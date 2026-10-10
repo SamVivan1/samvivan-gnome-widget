@@ -79,6 +79,7 @@ fi
 
 echo "--- Done ---"
 echo "Installed to: $EXT_DIR"
+echo "Calendar/Agenda events need: sudo apt install python3-gi gir1.2-ecal-2.0 gir1.2-edataserver-1.2 gir1.2-ical-3.0"
 if [[ "${XDG_SESSION_TYPE:-}" == "wayland" ]]; then
   echo "On Wayland, logout/login is required for GNOME Shell to load the new extension."
 else

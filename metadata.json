@@ -1,7 +1,7 @@
 {
   "uuid": "desktop-widget@samvivan",
   "name": "Desktop Widget",
-  "description": "Desktop widgets (clock, calendar, weather, photos, battery) for GNOME Shell 50. Lightweight, runs in gnome-shell. Photos can rotate from local images or your Immich library with fallback. Drag, resize, snap to grid, multi-monitor, and fully configurable.",
+  "description": "Desktop widgets (clock, calendar, agenda, weather, photos, battery) for GNOME Shell 50. Lightweight, runs in gnome-shell. Calendar shows event dots and Agenda lists upcoming events from Evolution/Online Accounts. Photos can rotate from local images or your Immich library with fallback. Drag, resize, snap to grid, multi-monitor, and fully configurable.",
   "shell-version": ["50"],
   "settings-schema": "org.gnome.shell.extensions.desktop-widget",
   "gettext-domain": "desktop-widget",

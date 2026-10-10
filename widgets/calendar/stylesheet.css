@@ -19,6 +19,26 @@
 	padding: 0;
 }
 
+.widget-calendar-cell-content {
+	spacing: 0;
+}
+
+.widget-calendar-today {
+	border-radius: 999px;
+}
+
+.widget-calendar-dots {
+	spacing: 1px;
+}
+
+.widget-calendar-dot {
+	border-radius: 2px;
+}
+
+.widget-calendar-bar {
+	border-radius: 2px;
+}
+
 .widget-calendar-day {
 	font-size: 12px;
 	text-align: center;

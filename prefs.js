@@ -8,10 +8,12 @@ import { ExtensionPreferences } from 'resource:///org/gnome/Shell/Extensions/js/
 import * as Immich from './widgets/photos/immich.js';
 
 const LAYOUT_KEY = 'layout-json';
+const EXTENSION_PATH = GLib.path_get_dirname(GLib.filename_from_uri(import.meta.url)[0]);
 
 const WIDGET_LABELS = {
   clock: 'Clock',
   calendar: 'Calendar',
+  agenda: 'Agenda',
   weather: 'Weather',
   photos: 'Photos',
   battery: 'Battery',
@@ -65,6 +67,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
     window.add(this._buildGeneralPage(window));
     window.add(this._buildPhotosPage());
+    window.add(this._buildCalendarPage());
     window.add(this._buildWidgetsPage());
   };
 
@@ -325,6 +328,117 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     loadAlbums();
 
     return page;
+  };
+
+  _buildCalendarPage() {
+    const page = new Adw.PreferencesPage({
+      name: 'calendar',
+      title: 'Calendar',
+      icon_name: 'x-office-calendar-symbolic',
+    });
+
+    const group = new Adw.PreferencesGroup({
+      title: 'Calendars',
+      description: 'Which calendars the Calendar and Agenda widgets read from Evolution. Deselecting every calendar shows all of them.',
+    });
+
+    const statusRow = new Adw.ActionRow({title: 'Loading calendars…'});
+    group.add(statusRow);
+    page.add(group);
+
+    this._loadCalendarSources(group, statusRow);
+
+    return page;
+  };
+
+  _loadCalendarSources(group, statusRow) {
+    const helper = GLib.build_filenamev([EXTENSION_PATH, 'tools', 'eds_events.py']);
+    const python = GLib.find_program_in_path('python3');
+
+    if (!python || !Gio.File.new_for_path(helper).query_exists(null)) {
+      statusRow.title = 'Calendar support unavailable';
+      statusRow.subtitle = 'Install python3-gi and Evolution Data Server introspection';
+      return;
+    };
+
+    let proc;
+
+    try {
+      proc = Gio.Subprocess.new(
+        [python, helper, '--list-sources'],
+        Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
+    } catch (error) {
+      statusRow.title = 'Could not read calendars';
+      statusRow.subtitle = error.message;
+      return;
+    };
+
+    proc.communicate_utf8_async(null, null, (source, result) => {
+      let stdout = '';
+
+      try {
+        [, stdout] = proc.communicate_utf8_finish(result);
+      } catch (error) {
+        statusRow.title = 'Could not read calendars';
+        statusRow.subtitle = error.message;
+        return;
+      };
+
+      let payload;
+
+      try {
+        payload = JSON.parse(stdout || '{}');
+      } catch (error) {
+        statusRow.title = 'Could not read calendars';
+        statusRow.subtitle = error.message;
+        return;
+      };
+
+      this._populateCalendarSources(group, statusRow, payload);
+    });
+  };
+
+  _populateCalendarSources(group, statusRow, payload) {
+    if (payload.ok !== true) {
+      statusRow.title = 'Calendar support unavailable';
+      statusRow.subtitle = payload.error ?? 'Install python3-gi and Evolution Data Server introspection';
+      return;
+    };
+
+    const sources = payload.sources ?? [];
+
+    if (sources.length === 0) {
+      statusRow.title = 'No calendars found';
+      statusRow.subtitle = 'Add a calendar in GNOME Calendar or Evolution';
+      return;
+    };
+
+    group.remove(statusRow);
+
+    const stored = this._settings.get_strv('calendar-sources');
+    const allSelected = stored.length === 0;
+    const selected = new Set(stored);
+    const switches = [];
+
+    const persist = () => {
+      const active = switches.filter(item => item.row.get_active()).map(item => item.uid);
+
+      this._settings.set_strv(
+        'calendar-sources',
+        active.length === switches.length ? [] : active);
+    };
+
+    for (const source of sources) {
+      const row = new Adw.SwitchRow({
+        title: source.name,
+        subtitle: source.holiday ? 'Public holidays' : (source.uid ?? ''),
+      });
+
+      row.set_active(allSelected || selected.has(source.uid));
+      row.connect('notify::active', persist);
+      group.add(row);
+      switches.push({uid: source.uid, row});
+    };
   };
 
   _subtitleFor(widget) {

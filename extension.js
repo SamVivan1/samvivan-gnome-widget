@@ -9,11 +9,13 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
+import * as AgendaWidget from './widgets/agenda/widget.js';
 import * as BatteryWidget from './widgets/battery/widget.js';
 import * as CalendarWidget from './widgets/calendar/widget.js';
 import * as ClockWidget from './widgets/clock/widget.js';
 import * as PhotosWidget from './widgets/photos/widget.js';
 import * as WeatherWidget from './widgets/weather/widget.js';
+import { CalendarData } from './lib/calendarData.js';
 import { configureLogger, resetLogger, warn } from './logger.js';
 import { WorkspaceIntegration } from './workspaceIntegration.js';
 
@@ -33,6 +35,7 @@ const INTERFACE_SCHEMA = 'org.gnome.desktop.interface';
 const WIDGET_MODULES = [
   ClockWidget,
   CalendarWidget,
+  AgendaWidget,
   WeatherWidget,
   PhotosWidget,
   BatteryWidget,
@@ -221,6 +224,8 @@ class WidgetController {
     this._lastBatteryRefreshAt = 0;
     this._batterySignature = undefined;
     this._calendarSignature = undefined;
+    this._calendarData = null;
+    this._calendarUnsubscribe = null;
   };
 
   _monitorIndex() {
@@ -288,6 +293,23 @@ class WidgetController {
     });
     connect('widget-opacity', () => this._applyOpacity());
     connect('show-panel-icon', () => this._syncIndicator());
+    connect('calendar-sources', () => this._applyCalendarSources());
+  };
+
+  _applyCalendarSources() {
+    if (!this._calendarData) {
+      return;
+    };
+
+    let sources = [];
+
+    try {
+      sources = this._layoutSettings.get_strv('calendar-sources');
+    } catch (error) {
+      sources = [];
+    };
+
+    this._calendarData.setSourcesFilter(sources);
   };
 
   _onGlobalChanged() {
@@ -319,10 +341,17 @@ class WidgetController {
     this._saveWidgets();
     this._connectSettings();
     this._syncIndicator();
+
+    this._calendarData = new CalendarData(EXTENSION_PATH);
+    this._calendarUnsubscribe = this._calendarData.subscribe(() => this._refreshCalendarViews(true));
+    this._applyCalendarSources();
+    this._calendarData.start();
+
     this._createLayer();
     this._rebuildWidgets();
     this._refreshWeather(true);
     this._workspaceIntegration.enable(this._layer);
+
     global.stage.connectObject(
       'button-release-event', (_stage, event) => this._handleAppClickEvent(event),
       this
@@ -382,6 +411,11 @@ class WidgetController {
 
     this._dbusSignalIds = [];
     this._sessionSignalIds = [];
+
+    this._calendarUnsubscribe?.();
+    this._calendarUnsubscribe = null;
+    this._calendarData?.stop();
+    this._calendarData = null;
 
     this._cancelActiveDrag();
 
@@ -854,18 +888,18 @@ class WidgetController {
     };
   };
 
-  _refreshCalendarViews() {
+  _refreshCalendarViews(force = false) {
     const now = new Date();
     const signature = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
 
-    if (signature === this._calendarSignature) {
+    if (!force && signature === this._calendarSignature) {
       return;
     };
 
     this._calendarSignature = signature;
 
     for (const view of this._views.values()) {
-      if (view.widget.type === 'calendar') {
+      if (view.widget.type === 'calendar' || view.widget.type === 'agenda') {
         this._fillWidgetBody(view.widget, view.body);
       };
     };
@@ -1201,6 +1235,7 @@ class WidgetController {
       theme: this._gnomeTheme(),
       weather: this._weather,
       weatherLocation: this._weatherLocation,
+      calendar: this._calendarData,
       createLabel: this._label.bind(this),
       sizeForWidget,
       settings: this._layoutSettings,

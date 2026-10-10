@@ -9,7 +9,8 @@ A lightweight desktop widget suite for GNOME Shell 50. Forked from `widgets@dist
 ## Features
 
 - **Clock** – Clean digital time display
-- **Calendar** – Month view at a glance
+- **Calendar** – Month view at a glance, with a dot under every day that has events (1–3 dots, bar for more)
+- **Agenda** – Today's schedule and the upcoming week from your Evolution/Online Accounts calendars, with public holidays highlighted. Resize it to show more or fewer days.
 - **Weather** – Uses GNOME Weather locations
 - **Photos** – Rotate local images or random photos from your Immich library, with automatic fallback. Supports all photos, favorites-only, or a specific album. Configurable interval and image quality.
 - **Battery** – System battery + GSConnect phone battery (when available). Devices pop and slide in/out as they connect or disconnect (respects GNOME reduce-motion).
@@ -22,6 +23,20 @@ A lightweight desktop widget suite for GNOME Shell 50. Forked from `widgets@dist
 - GNOME Shell 50
 - `glib-compile-schemas` (usually present on Linux distros with GNOME)
 - For Immich: a running Immich server + API key
+- For Calendar/Agenda events: `python3-gi` and the Evolution Data Server introspection packages (see below). Without them the widgets still work but only as a plain month view / empty agenda.
+
+### Calendar data (optional)
+
+Installing these enables events from GNOME Calendar, Evolution, and online accounts
+(Google/Microsoft 365):
+
+```bash
+sudo apt install python3-gi gir1.2-ecal-2.0 gir1.2-edataserver-1.2 gir1.2-ical-3.0
+```
+
+Events are read through a small helper process (`tools/eds_events.py`). A separate
+process is used on purpose: importing Evolution Data Server inside GNOME Shell
+crashes the shell when those objects are freed.
 
 ## Installation
 
@@ -117,6 +132,7 @@ Open preferences via: `gnome-extensions prefs desktop-widget@samvivan` or panel 
 | `immich-scope` | `s` | `'all'` | `all`/`favorites`/`album` |
 | `immich-album-id` | `s` | `''` | Album ID when scope=album |
 | `immich-size` | `s` | `'preview'` | `thumbnail`/`preview`/`fullsize` |
+| `calendar-sources` | `as` | `[]` | EDS calendar UIDs to show (empty = all enabled) |
 
 ## Uninstall
 
@@ -168,9 +184,14 @@ make uninstall      # removes the extension
 ├── logger.js             # Logging helpers
 ├── stylesheet.css        # Global styles
 ├── schemas/              # GSettings schema
+├── lib/
+│   └── calendarData.js   # runs tools/eds_events.py, caches + refreshes events
+├── tools/
+│   └── eds_events.py     # EDS -> JSON helper (separate process, avoids shell crash)
 ├── widgets/
 │   ├── clock/            # type/label/stylesheet/defaultSize + render/cleanup/style
-│   ├── calendar/
+│   ├── calendar/         # month view + event dots
+│   ├── agenda/           # today + upcoming events
 │   ├── weather/
 │   ├── photos/           # rotation + Immich + local sources
 │   └── battery/          # system + GSConnect

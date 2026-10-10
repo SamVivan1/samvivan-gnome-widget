@@ -86,5 +86,10 @@
       <summary>Immich image size</summary>
       <description>Thumbnail rendition requested from Immich: thumbnail, preview or fullsize.</description>
     </key>
+    <key name="calendar-sources" type="as">
+      <default>[]</default>
+      <summary>Calendar sources</summary>
+      <description>UIDs of the Evolution Data Server calendar sources shown by the Calendar and Agenda widgets. An empty list uses every enabled calendar.</description>
+    </key>
   </schema>
 </schemalist>

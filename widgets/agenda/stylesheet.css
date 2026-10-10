@@ -1,0 +1,52 @@
+.widget-agenda-header {
+	spacing: 6px;
+}
+
+.widget-agenda-title-date {
+	font-size: 17px;
+	font-weight: 800;
+}
+
+.widget-agenda-list {
+	spacing: 1px;
+}
+
+.widget-agenda-row {
+	spacing: 8px;
+}
+
+.widget-agenda-time {
+	font-size: 12px;
+	width: 54px;
+	text-align: left;
+}
+
+.widget-agenda-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 4px;
+	margin-top: 3px;
+}
+
+.widget-agenda-title {
+	font-size: 13px;
+}
+
+.widget-agenda-day {
+	font-size: 11px;
+	margin-top: 5px;
+}
+
+.widget-agenda-section {
+	font-size: 11px;
+	margin-top: 2px;
+}
+
+.widget-agenda-message {
+	font-size: 12px;
+}
+
+.widget-agenda-more {
+	font-size: 11px;
+	margin-top: 3px;
+}
