@@ -754,14 +754,11 @@ function exitSlot(entry, animate) {
 		return;
 	};
 
-	slot.set_pivot_point(0.5, 0.5);
 	slot.ease({
-		width: 0,
+		translation_y: Math.round(entry.size + SLOT_GAP),
 		opacity: 0,
-		scale_x: 0.6,
-		scale_y: 0.6,
-		duration: 200,
-		mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+		duration: 240,
+		mode: Clutter.AnimationMode.EASE_IN_CUBIC,
 		onComplete: finalize,
 	});
 };

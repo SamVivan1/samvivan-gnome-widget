@@ -13,7 +13,7 @@ A lightweight desktop widget suite for GNOME Shell 50. Forked from `widgets@dist
 - **Agenda** – Today's schedule and the upcoming week from your Evolution/Online Accounts calendars, with public holidays highlighted. Resize it to show more or fewer days.
 - **Weather** – Uses GNOME Weather locations
 - **Photos** – Rotate local images or random photos from your Immich library, with automatic fallback. Supports all photos, favorites-only, or a specific album. Configurable interval and image quality.
-- **Battery** – System battery + GSConnect phone battery (when available). Devices pop and slide in/out as they connect or disconnect (respects GNOME reduce-motion).
+- **Battery** – System battery + GSConnect phone battery (when available). Devices slide in from the right when they connect and drop away when they disconnect, keeping a stable connect order (respects GNOME reduce-motion).
 - **Placement** – Drag, resize, snap-to-grid, configurable grid gap, multi-monitor support (`-1` = primary)
 - **Behavior** – Edit/Lock/Hide-all modes, widget opacity (10–100%), optional top-panel icon
 - **Panel menu** – Quick toggle/edit/add/reset widgets from the top bar
