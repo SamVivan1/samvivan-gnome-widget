@@ -1,9 +1,11 @@
 {
   "uuid": "desktop-widget@samvivan",
   "name": "Desktop Widget",
-  "description": "Fork dari Widgets (distro.com): clock, calendar, weather, photos, battery. Ringan karena berjalan di dalam proses gnome-shell. Settingan lengkap: pindah posisi (drag/Preview/X-Y), resize, hide-show per widget, kunci widget, pilih monitor, grid & gap.",
+  "description": "Desktop widgets (clock, calendar, weather, photos, battery) for GNOME Shell 50. Lightweight, runs in gnome-shell. Photos can rotate from local images or your Immich library with fallback. Drag, resize, snap to grid, multi-monitor, and fully configurable.",
   "shell-version": ["50"],
   "settings-schema": "org.gnome.shell.extensions.desktop-widget",
   "gettext-domain": "desktop-widget",
-  "url": ""
+  "url": "https://github.com/SamVivan1/samvivan-gnome-widget",
+  "version": 1,
+  "version-name": "1.0.0"
 }

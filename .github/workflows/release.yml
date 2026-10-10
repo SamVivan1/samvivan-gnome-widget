@@ -1,0 +1,28 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends glib-compile-schemas zip
+
+      - name: Build extension zip
+        run: make pack
+
+      - name: Create Release and upload
+        uses: softprops/action-gh-release@v2
+        with:
+          files: desktop-widget@samvivan.shell-extension.zip
+          generate_release_notes: true
