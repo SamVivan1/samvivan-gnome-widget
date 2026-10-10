@@ -130,6 +130,23 @@ function darkStyleEnabled(settings) {
   return settings?.get_string('color-scheme') === 'prefer-dark';
 };
 
+function hexToRgba(hex, alpha) {
+  const value = String(hex || '').replace('#', '');
+  const normalized = value.length === 3
+    ? value.split('').map(part => part + part).join('')
+    : value;
+
+  if (normalized.length !== 6) {
+    return `rgba(53, 132, 228, ${alpha})`;
+  };
+
+  const red = parseInt(normalized.slice(0, 2), 16);
+  const green = parseInt(normalized.slice(2, 4), 16);
+  const blue = parseInt(normalized.slice(4, 6), 16);
+
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+};
+
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 };
@@ -283,7 +300,6 @@ class WidgetController {
 
     for (const view of this._views.values()) {
       view.actor.set_opacity(opacity);
-      view.editBorder?.set_opacity(opacity);
     };
   };
 
@@ -510,12 +526,23 @@ class WidgetController {
     ].join(' ');
   };
 
+  _editBorderStyle() {
+    const accent = this._gnomeTheme().accent;
+
+    return `border: 2px solid ${accent}; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.16), 0 0 20px ${hexToRgba(accent, 0.55)};`;
+  };
+
   _styleForWidget(widget) {
     const theme = this._gnomeTheme();
     const widgetModule = WIDGETS.get(widget.type);
     const specific = widgetModule?.style ? widgetModule.style(theme) : '';
+    const base = `${this._glassStyle(theme)} ${specific}`;
 
-    return `${this._glassStyle(theme)} ${specific}`;
+    if (!this._editMode) {
+      return base;
+    };
+
+    return `${base} ${this._editBorderStyle()}`;
   };
 
   _clearWeatherInfo() {
@@ -879,8 +906,8 @@ class WidgetController {
       widget,
       actor,
       body,
-      editBorder: null,
       removeButton: null,
+      removeButtonWidth: 0,
     };
     this._views.set(widget.id, view);
 
@@ -895,11 +922,9 @@ class WidgetController {
     this._fillWidgetBody(widget, body);
   };
 
-  _removeButtonPosition(widget, removeButton) {
+  _removeButtonPosition(widget, view) {
     const [width] = sizeForWidget(widget);
-
-    removeButton.ensure_style();
-    const [, buttonWidth] = removeButton.get_preferred_width(-1);
+    const buttonWidth = view.removeButtonWidth || 24;
 
     return {
       x: widget.x + width - buttonWidth - 8,
@@ -907,53 +932,40 @@ class WidgetController {
     };
   };
 
-  _syncEditControls(widget, animate = false) {
-    const view = this._views.get(widget.id);
-
-    if (!view?.editBorder && !view?.removeButton) {
+  _positionRemoveButton(view) {
+    if (!view.removeButton) {
       return;
     };
 
-    const overlay = rectForWidget(widget);
-    const button = this._removeButtonPosition(widget, view.removeButton);
+    const button = this._removeButtonPosition(view.widget, view);
+
+    view.removeButton.set_position(button.x, button.y);
+  };
+
+  _syncEditControls(widget, animate = false) {
+    const view = this._views.get(widget.id);
+
+    if (!view?.removeButton) {
+      return;
+    };
+
+    const button = this._removeButtonPosition(widget, view);
 
     if (animate) {
-      view.editBorder?.ease({
-        x: overlay.x,
-        y: overlay.y,
-        width: overlay.width,
-        height: overlay.height,
-        duration: 130,
-        mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-      });
-
-      view.removeButton?.ease({
+      view.removeButton.ease({
         x: button.x,
         y: button.y,
         duration: 130,
         mode: Clutter.AnimationMode.EASE_OUT_QUAD,
       });
     } else {
-      view.editBorder?.set_position(overlay.x, overlay.y);
-      view.editBorder?.set_size(overlay.width, overlay.height);
-      view.removeButton?.set_position(button.x, button.y);
+      view.removeButton.set_position(button.x, button.y);
     };
 
-    if (view.editBorder) {
-      raiseActor(view.editBorder);
-    };
-
-    if (view.removeButton) {
-      raiseActor(view.removeButton);
-    };
+    raiseActor(view.removeButton);
   };
 
   _addEditControls(view) {
-    const editBorder = new St.Widget({
-      style_class: 'widget-edit-border',
-      reactive: false,
-    });
-
     const removeButton = new St.Button({
       style_class: 'icon-button',
       icon_name: 'window-close-symbolic',
@@ -963,13 +975,14 @@ class WidgetController {
       accessible_name: 'Remove widget',
     });
 
-    this._layer.add_child(editBorder);
+    this._layer.add_child(removeButton);
+    removeButton.ensure_style();
+    const [, buttonWidth] = removeButton.get_preferred_width(-1);
 
     removeButton.connectObject('clicked', () => this.removeWidget(view.widget.id), this);
-    this._layer.add_child(removeButton);
 
-    view.editBorder = editBorder;
     view.removeButton = removeButton;
+    view.removeButtonWidth = buttonWidth;
     this._syncEditControls(view.widget);
   };
 
@@ -1088,13 +1101,23 @@ class WidgetController {
       const [stageX, stageY] = event.get_coords();
       const [width, height] = sizeForWidget(widget);
       const monitor = this._monitor();
-      const minY = Main.panel?.height ? Main.panel.height + WIDGET_GAP : WIDGET_GAP;
 
-      widget.x = clamp(snap(drag.actorX + stageX - drag.stageX), WIDGET_GAP, Math.max(WIDGET_GAP, monitor.width - width - WIDGET_GAP));
-      widget.y = clamp(snap(drag.actorY + stageY - drag.stageY), minY, Math.max(minY, monitor.height - height - WIDGET_GAP));
-      actor.set_position(widget.x, widget.y);
-      this._syncEditControls(widget);
-      this._resolveLayout(widget, false, false);
+      if (!monitor) {
+        return;
+      };
+
+      const minY = Main.panel?.height ? Main.panel.height + WIDGET_GAP : WIDGET_GAP;
+      const x = clamp(drag.actorX + stageX - drag.stageX, WIDGET_GAP, Math.max(WIDGET_GAP, monitor.width - width - WIDGET_GAP));
+      const y = clamp(drag.actorY + stageY - drag.stageY, minY, Math.max(minY, monitor.height - height - WIDGET_GAP));
+
+      if (x === widget.x && y === widget.y) {
+        return;
+      };
+
+      widget.x = x;
+      widget.y = y;
+      actor.set_position(x, y);
+      this._positionRemoveButton(view);
     };
 
     actor.connectObject('button-press-event', (_source, event) => {
