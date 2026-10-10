@@ -547,7 +547,7 @@ function addSlotLabels(entry, device, theme, createLabel, size) {
 	const parent = entry.textColumn || entry.slot;
 
 	if (showName) {
-		const nameLabel = createLabel(device ? device.name : '', 'widget-battery-name', `font-size: ${fonts.name}px; color: ${theme.muted};`);
+		const nameLabel = createLabel(fitName(device ? device.name : '', entry.nameLimit), 'widget-battery-name', `font-size: ${fonts.name}px; color: ${theme.muted};`);
 
 		nameLabel.x_expand = horizontal ? false : true;
 		nameLabel.x_align = Clutter.ActorAlign.CENTER;
@@ -605,6 +605,7 @@ function buildSlot(device, theme, createLabel, size, layout) {
 		textColumn: null,
 		nameLabel: null,
 		percentLabel: null,
+		nameLimit: null,
 	};
 
 	populateSlot(entry, device, theme, createLabel, size, layout);
@@ -625,6 +626,7 @@ function populateSlot(entry, device, theme, createLabel, size, layout) {
 	entry.textRatio = textRatio;
 	entry.size = size;
 	entry.slotWidth = horizontal ? horizontalSlotWidth(size, textRatio) : size;
+	entry.nameLimit = layout.nameLimit ?? null;
 	entry.textColumn = null;
 	entry.nameLabel = null;
 	entry.percentLabel = null;
@@ -686,6 +688,7 @@ function resizeSlot(entry, device, theme, size, layout) {
 
 	entry.textRatio = layout.textRatio;
 	entry.slotWidth = entry.horizontal ? horizontalSlotWidth(size, layout.textRatio) : size;
+	entry.nameLimit = layout.nameLimit ?? null;
 
 	if (!entry.exiting) {
 		if (entry.horizontal) {
@@ -735,6 +738,7 @@ function syncSlot(entry, device, theme, createLabel, size, layout) {
 	entry.nameLabel = null;
 	entry.percentLabel = null;
 	entry.showName = layout.showName;
+	entry.nameLimit = layout.nameLimit ?? null;
 
 	addSlotLabels(entry, device, theme, createLabel, size);
 };
@@ -977,13 +981,42 @@ function bestLayout(count, availWidth, availHeight, showName, textRatio) {
 	return best;
 };
 
+function fitName(name, limit) {
+	const value = String(name ?? '');
+
+	if (!Number.isFinite(limit) || value.length <= limit) {
+		return value;
+	};
+
+	if (limit <= 1) {
+		return value.slice(0, 1);
+	};
+
+	return `${value.slice(0, limit - 1)}\u2026`;
+};
+
+function singleDeviceLayout(availWidth, availHeight, textRatio) {
+	const usable = Math.max(MIN_TEXT_GAUGE, availWidth - SLOT_SPACING);
+	const ratio = Math.min(textRatio, Math.max(0, usable / MIN_TEXT_GAUGE - 1));
+	const size = Math.max(Math.min(availHeight, usable / (1 + ratio)), MIN_TEXT_GAUGE);
+	const room = Math.max(0, size * ratio - SLOT_SPACING);
+	const charWidth = HORIZONTAL_CHAR_WIDTH * Math.max(11, Math.round(size * HORIZONTAL_NAME_RATIO));
+
+	return {
+		cols: 1,
+		rows: 1,
+		size,
+		horizontal: true,
+		showName: true,
+		textRatio: ratio,
+		nameLimit: Math.max(4, Math.floor(room / charWidth)),
+		score: 1,
+	};
+};
+
 function computeLayout(count, availWidth, availHeight, textRatio) {
 	if (count === 1) {
-		const alone = bestGrid(1, availWidth, availHeight, {horizontal: true, showName: true, textRatio});
-
-		if (alone) {
-			return {...alone, horizontal: true, showName: true, textRatio, score: alone.size + 1};
-		};
+		return singleDeviceLayout(availWidth, availHeight, textRatio);
 	};
 
 	if (count <= TEXT_SLOT_LIMIT) {
