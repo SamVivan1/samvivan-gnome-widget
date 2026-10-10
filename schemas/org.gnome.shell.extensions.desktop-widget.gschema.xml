@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.desktop-widget" path="/org/gnome/shell/extensions/desktop-widget/">
+    <key name="layout-json" type="s">
+      <default>''</default>
+      <summary>Serialized widget layout</summary>
+      <description>Stores widget types, sizes, desktop positions, per-widget visibility and target monitor as JSON.</description>
+    </key>
+    <key name="monitor-index" type="i">
+      <default>-1</default>
+      <summary>Target monitor</summary>
+      <description>Index of the monitor widgets are shown on. -1 uses the primary monitor.</description>
+    </key>
+    <key name="grid-size" type="i">
+      <default>20</default>
+      <summary>Grid size</summary>
+      <description>Snap grid size in pixels used when positioning widgets.</description>
+    </key>
+    <key name="widget-gap" type="i">
+      <default>14</default>
+      <summary>Widget gap</summary>
+      <description>Spacing in pixels between widgets and the screen edges.</description>
+    </key>
+    <key name="snap-to-grid" type="b">
+      <default>true</default>
+      <summary>Snap to grid</summary>
+      <description>Whether widget positions snap to the grid while dragging.</description>
+    </key>
+    <key name="lock-widgets" type="b">
+      <default>false</default>
+      <summary>Lock widgets</summary>
+      <description>Disable dragging and resizing of widgets.</description>
+    </key>
+    <key name="hide-all" type="b">
+      <default>false</default>
+      <summary>Hide all widgets</summary>
+      <description>Hide every desktop widget without removing its configuration.</description>
+    </key>
+    <key name="edit-mode" type="b">
+      <default>false</default>
+      <summary>Edit mode</summary>
+      <description>Show edit controls so widgets can be moved and removed.</description>
+    </key>
+    <key name="widget-opacity" type="i">
+      <default>100</default>
+      <summary>Widget opacity</summary>
+      <description>Opacity of widgets as a percentage (10-100).</description>
+    </key>
+  </schema>
+</schemalist>

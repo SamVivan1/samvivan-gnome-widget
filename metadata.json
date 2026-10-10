@@ -1,0 +1,9 @@
+{
+  "uuid": "desktop-widget@samvivan",
+  "name": "Desktop Widget",
+  "description": "Fork dari Widgets (distro.com): clock, calendar, weather, photos, battery. Ringan karena berjalan di dalam proses gnome-shell. Settingan lengkap: pindah posisi (drag/Preview/X-Y), resize, hide-show per widget, kunci widget, pilih monitor, grid & gap.",
+  "shell-version": ["50"],
+  "settings-schema": "org.gnome.shell.extensions.desktop-widget",
+  "gettext-domain": "desktop-widget",
+  "url": ""
+}
