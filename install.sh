@@ -33,6 +33,10 @@ while [[ $# -gt 0 ]]; do
 done
 
 if (( uninstall_mode )); then
+  script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]:-$0}")" && pwd)"
+  if [[ -x "$script_dir/uninstall.sh" ]]; then
+    exec "$script_dir/uninstall.sh"
+  fi
   if command -v gnome-extensions >/dev/null 2>&1; then
     gnome-extensions disable "$EXT" 2>/dev/null || true
   fi

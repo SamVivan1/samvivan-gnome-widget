@@ -120,11 +120,30 @@ Open preferences via: `gnome-extensions prefs desktop-widget@samvivan` or panel 
 
 ## Uninstall
 
+### 1) One-liner
+
 ```bash
-curl -fsSL https://raw.githubusercontent.com/SamVivan1/samvivan-gnome-widget/main/install.sh | bash -s -- --uninstall
-# or
-make uninstall
+curl -fsSL https://raw.githubusercontent.com/SamVivan1/samvivan-gnome-widget/main/uninstall.sh | bash
 ```
+
+This removes the extension directory and disables it. Your saved settings and the Immich thumbnail cache are kept. To remove those too, add `--purge`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/SamVivan1/samvivan-gnome-widget/main/uninstall.sh | bash -s -- --purge
+```
+
+### 2) Other ways
+
+```bash
+# via the installer's flag
+curl -fsSL https://raw.githubusercontent.com/SamVivan1/samvivan-gnome-widget/main/install.sh | bash -s -- --uninstall
+
+# from a local checkout
+make uninstall      # removes the extension
+./uninstall.sh --purge   # removes extension + settings + cache
+```
+
+> On Wayland, **log out and back in** after uninstalling so GNOME Shell drops the extension.
 
 ## Troubleshooting
 
@@ -139,6 +158,9 @@ make uninstall
 ### Structure
 ```
 .
+├── install.sh            # one-liner installer
+├── uninstall.sh          # one-liner uninstaller (--purge to wipe data)
+├── Makefile              # make check/install/uninstall/pack
 ├── extension.js          # GNOME Shell entry, layout/drag/resize, panel menu
 ├── prefs.js              # libadwaita preferences UI
 ├── metadata.json         # Extension metadata
