@@ -200,6 +200,10 @@ class WidgetController {
     this._weatherInfo = null;
     this._weatherUpdating = false;
     this._weatherUpdateTime = 0;
+    this._batteryRefreshId = 0;
+    this._lastBatteryRefreshAt = 0;
+    this._batterySignature = undefined;
+    this._calendarSignature = undefined;
   };
 
   _monitorIndex() {
@@ -304,7 +308,7 @@ class WidgetController {
     this._refreshWeather(true);
     this._workspaceIntegration.enable(this._layer);
     global.stage.connectObject(
-      'captured-event', (_stage, event) => this._handleAppClickEvent(event),
+      'button-release-event', (_stage, event) => this._handleAppClickEvent(event),
       this
     );
 
@@ -342,6 +346,11 @@ class WidgetController {
     };
 
     this._timeouts = [];
+
+    if (this._batteryRefreshId) {
+      GLib.source_remove(this._batteryRefreshId);
+      this._batteryRefreshId = 0;
+    };
 
     global.stage.disconnectObject(this);
     Main.layoutManager.disconnectObject(this);
@@ -581,6 +590,27 @@ class WidgetController {
   };
 
   _refreshBatteryViews() {
+    let hasBattery = false;
+
+    for (const view of this._views.values()) {
+      if (view.widget.type === 'battery') {
+        hasBattery = true;
+        break;
+      };
+    };
+
+    if (!hasBattery) {
+      return;
+    };
+
+    const signature = BatteryWidget.batterySignature?.() ?? null;
+
+    if (signature !== null && signature === this._batterySignature) {
+      return;
+    };
+
+    this._batterySignature = signature;
+
     for (const view of this._views.values()) {
       if (view.widget.type === 'battery') {
         this._fillWidgetBody(view.widget, view.body);
@@ -588,8 +618,24 @@ class WidgetController {
     };
   };
 
+  _scheduleBatteryRefresh() {
+    if (this._batteryRefreshId) {
+      return;
+    };
+
+    const elapsed = Date.now() - this._lastBatteryRefreshAt;
+    const delay = Math.max(0, 2000 - elapsed);
+
+    this._batteryRefreshId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, delay, () => {
+      this._batteryRefreshId = 0;
+      this._lastBatteryRefreshAt = Date.now();
+      this._refreshBatteryViews();
+      return GLib.SOURCE_REMOVE;
+    });
+  };
+
   _watchBatteryChanges() {
-    const refresh = () => this._refreshBatteryViews();
+    const refresh = () => this._scheduleBatteryRefresh();
     const refreshBlueZ = (_connection, _sender, _objectPath, _interfaceName, _signalName, parameters) => {
       const [changedInterface] = parameters.deep_unpack();
 
@@ -761,24 +807,39 @@ class WidgetController {
     };
 
     this._refreshWeather(false);
+    this._refreshCalendarViews();
+    this._refreshBatteryViews();
+    this._pruneStaleViews();
+  };
 
+  _pruneStaleViews() {
     for (const [id, view] of this._views) {
-      if (!['battery', 'calendar', 'weather'].includes(view.widget.type)) {
-        continue;
-      };
-
       try {
         if (view.actor.get_parent() !== this._layer || view.body.get_parent() !== view.actor) {
           view.actor.disconnectObject(this);
           this._views.delete(id);
-          continue;
         };
-
-        this._fillWidgetBody(view.widget, view.body);
       } catch (error) {
         warn('stale-widget-view', `Dropping stale widget view: ${error.message}`);
         view.actor.disconnectObject(this);
         this._views.delete(id);
+      };
+    };
+  };
+
+  _refreshCalendarViews() {
+    const now = new Date();
+    const signature = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+
+    if (signature === this._calendarSignature) {
+      return;
+    };
+
+    this._calendarSignature = signature;
+
+    for (const view of this._views.values()) {
+      if (view.widget.type === 'calendar') {
+        this._fillWidgetBody(view.widget, view.body);
       };
     };
   };

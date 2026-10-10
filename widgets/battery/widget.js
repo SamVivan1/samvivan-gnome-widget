@@ -414,8 +414,30 @@ function mergeDevices(devices) {
 	return [...merged.values()].sort((a, b) => Number(b.powerSupply) - Number(a.powerSupply) || a.name.localeCompare(b.name));
 };
 
-function readDevices() {
-	return mergeDevices([...readUPowerDevices(), ...readBlueZDevices(), ...readGSConnectDevices()]);
+const DEVICES_CACHE_MS = 2000;
+let devicesCache = null;
+
+function readDevices(force = false) {
+	const now = Date.now();
+
+	if (!force && devicesCache && now - devicesCache.time < DEVICES_CACHE_MS) {
+		return devicesCache.devices;
+	};
+
+	const devices = mergeDevices([...readUPowerDevices(), ...readBlueZDevices(), ...readGSConnectDevices()]);
+
+	devicesCache = {time: now, devices};
+	return devices;
+};
+
+export function batterySignature() {
+	return readDevices().map(device => [
+		device.name,
+		device.kind ?? '',
+		device.percentage,
+		device.powerSupply ? 1 : 0,
+		device.iconName ?? '',
+	].join(':')).join('|');
 };
 
 const BatteryRing = GObject.registerClass(
