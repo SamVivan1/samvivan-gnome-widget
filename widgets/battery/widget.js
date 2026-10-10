@@ -978,6 +978,14 @@ function bestLayout(count, availWidth, availHeight, showName, textRatio) {
 };
 
 function computeLayout(count, availWidth, availHeight, textRatio) {
+	if (count === 1) {
+		const alone = bestGrid(1, availWidth, availHeight, {horizontal: true, showName: true, textRatio});
+
+		if (alone) {
+			return {...alone, horizontal: true, showName: true, textRatio, score: alone.size + 1};
+		};
+	};
+
 	if (count <= TEXT_SLOT_LIMIT) {
 		const named = bestLayout(count, availWidth, availHeight, true, textRatio);
 
@@ -1047,6 +1055,8 @@ export function reconcile({body, widget, createLabel, theme, sizeForWidget, anim
 	const cellHeight = (availHeight - (rowCount - 1) * SLOT_GAP) / rowCount;
 	const pitchX = cellWidth + SLOT_GAP;
 	const pitchY = cellHeight + SLOT_GAP;
+	const trayWidth = width - WIDGET_PADDING;
+	const trayHeight = height - WIDGET_PADDING;
 
 	const cellCenter = index => {
 		const row = Math.floor(index / cols);
@@ -1106,8 +1116,11 @@ export function reconcile({body, widget, createLabel, theme, sizeForWidget, anim
 		entry.device = device;
 
 		const measured = measureSlot(entry);
-		let targetX = centerX - measured.width / 2;
-		let targetY = centerY - measured.height / 2;
+		const clampX = x => Math.min(Math.max(x, 0), Math.max(0, trayWidth - measured.width));
+		const clampY = y => Math.min(Math.max(y, 0), Math.max(0, trayHeight - measured.height));
+
+		let targetX = clampX(centerX - measured.width / 2);
+		let targetY = clampY(centerY - measured.height / 2);
 
 		if (entry.x === null) {
 			entry.x = Math.round(targetX);
@@ -1132,13 +1145,7 @@ export function reconcile({body, widget, createLabel, theme, sizeForWidget, anim
 			targetY += (dy / dist) * strength;
 		};
 
-		const trayWidth = width - WIDGET_PADDING;
-		const trayHeight = height - WIDGET_PADDING;
-
-		targetX = Math.min(Math.max(targetX, 0), Math.max(0, trayWidth - measured.width));
-		targetY = Math.min(Math.max(targetY, 0), Math.max(0, trayHeight - measured.height));
-
-		moveSlot(entry, targetX, targetY, animate);
+		moveSlot(entry, clampX(targetX), clampY(targetY), animate);
 	});
 
 	for (const [key, entry] of [...slots]) {
