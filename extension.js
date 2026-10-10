@@ -180,12 +180,14 @@ class WidgetController {
     this._views = new Map();
     this._timeouts = [];
     this._dbusSignalIds = [];
+    this._sessionSignalIds = [];
     this._settingsSignals = [];
     this._editMode = false;
     this._dragActor = null;
     this._lastAppLaunchAt = 0;
     this._lastLayoutJson = null;
     this._syncingMenu = false;
+    this._indicator = null;
     this._editItem = null;
     this._lockItem = null;
     this._hideItem = null;
@@ -264,6 +266,7 @@ class WidgetController {
       this.setEditMode(settings.get_boolean('edit-mode'));
     });
     connect('widget-opacity', () => this._applyOpacity());
+    connect('show-panel-icon', () => this._syncIndicator());
   };
 
   _onGlobalChanged() {
@@ -294,8 +297,8 @@ class WidgetController {
     this._applyGlobalSettings();
     this._widgets = this._loadWidgets();
     this._saveWidgets();
-    this._createIndicator();
     this._connectSettings();
+    this._syncIndicator();
     this._createLayer();
     this._rebuildWidgets();
     this._refreshWeather(true);
@@ -348,13 +351,16 @@ class WidgetController {
     for (const id of this._dbusSignalIds) {
       Gio.DBus.system.signal_unsubscribe(id);
     };
+    for (const id of this._sessionSignalIds) {
+      Gio.DBus.session.signal_unsubscribe(id);
+    };
 
     this._dbusSignalIds = [];
+    this._sessionSignalIds = [];
 
     this._cancelActiveDrag();
 
-    this._indicator?.destroy();
-    this._indicator = null;
+    this._destroyIndicator();
 
     this._clearWeatherInfo();
 
@@ -598,11 +604,32 @@ class WidgetController {
       Gio.DBus.system.signal_subscribe('org.freedesktop.UPower', 'org.freedesktop.DBus.Properties', 'PropertiesChanged', null, 'org.freedesktop.UPower.Device', Gio.DBusSignalFlags.NONE, refresh),
       Gio.DBus.system.signal_subscribe('org.bluez', 'org.freedesktop.DBus.ObjectManager', 'InterfacesAdded', '/', null, Gio.DBusSignalFlags.NONE, refresh),
       Gio.DBus.system.signal_subscribe('org.bluez', 'org.freedesktop.DBus.ObjectManager', 'InterfacesRemoved', '/', null, Gio.DBusSignalFlags.NONE, refresh),
-      Gio.DBus.system.signal_subscribe('org.bluez', 'org.freedesktop.DBus.Properties', 'PropertiesChanged', null, null, Gio.DBusSignalFlags.NONE, refreshBlueZ),
+      Gio.DBus.system.signal_subscribe('org.bluez', 'org.freedesktop.DBus.Properties', 'PropertiesChanged', null, null, Gio.DBusSignalFlags.NONE, refreshBlueZ)
+    );
+    this._sessionSignalIds.push(
       Gio.DBus.session.signal_subscribe('org.gnome.Shell.Extensions.GSConnect', 'org.gtk.Actions', 'Changed', null, null, Gio.DBusSignalFlags.NONE, refresh),
       Gio.DBus.session.signal_subscribe('org.gnome.Shell.Extensions.GSConnect', 'org.freedesktop.DBus.ObjectManager', 'InterfacesAdded', '/org/gnome/Shell/Extensions/GSConnect', null, Gio.DBusSignalFlags.NONE, refresh),
       Gio.DBus.session.signal_subscribe('org.gnome.Shell.Extensions.GSConnect', 'org.freedesktop.DBus.ObjectManager', 'InterfacesRemoved', '/org/gnome/Shell/Extensions/GSConnect', null, Gio.DBusSignalFlags.NONE, refresh)
     );
+  };
+
+  _syncIndicator() {
+    const show = this._layoutSettings.get_boolean('show-panel-icon');
+
+    if (show && !this._indicator) {
+      this._createIndicator();
+    } else if (!show && this._indicator) {
+      this._destroyIndicator();
+    };
+  };
+  };
+
+  _destroyIndicator() {
+    this._indicator?.destroy();
+    this._indicator = null;
+    this._editItem = null;
+    this._lockItem = null;
+    this._hideItem = null;
   };
 
   _createIndicator() {

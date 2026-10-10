@@ -46,5 +46,10 @@
       <summary>Widget opacity</summary>
       <description>Opacity of widgets as a percentage (10-100).</description>
     </key>
+    <key name="show-panel-icon" type="b">
+      <default>true</default>
+      <summary>Show top panel icon</summary>
+      <description>Whether the Desktop Widget icon is shown in the top panel.</description>
+    </key>
   </schema>
 </schemalist>

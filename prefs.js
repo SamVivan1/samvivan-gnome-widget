@@ -147,6 +147,20 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
     page.add(behavior);
 
+    const panel = new Adw.PreferencesGroup({
+      title: 'Top panel',
+      description: 'Control the Desktop Widget button in the top panel.',
+    });
+
+    const panelIconRow = new Adw.SwitchRow({
+      title: 'Show panel icon',
+      subtitle: 'Show the Desktop Widget button in the top panel',
+    });
+    this._settings.bind('show-panel-icon', panelIconRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+    panel.add(panelIconRow);
+
+    page.add(panel);
+
     return page;
   };
 
