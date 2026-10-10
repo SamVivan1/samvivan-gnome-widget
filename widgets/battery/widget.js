@@ -11,7 +11,14 @@ export const label = 'Battery';
 export const stylesheet = 'widgets/battery/stylesheet.css';
 export const defaultSize = 'medium';
 
-const SLOT_COUNT = 4;
+const MAX_GAUGE_SIZE = 84;
+const MIN_GAUGE_SIZE = 40;
+const SLOT_GAP = 12;
+const MAX_SLOTS = 8;
+const TEXT_SLOT_LIMIT = 4;
+const MIN_TEXT_GAUGE = 64;
+const WIDGET_PADDING = 30;
+const FALLBACK_WIDGET_WIDTH = 454;
 
 const DEVICE_TYPE = {
 	BATTERY: 2,
@@ -373,34 +380,37 @@ export function style(theme) {
 	return `color: ${theme.text};`;
 };
 
-function createSlot(device, theme, createLabel) {
+function createSlot(device, theme, createLabel, size, showText) {
 	const slot = new St.BoxLayout({
 		orientation: Clutter.Orientation.VERTICAL,
 		style_class: 'widget-battery-slot',
 		x_expand: true,
 		x_align: Clutter.ActorAlign.CENTER,
 	});
-	const gauge = new St.Widget({style_class: 'widget-battery-gauge'});
+	const gauge = new St.Widget({
+		style_class: 'widget-battery-gauge',
+		style: `width: ${size}px; height: ${size}px;`,
+		x_align: Clutter.ActorAlign.CENTER,
+	});
 	const ring = new BatteryRing(device, theme);
+	const iconSize = Math.max(16, Math.round(size * 0.36));
 	const icon = new St.Icon({
 		icon_name: iconForDevice(device),
 		style_class: 'widget-battery-icon',
-		style: `color: ${device ? theme.text : theme.muted};`,
+		style: `icon-size: ${iconSize}px; color: ${device ? theme.text : theme.muted};`,
 	});
 
-	gauge.set_size(84, 84);
-	ring.set_size(84, 84);
-	icon.set_size(30, 30);
-	icon.set_position(27, 27);
+	ring.set_size(size, size);
+	ring.style = `width: ${size}px; height: ${size}px;`;
+	icon.set_size(iconSize, iconSize);
+	icon.set_position(Math.round((size - iconSize) / 2), Math.round((size - iconSize) / 2));
 	gauge.add_child(ring);
 	gauge.add_child(icon);
 	slot.add_child(gauge);
 
-	const label = createLabel(device ? `${device.percentage}%` : '', 'widget-battery-percent', `color: ${device ? theme.text : theme.muted};`);
-
-	label.x_expand = false;
-	label.x_align = Clutter.ActorAlign.CENTER;
-	slot.add_child(label);
+	if (!showText) {
+		return slot;
+	};
 
 	const nameLabel = createLabel(device ? device.name : '', 'widget-battery-name', `color: ${theme.muted};`);
 
@@ -408,20 +418,45 @@ function createSlot(device, theme, createLabel) {
 	nameLabel.x_align = Clutter.ActorAlign.CENTER;
 	nameLabel.clutter_text.set_line_wrap(false);
 	slot.add_child(nameLabel);
+
+	const percentLabel = createLabel(device ? `${device.percentage}%` : '', 'widget-battery-percent', `color: ${device ? theme.text : theme.muted};`);
+
+	percentLabel.x_expand = false;
+	percentLabel.x_align = Clutter.ActorAlign.CENTER;
+	slot.add_child(percentLabel);
 	return slot;
 };
 
-export function render({body, createLabel, theme}) {
-	const devices = readDevices().slice(0, SLOT_COUNT);
+export function render({body, widget, createLabel, theme, sizeForWidget}) {
+	const devices = readDevices();
+
+	if (devices.length === 0) {
+		return;
+	};
+
+	const width = sizeForWidget ? sizeForWidget(widget)[0] : FALLBACK_WIDGET_WIDTH;
+	const available = Math.max(MIN_GAUGE_SIZE, width - WIDGET_PADDING);
+	const count = Math.min(devices.length, MAX_SLOTS);
+
+	let size = MAX_GAUGE_SIZE;
+	if (count * MAX_GAUGE_SIZE + (count - 1) * SLOT_GAP > available) {
+		size = Math.floor((available - (count - 1) * SLOT_GAP) / count);
+	};
+	size = Math.max(MIN_GAUGE_SIZE, Math.min(MAX_GAUGE_SIZE, size));
+
+	const fitCount = Math.max(1, Math.floor((available + SLOT_GAP) / (size + SLOT_GAP)));
+	const shown = Math.min(count, fitCount);
+	const showText = shown <= TEXT_SLOT_LIMIT && size >= MIN_TEXT_GAUGE;
 	const tray = new St.BoxLayout({
 		style_class: 'widget-battery-tray',
 		x_expand: true,
 		y_expand: true,
+		x_align: Clutter.ActorAlign.CENTER,
 		y_align: Clutter.ActorAlign.CENTER,
 	});
 
-	for (let index = 0; index < SLOT_COUNT; index++) {
-		tray.add_child(createSlot(devices[index] ?? null, theme, createLabel));
+	for (let index = 0; index < shown; index++) {
+		tray.add_child(createSlot(devices[index], theme, createLabel, size, showText));
 	};
 
 	body.add_child(tray);
