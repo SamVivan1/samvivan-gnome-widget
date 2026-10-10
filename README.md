@@ -161,6 +161,7 @@ make uninstall      # removes the extension
 ├── install.sh            # one-liner installer
 ├── uninstall.sh          # one-liner uninstaller (--purge to wipe data)
 ├── Makefile              # make check/install/uninstall/pack
+├── scripts/              # check.sh (ESM parse) + pack.py (build release zip)
 ├── extension.js          # GNOME Shell entry, layout/drag/resize, panel menu
 ├── prefs.js              # libadwaita preferences UI
 ├── metadata.json         # Extension metadata

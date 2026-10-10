@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+"""Build the GNOME Shell extension zip from tracked runtime files only.
+
+Usage: scripts/pack.py [repo-root]
+
+Dev-only files (README, Makefile, install/uninstall scripts, CI config, docs,
+screenshots, this scripts/ dir) are excluded from the packaged extension.
+"""
+import os
+import shutil
+import subprocess
+import sys
+import zipfile
+
+EXT = "desktop-widget@samvivan"
+
+EXCLUDE_TOP_DIRS = {".github", "docs", "scripts", "screenshots", "build"}
+EXCLUDE_FILES = {
+    "README.md",
+    "Makefile",
+    "install.sh",
+    "uninstall.sh",
+    "LICENSE",
+    ".gitignore",
+}
+
+
+def main() -> int:
+    if len(sys.argv) > 1:
+        repo = os.path.abspath(sys.argv[1])
+    else:
+        repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    build = os.path.join(repo, "build")
+    stage = os.path.join(build, EXT)
+
+    shutil.rmtree(build, ignore_errors=True)
+    os.makedirs(stage)
+
+    files = subprocess.check_output(
+        ["git", "-C", repo, "ls-files"], text=True
+    ).splitlines()
+
+    count = 0
+    for f in files:
+        if not f:
+            continue
+        top = f.split("/", 1)[0]
+        if top in EXCLUDE_TOP_DIRS or f in EXCLUDE_FILES or top.startswith("."):
+            continue
+        src = os.path.join(repo, f)
+        dst = os.path.join(stage, f)
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        shutil.copy2(src, dst)
+        count += 1
+
+    glib = shutil.which("glib-compile-schemas")
+    if glib:
+        subprocess.run([glib, os.path.join(stage, "schemas")], check=True)
+    else:
+        print("warning: glib-compile-schemas not found; schemas left uncompiled")
+
+    zip_path = os.path.join(repo, f"{EXT}.shell-extension.zip")
+    if os.path.exists(zip_path):
+        os.remove(zip_path)
+
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
+        for root, _dirs, names in os.walk(stage):
+            for name in names:
+                path = os.path.join(root, name)
+                z.write(path, os.path.relpath(path, build))
+
+    print(f"ok {zip_path} ({count} files)")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

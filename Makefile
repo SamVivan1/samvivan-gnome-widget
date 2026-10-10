@@ -3,7 +3,7 @@ PREFIX  := $(HOME)/.local/share/gnome-shell/extensions/$(EXTUUID)
 
 .PHONY: check
 check:
-	@bash /tmp/mkcheck.sh
+	@bash scripts/check.sh
 
 .PHONY: clean
 clean:
@@ -11,7 +11,7 @@ clean:
 
 .PHONY: pack
 pack: clean check
-	@python3 /tmp/pack.py $(PWD)
+	@python3 scripts/pack.py $(CURDIR)
 
 .PHONY: install
 install: pack

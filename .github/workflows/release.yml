@@ -16,7 +16,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install deps
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends glib-compile-schemas zip
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libglib2.0-bin
 
       - name: Build extension zip
         run: make pack
