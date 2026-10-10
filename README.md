@@ -12,7 +12,7 @@ A lightweight desktop widget suite for GNOME Shell 50. Forked from `widgets@dist
 - **Calendar** – Month view at a glance
 - **Weather** – Uses GNOME Weather locations
 - **Photos** – Rotate local images or random photos from your Immich library, with automatic fallback. Supports all photos, favorites-only, or a specific album. Configurable interval and image quality.
-- **Battery** – System battery + GSConnect phone battery (when available)
+- **Battery** – System battery + GSConnect phone battery (when available). Devices pop and slide in/out as they connect or disconnect (respects GNOME reduce-motion).
 - **Placement** – Drag, resize, snap-to-grid, configurable grid gap, multi-monitor support (`-1` = primary)
 - **Behavior** – Edit/Lock/Hide-all modes, widget opacity (10–100%), optional top-panel icon
 - **Panel menu** – Quick toggle/edit/add/reset widgets from the top bar
@@ -187,6 +187,7 @@ Each widget module must export:
 And provide:
 - `export function style()` (optional)
 - `export function render({ ...settings })` – returns a `Clutter.Actor`/container
+- `export function reconcile({ ...settings, animate })` (optional) – takes precedence over `render` for in-place updates without clearing the body; set `animate` to `false` for instant changes
 - `export function cleanup(actor)` (optional)
 
 ### Adding a widget

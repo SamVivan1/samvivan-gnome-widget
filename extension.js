@@ -1155,16 +1155,24 @@ class WidgetController {
     this._dragActor = null;
   };
 
+  _animationsEnabled() {
+    try {
+      return St.Settings.get().enable_animations;
+    } catch (error) {
+      return true;
+    };
+  };
+
   _fillWidgetBody(widget, body) {
-    body.destroy_all_children();
     const widgetModule = WIDGETS.get(widget.type);
 
-    if (!widgetModule?.render) {
+    if (!widgetModule?.render && !widgetModule?.reconcile) {
+      body.destroy_all_children();
       body.add_child(this._label('Unknown widget', 'widget-text'));
       return;
     };
 
-    widgetModule.render({
+    const params = {
       body,
       widget,
       theme: this._gnomeTheme(),
@@ -1173,7 +1181,16 @@ class WidgetController {
       createLabel: this._label.bind(this),
       sizeForWidget,
       settings: this._layoutSettings,
-    });
+      animate: this._animationsEnabled(),
+    };
+
+    if (widgetModule.reconcile) {
+      widgetModule.reconcile(params);
+      return;
+    };
+
+    body.destroy_all_children();
+    widgetModule.render(params);
   };
 
   _label(text, styleClass, style = null) {

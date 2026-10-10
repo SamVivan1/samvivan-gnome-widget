@@ -449,6 +449,13 @@ const BatteryRing = GObject.registerClass(
 			this._trackColor = theme?.dark ? [1, 1, 1, 0.16] : [0, 0, 0, 0.11];
 		};
 
+		update(device, theme) {
+			this._percentage = device?.percentage ?? null;
+			this._ringColor = batteryColor(this._percentage);
+			this._trackColor = theme?.dark ? [1, 1, 1, 0.16] : [0, 0, 0, 0.11];
+			this.queue_repaint();
+		};
+
 		vfunc_repaint() {
 			const cr = this.get_context();
 			const [width, height] = this.get_surface_size();
@@ -483,20 +490,45 @@ export function style(theme) {
 	return `color: ${theme.text};`;
 };
 
-function createSlot(device, theme, createLabel, size, showText) {
+function slotIconSize(size) {
+	return Math.max(16, Math.round(size * 0.36));
+};
+
+function addSlotLabels(entry, device, theme, createLabel) {
+	const nameLabel = createLabel(device ? device.name : '', 'widget-battery-name', `color: ${theme.muted};`);
+
+	nameLabel.x_expand = true;
+	nameLabel.x_align = Clutter.ActorAlign.CENTER;
+	nameLabel.clutter_text.set_line_wrap(false);
+	entry.slot.add_child(nameLabel);
+	entry.nameLabel = nameLabel;
+
+	const percentLabel = createLabel(device ? `${device.percentage}%` : '', 'widget-battery-percent', `color: ${device ? theme.text : theme.muted};`);
+
+	percentLabel.x_expand = false;
+	percentLabel.x_align = Clutter.ActorAlign.CENTER;
+	entry.slot.add_child(percentLabel);
+	entry.percentLabel = percentLabel;
+};
+
+function buildSlot(device, theme, createLabel, size, showText) {
 	const slot = new St.BoxLayout({
 		orientation: Clutter.Orientation.VERTICAL,
 		style_class: 'widget-battery-slot',
-		x_expand: true,
 		x_align: Clutter.ActorAlign.CENTER,
+		y_align: Clutter.ActorAlign.CENTER,
+		clip_to_allocation: true,
 	});
+
+	slot.set_width(size);
+
 	const gauge = new St.Widget({
 		style_class: 'widget-battery-gauge',
 		style: `width: ${size}px; height: ${size}px;`,
 		x_align: Clutter.ActorAlign.CENTER,
 	});
 	const ring = new BatteryRing(device, theme);
-	const iconSize = Math.max(16, Math.round(size * 0.36));
+	const iconSize = slotIconSize(size);
 	const icon = new St.Icon({
 		icon_name: iconForDevice(device),
 		style_class: 'widget-battery-icon',
@@ -511,29 +543,169 @@ function createSlot(device, theme, createLabel, size, showText) {
 	gauge.add_child(icon);
 	slot.add_child(gauge);
 
-	if (!showText) {
-		return slot;
+	const entry = {
+		slot,
+		gauge,
+		ring,
+		icon,
+		iconSize,
+		size,
+		showText,
+		nameLabel: null,
+		percentLabel: null,
 	};
 
-	const nameLabel = createLabel(device ? device.name : '', 'widget-battery-name', `color: ${theme.muted};`);
+	if (showText) {
+		addSlotLabels(entry, device, theme, createLabel);
+	};
 
-	nameLabel.x_expand = true;
-	nameLabel.x_align = Clutter.ActorAlign.CENTER;
-	nameLabel.clutter_text.set_line_wrap(false);
-	slot.add_child(nameLabel);
-
-	const percentLabel = createLabel(device ? `${device.percentage}%` : '', 'widget-battery-percent', `color: ${device ? theme.text : theme.muted};`);
-
-	percentLabel.x_expand = false;
-	percentLabel.x_align = Clutter.ActorAlign.CENTER;
-	slot.add_child(percentLabel);
-	return slot;
+	return entry;
 };
 
-export function render({body, widget, createLabel, theme, sizeForWidget}) {
+function resizeSlot(entry, size) {
+	const iconSize = slotIconSize(size);
+
+	entry.gauge.style = `width: ${size}px; height: ${size}px;`;
+	entry.ring.set_size(size, size);
+	entry.ring.style = `width: ${size}px; height: ${size}px;`;
+	entry.icon.set_size(iconSize, iconSize);
+	entry.icon.set_position(Math.round((size - iconSize) / 2), Math.round((size - iconSize) / 2));
+
+	if (!entry.exiting) {
+		entry.slot.set_width(size);
+	};
+
+	entry.iconSize = iconSize;
+	entry.size = size;
+};
+
+function syncSlot(entry, device, theme, createLabel, size, showText) {
+	if (entry.exiting) {
+		return;
+	};
+
+	entry.slot.remove_all_transitions();
+	entry.slot.set_opacity(255);
+	entry.slot.set_scale(1, 1);
+
+	if (entry.size !== size) {
+		resizeSlot(entry, size);
+	};
+
+	entry.ring.update(device, theme);
+	entry.icon.icon_name = iconForDevice(device);
+	entry.icon.style = `icon-size: ${entry.iconSize}px; color: ${device ? theme.text : theme.muted};`;
+
+	if (entry.showText === showText) {
+		if (showText) {
+			entry.nameLabel.text = device.name;
+			entry.percentLabel.text = `${device.percentage}%`;
+		};
+		return;
+	};
+
+	entry.nameLabel?.destroy();
+	entry.percentLabel?.destroy();
+	entry.nameLabel = null;
+	entry.percentLabel = null;
+	entry.showText = showText;
+
+	if (showText) {
+		addSlotLabels(entry, device, theme, createLabel);
+	};
+};
+
+function enterSlot(entry, animate) {
+	const {slot} = entry;
+
+	slot.remove_all_transitions();
+
+	if (!animate) {
+		slot.set_opacity(255);
+		return;
+	};
+
+	slot.set_pivot_point(0.5, 0.5);
+	slot.set_width(0);
+	slot.set_opacity(0);
+	slot.set_scale(0.6, 0.6);
+	slot.ease({
+		width: entry.size,
+		opacity: 255,
+		duration: 260,
+		mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
+	});
+	slot.ease({
+		scale_x: 1,
+		scale_y: 1,
+		duration: 320,
+		mode: Clutter.AnimationMode.EASE_OUT_BACK,
+	});
+};
+
+function exitSlot(tray, entry, animate) {
+	const {slot} = entry;
+
+	entry.exiting = true;
+	slot.remove_all_transitions();
+
+	const finalize = () => {
+		if (slot.get_parent() === tray) {
+			tray.remove_child(slot);
+		};
+		slot.destroy();
+	};
+
+	if (!animate) {
+		finalize();
+		return;
+	};
+
+	slot.set_pivot_point(0.5, 0.5);
+	slot.ease({
+		width: 0,
+		opacity: 0,
+		scale_x: 0.6,
+		scale_y: 0.6,
+		duration: 200,
+		mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+		onComplete: finalize,
+	});
+};
+
+function trayFor(body) {
+	const state = body._batteryState;
+
+	if (state && state.tray.get_parent() === body) {
+		return state;
+	};
+
+	body.destroy_all_children();
+
+	const tray = new St.BoxLayout({
+		style_class: 'widget-battery-tray',
+		x_expand: true,
+		y_expand: true,
+		x_align: Clutter.ActorAlign.CENTER,
+		y_align: Clutter.ActorAlign.CENTER,
+	});
+
+	body.add_child(tray);
+	body._batteryState = {tray, slots: new Map()};
+
+	return body._batteryState;
+};
+
+export function reconcile({body, widget, createLabel, theme, sizeForWidget, animate = true}) {
+	const state = trayFor(body);
+	const {tray, slots} = state;
 	const devices = readDevices();
 
 	if (devices.length === 0) {
+		for (const [key, entry] of slots) {
+			slots.delete(key);
+			exitSlot(tray, entry, animate);
+		};
 		return;
 	};
 
@@ -550,17 +722,34 @@ export function render({body, widget, createLabel, theme, sizeForWidget}) {
 	const fitCount = Math.max(1, Math.floor((available + SLOT_GAP) / (size + SLOT_GAP)));
 	const shown = Math.min(count, fitCount);
 	const showText = shown <= TEXT_SLOT_LIMIT && size >= MIN_TEXT_GAUGE;
-	const tray = new St.BoxLayout({
-		style_class: 'widget-battery-tray',
-		x_expand: true,
-		y_expand: true,
-		x_align: Clutter.ActorAlign.CENTER,
-		y_align: Clutter.ActorAlign.CENTER,
-	});
+	const targets = devices.slice(0, shown);
+	const targetKeys = new Set(targets.map(deviceKey));
 
-	for (let index = 0; index < shown; index++) {
-		tray.add_child(createSlot(devices[index], theme, createLabel, size, showText));
+	for (const [key, entry] of [...slots]) {
+		if (!targetKeys.has(key)) {
+			slots.delete(key);
+			exitSlot(tray, entry, animate);
+		};
 	};
 
-	body.add_child(tray);
+	targets.forEach((device, index) => {
+		const key = deviceKey(device);
+		const existing = slots.get(key);
+
+		if (existing) {
+			syncSlot(existing, device, theme, createLabel, size, showText);
+			tray.set_child_at_index(existing.slot, index);
+			return;
+		};
+
+		const entry = buildSlot(device, theme, createLabel, size, showText);
+
+		slots.set(key, entry);
+		tray.insert_child_at_index(entry.slot, index);
+		enterSlot(entry, animate);
+	});
+};
+
+export function render(params) {
+	reconcile({...params, animate: false});
 };
