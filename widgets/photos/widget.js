@@ -1,9 +1,10 @@
-import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
-import GObject from 'gi://GObject';
 import St from 'gi://St';
+import GObject from 'gi://GObject';
+import Clutter from 'gi://Clutter';
 
+import * as Immich from './immich.js';
 import { warn } from '../../logger.js';
 
 export const type = 'photos';
@@ -13,11 +14,28 @@ export const defaultSize = 'medium';
 
 const IMAGE_EXTENSIONS = ['.avif', '.bmp', '.gif', '.jpeg', '.jpg', '.png', '.svg', '.webp'];
 const PHOTO_CACHE_TTL_MS = 60 * 1000;
-const PHOTO_REFRESH_SECONDS = 15;
 const PHOTO_RADIUS = 26;
+const DEFAULT_INTERVAL_SECONDS = 1800;
+const MIN_INTERVAL_SECONDS = 5;
+const MAX_INTERVAL_SECONDS = 24 * 60 * 60;
+const IMMICH_BATCH_SIZE = 20;
+const IMMICH_LOW_WATER = 4;
+const IMMICH_SIZES = ['thumbnail', 'preview', 'fullsize'];
+const SOURCES = ['local', 'immich', 'mixed'];
+const SETTINGS_KEYS = [
+	'photos-source',
+	'photo-interval',
+	'immich-server-url',
+	'immich-api-key',
+	'immich-scope',
+	'immich-album-id',
+	'immich-size',
+];
+const PRUNE_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 let picturePoolCache = {time: 0, pools: []};
 const pictureAssignments = new Map();
+let lastPruneTime = 0;
 
 function collectPictures(directory, images, seenDirectories, depth = 0) {
 	if (!directory || depth > 4 || images.length >= 300) {
@@ -105,56 +123,34 @@ function picturePools(force = false) {
 	return picturePoolCache.pools;
 };
 
-function stablePictureIndex(widgetId, length) {
-	let hash = Math.floor(Date.now() / 86400000);
-
-	for (const character of String(widgetId)) {
-		hash = ((hash * 31) + character.codePointAt(0)) >>> 0;
-	};
-
-	return hash % length;
-};
-
-function assignPictureFile(assignment, force = false, excludedPath = null) {
-	const pools = picturePools(force);
+function pickLocalPhotoFile(assignment) {
+	const pools = picturePools();
 	const currentPath = pictureAssignments.get(assignment) ?? null;
 	const poolPaths = new Set(pools.flatMap(pool => pool.map(filePath)));
 	const usedPaths = new Set([...pictureAssignments.entries()].filter(([key, path]) => key !== assignment && poolPaths.has(path)).map(([, path]) => path));
+	let candidates = pools.flatMap(pool => pool.filter(file => {
+		const path = filePath(file);
 
-	for (const pool of pools) {
-		const available = pool.filter(file => {
-			const path = filePath(file);
+		return path !== currentPath && !usedPaths.has(path);
+	}));
 
-			return path !== excludedPath && !usedPaths.has(path);
-		});
-
-		if (available.length === 0) {
-			continue;
-		};
-
-		const current = available.find(file => filePath(file) === currentPath);
-		const selected = current ?? available[stablePictureIndex(assignment.seed, available.length)];
-
-		pictureAssignments.set(assignment, filePath(selected));
-		return selected;
+	if (candidates.length === 0) {
+		candidates = pools.flatMap(pool => pool.filter(file => filePath(file) !== currentPath));
 	};
 
-	for (const pool of pools) {
-		const available = pool.filter(file => filePath(file) !== excludedPath);
-
-		if (available.length === 0) {
-			continue;
-		};
-
-		const current = available.find(file => filePath(file) === currentPath);
-		const selected = current ?? available[stablePictureIndex(assignment.seed, available.length)];
-
-		pictureAssignments.set(assignment, filePath(selected));
-		return selected;
+	if (candidates.length === 0) {
+		candidates = pools.flatMap(pool => pool);
 	};
 
-	pictureAssignments.delete(assignment);
-	return null;
+	if (candidates.length === 0) {
+		pictureAssignments.delete(assignment);
+		return null;
+	};
+
+	const selected = candidates[Math.floor(Math.random() * candidates.length)];
+	pictureAssignments.set(assignment, filePath(selected));
+
+	return selected;
 };
 
 function releasePictureFile(assignment, file) {
@@ -163,9 +159,20 @@ function releasePictureFile(assignment, file) {
 	};
 };
 
+function maybePruneCache(settings) {
+	const now = Date.now();
+
+	if (now - lastPruneTime < PRUNE_INTERVAL_MS) {
+		return;
+	};
+
+	lastPruneTime = now;
+	Immich.pruneCache(settings);
+};
+
 const PhotoFrame = GObject.registerClass(
 	class PhotoFrame extends St.Widget {
-		_init(assignment, file) {
+		_init({assignment, settings = null}) {
 			super._init({
 				style_class: 'widget-photo',
 				x_expand: true,
@@ -175,67 +182,227 @@ const PhotoFrame = GObject.registerClass(
 			});
 
 			this._assignment = assignment;
-			this._file = null;
-			this._setFile(file);
+			this._settings = settings;
+			this._bgUri = null;
+			this._localFile = null;
+			this._immichQueue = [];
+			this._immichFetch = null;
+			this._lastImmichId = null;
+			this._generation = 0;
+			this._destroyed = false;
+			this._refreshTimeoutId = 0;
+			this._settingsSignalIds = [];
 
-			this._refreshTimeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, PHOTO_REFRESH_SECONDS, () => {
-				if (!this.get_parent()) {
-					this._refreshTimeoutId = 0;
-					return GLib.SOURCE_REMOVE;
+			if (this._settings) {
+				const handler = () => this._onSettingsChanged();
+
+				for (const key of SETTINGS_KEYS) {
+					this._settingsSignalIds.push(this._settings.connect(`changed::${key}`, handler));
 				};
+			};
 
-				this._refreshFile(false);
-				return GLib.SOURCE_CONTINUE;
-			});
+			this._schedule();
+			this._rotate();
 
 			this.connect('destroy', this._onDestroy.bind(this));
 		};
 
-		_onDestroy() {
-			releasePictureFile(this._assignment, this._file);
+		_intervalSeconds() {
+			if (!this._settings) {
+				return DEFAULT_INTERVAL_SECONDS;
+			};
 
+			const value = this._settings.get_int('photo-interval');
+
+			return Math.min(MAX_INTERVAL_SECONDS, Math.max(MIN_INTERVAL_SECONDS, value || DEFAULT_INTERVAL_SECONDS));
+		};
+
+		_source() {
+			const value = this._settings?.get_string('photos-source') ?? 'local';
+
+			return SOURCES.includes(value) ? value : 'mixed';
+		};
+
+		_immichSize() {
+			const value = this._settings?.get_string('immich-size') ?? 'preview';
+
+			return IMMICH_SIZES.includes(value) ? value : 'preview';
+		};
+
+		_schedule() {
+			this._clearTimer();
+
+			this._refreshTimeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, this._intervalSeconds(), () => {
+				if (this._destroyed || !this.get_parent()) {
+					this._refreshTimeoutId = 0;
+					return GLib.SOURCE_REMOVE;
+				};
+
+				this._rotate();
+				return GLib.SOURCE_CONTINUE;
+			});
+		};
+
+		_clearTimer() {
 			if (this._refreshTimeoutId) {
 				GLib.Source.remove(this._refreshTimeoutId);
 				this._refreshTimeoutId = 0;
 			};
+		};
 
-			this._file = null;
+		_setUri(uri) {
+			if (!uri || uri === this._bgUri) {
+				return;
+			};
+
+			this._bgUri = uri;
+			this.set_style(`background-image: url(${JSON.stringify(uri)});`);
+		};
+
+		_rotate() {
+			const source = this._source();
+
+			if (source === 'local') {
+				this._rotateLocal();
+				return;
+			};
+
+			const generation = this._generation;
+
+			this._showNextImmich(generation).then(shown => {
+				if (this._destroyed || generation !== this._generation) {
+					return;
+				};
+
+				if (!shown && (source === 'mixed' || !this._bgUri)) {
+					this._rotateLocal();
+				};
+			});
+		};
+
+		_rotateLocal() {
+			const file = pickLocalPhotoFile(this._assignment);
+
+			if (!file) {
+				return;
+			};
+
+			this._localFile = file;
+			this._setUri(file.get_uri());
+		};
+
+		async _fetchImmichBatch(generation) {
+			if (this._immichFetch) {
+				return this._immichFetch;
+			};
+
+			maybePruneCache(this._settings);
+
+			this._immichFetch = (async () => {
+				try {
+					const ids = await Immich.fetchRandomIds(this._settings, IMMICH_BATCH_SIZE);
+
+					if (this._destroyed || generation !== this._generation) {
+						return false;
+					};
+
+					const seen = new Set(this._immichQueue);
+
+					for (const id of ids) {
+						if (!seen.has(id) && id !== this._lastImmichId) {
+							this._immichQueue.push(id);
+							seen.add(id);
+						};
+					};
+
+					return this._immichQueue.length > 0;
+				} catch (error) {
+					warn('photos-immich', `Could not fetch Immich photos: ${error.message}`);
+					return false;
+				} finally {
+					this._immichFetch = null;
+				};
+			})();
+
+			return this._immichFetch;
+		};
+
+		async _showNextImmich(generation) {
+			for (let attempt = 0; attempt <= this._immichQueue.length; attempt++) {
+				if (this._destroyed || generation !== this._generation) {
+					return false;
+				};
+
+				if (this._immichQueue.length === 0) {
+					const filled = await this._fetchImmichBatch(generation);
+
+					if (this._destroyed || generation !== this._generation) {
+						return false;
+					};
+
+					if (!filled || this._immichQueue.length === 0) {
+						return false;
+					};
+				};
+
+				const id = this._immichQueue.shift();
+
+				try {
+					const path = await Immich.ensureThumbnail(this._settings, id, this._immichSize());
+
+					if (this._destroyed || generation !== this._generation) {
+						return false;
+					};
+
+					this._lastImmichId = id;
+					this._setUri(Gio.File.new_for_path(path).get_uri());
+
+					if (this._immichQueue.length <= IMMICH_LOW_WATER) {
+						this._fetchImmichBatch(generation);
+					};
+
+					return true;
+				} catch (error) {
+					warn('photos-immich', `Could not load Immich thumbnail: ${error.message}`);
+				};
+			};
+
+			return false;
+		};
+
+		_onSettingsChanged() {
+			this._generation += 1;
+			this._immichQueue = [];
+			this._immichFetch = null;
+			this._schedule();
+			this._rotate();
+		};
+
+		_onDestroy() {
+			this._destroyed = true;
+			this._generation += 1;
+			releasePictureFile(this._assignment, this._localFile);
+
+			for (const id of this._settingsSignalIds) {
+				this._settings?.disconnect(id);
+			};
+
+			this._settingsSignalIds = [];
+			this._clearTimer();
+			this._localFile = null;
+			this._bgUri = null;
 			this.set_style(null);
-		};
-
-		_setFile(file) {
-			if (filePath(file) === filePath(this._file)) {
-				return false;
-			};
-
-			this._file = file;
-			const uri = file?.get_uri() ?? null;
-			this.set_style(uri ? `background-image: url(${JSON.stringify(uri)});` : null);
-
-			return true;
-		};
-
-		_refreshFile(force, excludedPath = null) {
-			const currentPath = filePath(this._file);
-
-			if (currentPath && !this._file.query_exists(null)) {
-				excludedPath ??= currentPath;
-				force = true;
-				invalidatePicturePool();
-			};
-
-			return this._setFile(assignPictureFile(this._assignment, force, excludedPath));
 		};
 	}
 );
 
 export function style(theme) {
-  return `border-radius: 26px; padding: 0px;`;
+  return `border-radius: ${PHOTO_RADIUS}px; padding: 0px;`;
 };
 
-export function render({body, widget}) {
+export function render({body, widget, settings = null}) {
 	const assignment = {seed: widget.id};
-	const frame = new PhotoFrame(assignment, assignPictureFile(assignment));
+	const frame = new PhotoFrame({assignment, settings});
 
 	frame.set_x_expand(true);
 	frame.set_y_expand(true);

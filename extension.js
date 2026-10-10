@@ -622,7 +622,6 @@ class WidgetController {
       this._destroyIndicator();
     };
   };
-  };
 
   _destroyIndicator() {
     this._indicator?.destroy();
@@ -1112,6 +1111,7 @@ class WidgetController {
       weatherLocation: this._weatherLocation,
       createLabel: this._label.bind(this),
       sizeForWidget,
+      settings: this._layoutSettings,
     });
   };
 
