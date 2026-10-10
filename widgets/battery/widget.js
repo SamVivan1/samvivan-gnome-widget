@@ -11,14 +11,18 @@ export const label = 'Battery';
 export const stylesheet = 'widgets/battery/stylesheet.css';
 export const defaultSize = 'medium';
 
-const MAX_GAUGE_SIZE = 84;
-const MIN_GAUGE_SIZE = 40;
+const MAX_GAUGE_SIZE = 320;
+const MIN_GAUGE_SIZE = 36;
 const SLOT_GAP = 12;
 const MAX_SLOTS = 8;
 const TEXT_SLOT_LIMIT = 4;
-const MIN_TEXT_GAUGE = 64;
+const MIN_TEXT_GAUGE = 52;
 const WIDGET_PADDING = 30;
 const FALLBACK_WIDGET_WIDTH = 454;
+const FALLBACK_WIDGET_HEIGHT = 190;
+const SLOT_SPACING = 6;
+const PERCENT_TEXT_RATIO = 0.42;
+const NAME_TEXT_RATIO = 0.2;
 
 const DEVICE_TYPE = {
 	BATTERY: 2,
@@ -465,7 +469,7 @@ const BatteryRing = GObject.registerClass(
 				return;
 			};
 
-			const lineWidth = 7;
+			const lineWidth = Math.max(5, Math.round(Math.min(width, height) * 0.08));
 			const radius = Math.min(width, height) / 2 - lineWidth / 2 - 1;
 			const centerX = width / 2;
 			const centerY = height / 2;
@@ -491,19 +495,29 @@ export function style(theme) {
 };
 
 function slotIconSize(size) {
-	return Math.max(16, Math.round(size * 0.36));
+	return Math.max(16, Math.round(size * 0.4));
 };
 
-function addSlotLabels(entry, device, theme, createLabel) {
-	const nameLabel = createLabel(device ? device.name : '', 'widget-battery-name', `color: ${theme.muted};`);
+function percentFontSize(size) {
+	return Math.max(13, Math.round(size * 0.34));
+};
 
-	nameLabel.x_expand = true;
-	nameLabel.x_align = Clutter.ActorAlign.CENTER;
-	nameLabel.clutter_text.set_line_wrap(false);
-	entry.slot.add_child(nameLabel);
-	entry.nameLabel = nameLabel;
+function nameFontSize(size) {
+	return Math.max(11, Math.round(size * 0.15));
+};
 
-	const percentLabel = createLabel(device ? `${device.percentage}%` : '', 'widget-battery-percent', `color: ${device ? theme.text : theme.muted};`);
+function addSlotLabels(entry, device, theme, createLabel, size, showName) {
+	if (showName) {
+		const nameLabel = createLabel(device ? device.name : '', 'widget-battery-name', `font-size: ${nameFontSize(size)}px; color: ${theme.muted};`);
+
+		nameLabel.x_expand = true;
+		nameLabel.x_align = Clutter.ActorAlign.CENTER;
+		nameLabel.clutter_text.set_line_wrap(false);
+		entry.slot.add_child(nameLabel);
+		entry.nameLabel = nameLabel;
+	};
+
+	const percentLabel = createLabel(device ? `${device.percentage}%` : '', 'widget-battery-percent', `font-size: ${percentFontSize(size)}px; color: ${device ? theme.text : theme.muted};`);
 
 	percentLabel.x_expand = false;
 	percentLabel.x_align = Clutter.ActorAlign.CENTER;
@@ -511,7 +525,17 @@ function addSlotLabels(entry, device, theme, createLabel) {
 	entry.percentLabel = percentLabel;
 };
 
-function buildSlot(device, theme, createLabel, size, showText) {
+function applyLabelStyles(entry, device, theme, size) {
+	if (entry.nameLabel) {
+		entry.nameLabel.style = `font-size: ${nameFontSize(size)}px; color: ${theme.muted};`;
+	};
+
+	if (entry.percentLabel) {
+		entry.percentLabel.style = `font-size: ${percentFontSize(size)}px; color: ${device ? theme.text : theme.muted};`;
+	};
+};
+
+function buildSlot(device, theme, createLabel, size, showName) {
 	const slot = new St.BoxLayout({
 		orientation: Clutter.Orientation.VERTICAL,
 		style_class: 'widget-battery-slot',
@@ -550,19 +574,17 @@ function buildSlot(device, theme, createLabel, size, showText) {
 		icon,
 		iconSize,
 		size,
-		showText,
+		showName,
 		nameLabel: null,
 		percentLabel: null,
 	};
 
-	if (showText) {
-		addSlotLabels(entry, device, theme, createLabel);
-	};
+	addSlotLabels(entry, device, theme, createLabel, size, showName);
 
 	return entry;
 };
 
-function resizeSlot(entry, size) {
+function resizeSlot(entry, device, theme, size) {
 	const iconSize = slotIconSize(size);
 
 	entry.gauge.style = `width: ${size}px; height: ${size}px;`;
@@ -570,6 +592,7 @@ function resizeSlot(entry, size) {
 	entry.ring.style = `width: ${size}px; height: ${size}px;`;
 	entry.icon.set_size(iconSize, iconSize);
 	entry.icon.set_position(Math.round((size - iconSize) / 2), Math.round((size - iconSize) / 2));
+	applyLabelStyles(entry, device, theme, size);
 
 	if (!entry.exiting) {
 		entry.slot.set_width(size);
@@ -579,7 +602,7 @@ function resizeSlot(entry, size) {
 	entry.size = size;
 };
 
-function syncSlot(entry, device, theme, createLabel, size, showText) {
+function syncSlot(entry, device, theme, createLabel, size, showName) {
 	if (entry.exiting) {
 		return;
 	};
@@ -589,18 +612,23 @@ function syncSlot(entry, device, theme, createLabel, size, showText) {
 	entry.slot.set_scale(1, 1);
 
 	if (entry.size !== size) {
-		resizeSlot(entry, size);
+		resizeSlot(entry, device, theme, size);
 	};
 
 	entry.ring.update(device, theme);
 	entry.icon.icon_name = iconForDevice(device);
 	entry.icon.style = `icon-size: ${entry.iconSize}px; color: ${device ? theme.text : theme.muted};`;
 
-	if (entry.showText === showText) {
-		if (showText) {
-			entry.nameLabel.text = device.name;
-			entry.percentLabel.text = `${device.percentage}%`;
+	if (entry.showName === showName) {
+		if (entry.nameLabel) {
+			entry.nameLabel.text = device ? device.name : '';
 		};
+
+		if (entry.percentLabel) {
+			entry.percentLabel.text = device ? `${device.percentage}%` : '';
+		};
+
+		applyLabelStyles(entry, device, theme, size);
 		return;
 	};
 
@@ -608,11 +636,9 @@ function syncSlot(entry, device, theme, createLabel, size, showText) {
 	entry.percentLabel?.destroy();
 	entry.nameLabel = null;
 	entry.percentLabel = null;
-	entry.showText = showText;
+	entry.showName = showName;
 
-	if (showText) {
-		addSlotLabels(entry, device, theme, createLabel);
-	};
+	addSlotLabels(entry, device, theme, createLabel, size, showName);
 };
 
 function enterSlot(entry, animate) {
@@ -643,16 +669,19 @@ function enterSlot(entry, animate) {
 	});
 };
 
-function exitSlot(tray, entry, animate) {
+function exitSlot(entry, animate) {
 	const {slot} = entry;
 
 	entry.exiting = true;
 	slot.remove_all_transitions();
 
 	const finalize = () => {
-		if (slot.get_parent() === tray) {
-			tray.remove_child(slot);
+		const parent = slot.get_parent();
+
+		if (parent) {
+			parent.remove_child(slot);
 		};
+
 		slot.destroy();
 	};
 
@@ -673,6 +702,16 @@ function exitSlot(tray, entry, animate) {
 	});
 };
 
+function rowBox() {
+	return new St.BoxLayout({
+		style_class: 'widget-battery-row',
+		x_expand: true,
+		y_align: Clutter.ActorAlign.CENTER,
+		x_align: Clutter.ActorAlign.CENTER,
+		spacing: SLOT_GAP,
+	});
+};
+
 function trayFor(body) {
 	const state = body._batteryState;
 
@@ -684,6 +723,7 @@ function trayFor(body) {
 
 	const tray = new St.BoxLayout({
 		style_class: 'widget-battery-tray',
+		orientation: Clutter.Orientation.VERTICAL,
 		x_expand: true,
 		y_expand: true,
 		x_align: Clutter.ActorAlign.CENTER,
@@ -691,63 +731,145 @@ function trayFor(body) {
 	});
 
 	body.add_child(tray);
-	body._batteryState = {tray, slots: new Map()};
+	body._batteryState = {tray, rows: [], slots: new Map()};
 
 	return body._batteryState;
 };
 
+function bestGrid(count, availWidth, availHeight, showName) {
+	const denom = 1 + PERCENT_TEXT_RATIO + (showName ? NAME_TEXT_RATIO : 0);
+	const gaps = (showName ? 2 : 1) * SLOT_SPACING;
+	const maxCols = Math.max(1, Math.min(count, MAX_SLOTS));
+	let best = null;
+
+	for (let cols = 1; cols <= maxCols; cols++) {
+		const rows = Math.ceil(count / cols);
+		const cellWidth = (availWidth - (cols - 1) * SLOT_GAP) / cols;
+		const cellHeight = (availHeight - (rows - 1) * SLOT_GAP) / rows;
+
+		if (cellWidth <= 0 || cellHeight <= 0) {
+			continue;
+		};
+
+		let size = Math.min(cellWidth, (cellHeight - gaps) / denom);
+
+		if (!Number.isFinite(size) || size < MIN_GAUGE_SIZE) {
+			continue;
+		};
+
+		size = Math.min(size, MAX_GAUGE_SIZE);
+
+		if (!best || size > best.size) {
+			best = {cols, rows, size};
+		};
+	};
+
+	return best;
+};
+
+function computeLayout(count, availWidth, availHeight) {
+	if (count <= TEXT_SLOT_LIMIT) {
+		const named = bestGrid(count, availWidth, availHeight, true);
+
+		if (named && named.size >= MIN_TEXT_GAUGE) {
+			return {...named, showName: true};
+		};
+	};
+
+	const plain = bestGrid(count, availWidth, availHeight, false);
+
+	if (plain) {
+		return {...plain, showName: false};
+	};
+
+	const named = bestGrid(count, availWidth, availHeight, true) ?? {cols: count, rows: 1, size: MIN_GAUGE_SIZE};
+
+	return {...named, showName: named.size >= MIN_TEXT_GAUGE};
+};
+
+function ensureRows(state, count) {
+	while (state.rows.length < count) {
+		const row = rowBox();
+
+		state.tray.add_child(row);
+		state.rows.push(row);
+	};
+};
+
+function pruneRows(state, keep) {
+	let index = state.rows.length - 1;
+
+	while (index >= keep) {
+		const row = state.rows[index];
+
+		if (row.get_n_children() > 0) {
+			break;
+		};
+
+		state.rows.splice(index, 1);
+		row.destroy();
+		index--;
+	};
+};
+
 export function reconcile({body, widget, createLabel, theme, sizeForWidget, animate = true}) {
 	const state = trayFor(body);
-	const {tray, slots} = state;
+	const {rows, slots} = state;
 	const devices = readDevices();
 
 	if (devices.length === 0) {
 		for (const [key, entry] of slots) {
 			slots.delete(key);
-			exitSlot(tray, entry, animate);
+			exitSlot(entry, animate);
 		};
+
+		pruneRows(state, 0);
 		return;
 	};
 
-	const width = sizeForWidget ? sizeForWidget(widget)[0] : FALLBACK_WIDGET_WIDTH;
-	const available = Math.max(MIN_GAUGE_SIZE, width - WIDGET_PADDING);
+	const [width, height] = sizeForWidget ? sizeForWidget(widget) : [FALLBACK_WIDGET_WIDTH, FALLBACK_WIDGET_HEIGHT];
+	const availWidth = Math.max(MIN_GAUGE_SIZE, width - WIDGET_PADDING);
+	const availHeight = Math.max(MIN_GAUGE_SIZE, height - WIDGET_PADDING);
 	const count = Math.min(devices.length, MAX_SLOTS);
-
-	let size = MAX_GAUGE_SIZE;
-	if (count * MAX_GAUGE_SIZE + (count - 1) * SLOT_GAP > available) {
-		size = Math.floor((available - (count - 1) * SLOT_GAP) / count);
-	};
-	size = Math.max(MIN_GAUGE_SIZE, Math.min(MAX_GAUGE_SIZE, size));
-
-	const fitCount = Math.max(1, Math.floor((available + SLOT_GAP) / (size + SLOT_GAP)));
-	const shown = Math.min(count, fitCount);
-	const showText = shown <= TEXT_SLOT_LIMIT && size >= MIN_TEXT_GAUGE;
-	const targets = devices.slice(0, shown);
+	const {cols, rows: rowCount, size, showName} = computeLayout(count, availWidth, availHeight);
+	const targets = devices.slice(0, count);
 	const targetKeys = new Set(targets.map(deviceKey));
 
 	for (const [key, entry] of [...slots]) {
 		if (!targetKeys.has(key)) {
 			slots.delete(key);
-			exitSlot(tray, entry, animate);
+			exitSlot(entry, animate);
 		};
 	};
 
+	ensureRows(state, rowCount);
+
 	targets.forEach((device, index) => {
 		const key = deviceKey(device);
+		const row = rows[Math.floor(index / cols)];
+		const column = index % cols;
 		const existing = slots.get(key);
 
 		if (existing) {
-			syncSlot(existing, device, theme, createLabel, size, showText);
-			tray.set_child_at_index(existing.slot, index);
+			syncSlot(existing, device, theme, createLabel, size, showName);
+
+			if (existing.slot.get_parent() !== row) {
+				existing.slot.get_parent()?.remove_child(existing.slot);
+				row.add_child(existing.slot);
+			};
+
+			row.set_child_at_index(existing.slot, Math.min(column, row.get_n_children() - 1));
 			return;
 		};
 
-		const entry = buildSlot(device, theme, createLabel, size, showText);
+		const entry = buildSlot(device, theme, createLabel, size, showName);
 
 		slots.set(key, entry);
-		tray.insert_child_at_index(entry.slot, index);
+		row.insert_child_at_index(entry.slot, Math.min(column, row.get_n_children()));
 		enterSlot(entry, animate);
 	});
+
+	pruneRows(state, rowCount);
 };
 
 export function render(params) {

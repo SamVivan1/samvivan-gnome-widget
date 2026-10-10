@@ -7,30 +7,18 @@
   spacing: 12px;
 }
 
+.widget-battery-row {
+  spacing: 12px;
+}
+
 .widget-battery-slot {
   spacing: 6px;
 }
 
-.widget-battery-gauge {
-  width: 84px;
-  height: 84px;
-}
-
-.widget-battery-ring {
-  width: 84px;
-  height: 84px;
-}
-
-.widget-battery-icon {
-  icon-size: 30px;
-}
-
 .widget-battery-percent {
-  font-size: 26px;
   font-weight: 800;
 }
 
 .widget-battery-name {
-  font-size: 12px;
   font-weight: 600;
 }
