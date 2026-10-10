@@ -725,11 +725,13 @@ function enterSlot(entry, animate) {
 
 	slot.set_opacity(0);
 	slot.set_translation(Math.min(entry.slotWidth + SLOT_GAP, 140), 0, 0);
-	slot.ease({
-		translation_x: 0,
-		opacity: 255,
-		duration: 360,
+	slot.ease_property('translation-x', 0, {
+		duration: 380,
 		mode: Clutter.AnimationMode.EASE_OUT_BACK,
+	});
+	slot.ease_property('opacity', 255, {
+		duration: 260,
+		mode: Clutter.AnimationMode.EASE_OUT_QUAD,
 	});
 };
 
@@ -757,11 +759,18 @@ function offsetWithin(actor, ancestor) {
 
 function startExit(entry, key, state, animate) {
 	const {slot} = entry;
+	let finished = false;
 
 	entry.exiting = true;
 	entry.exitStarted = true;
 
 	const finalize = () => {
+		if (finished) {
+			return;
+		};
+
+		finished = true;
+
 		const parent = slot.get_parent();
 
 		if (parent) {
@@ -786,48 +795,72 @@ function startExit(entry, key, state, animate) {
 
 	slot.remove_all_transitions();
 	slot.set_translation(0, 0, 0);
+
+	const lift = Math.min(Math.round(entry.size * 0.45), 30);
+	const fall = Math.round(entry.size + lift + SLOT_GAP * 2);
+
 	slot.ease({
-		translation_y: Math.round(entry.size + SLOT_GAP * 2),
-		opacity: 0,
-		duration: 360,
-		mode: Clutter.AnimationMode.EASE_OUT_BOUNCE,
-		onComplete: finalize,
+		translation_y: -lift,
+		duration: 150,
+		mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
+		onComplete: () => {
+			if (finished) {
+				return;
+			};
+
+			slot.ease_property('translation-y', fall, {
+				duration: 340,
+				mode: Clutter.AnimationMode.EASE_IN_QUAD,
+			});
+			slot.ease_property('opacity', 0, {
+				duration: 360,
+				mode: Clutter.AnimationMode.EASE_IN_QUAD,
+				onComplete: finalize,
+			});
+		},
 	});
 };
 
-function settleSlots(slots, positionsBefore, stage, animate) {
+function flipSlots(slots, positionsBefore, stage, animate) {
 	if (!animate || !stage) {
 		return;
 	};
 
-	GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-		for (const [key, entry] of slots) {
-			const previous = positionsBefore.get(key);
+	for (const [key, entry] of slots) {
+		const previous = positionsBefore.get(key);
+		const slot = entry.slot;
 
-			if (!previous || entry.exiting || !entry.slot.get_parent()) {
-				continue;
-			};
+		if (!previous || entry.exiting) {
+			continue;
+		};
 
-			const [nowX, nowY] = offsetWithin(entry.slot, stage);
+		if (slot._flipId) {
+			slot.disconnect(slot._flipId);
+			slot._flipId = 0;
+		};
+
+		slot._flipId = slot.connect('notify::allocation', () => {
+			slot.disconnect(slot._flipId);
+			slot._flipId = 0;
+
+			const [nowX, nowY] = offsetWithin(slot, stage);
 			const dx = Math.round(previous[0] - nowX);
 			const dy = Math.round(previous[1] - nowY);
 
 			if (Math.abs(dx) < 1 && Math.abs(dy) < 1) {
-				continue;
+				return;
 			};
 
-			entry.slot.remove_all_transitions();
-			entry.slot.set_translation(dx, dy, 0);
-			entry.slot.ease({
+			slot.remove_all_transitions();
+			slot.set_translation(dx, dy, 0);
+			slot.ease({
 				translation_x: 0,
 				translation_y: 0,
-				duration: 320,
+				duration: 300,
 				mode: Clutter.AnimationMode.EASE_OUT_BACK,
 			});
-		};
-
-		return GLib.SOURCE_REMOVE;
-	});
+		});
+	};
 };
 
 function rowBox() {
@@ -1060,7 +1093,7 @@ export function reconcile({body, widget, createLabel, theme, sizeForWidget, anim
 		};
 	};
 
-	settleSlots(slots, positionsBefore, stage, animate);
+	flipSlots(slots, positionsBefore, stage, animate);
 	pruneRows(state, rowCount);
 };
 
