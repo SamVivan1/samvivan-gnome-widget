@@ -18,12 +18,18 @@ const MAX_SLOTS = 8;
 const TEXT_SLOT_LIMIT = 4;
 const MIN_TEXT_GAUGE = 52;
 const WIDGET_PADDING = 30;
+const LAYOUT_MARGIN = 18;
 const FALLBACK_WIDGET_WIDTH = 454;
 const FALLBACK_WIDGET_HEIGHT = 190;
 const SLOT_SPACING = 6;
-const PERCENT_TEXT_RATIO = 0.42;
+const PERCENT_TEXT_RATIO = 0.4;
 const NAME_TEXT_RATIO = 0.2;
-const HORIZONTAL_TEXT_RATIO = 0.85;
+const PERCENT_FONT_RATIO = 0.29;
+const NAME_FONT_RATIO = 0.15;
+const HORIZONTAL_PERCENT_RATIO = 0.27;
+const HORIZONTAL_NAME_RATIO = 0.15;
+const HORIZONTAL_TEXT_SAFETY = 1.15;
+const HORIZONTAL_CHAR_WIDTH = 0.64;
 
 const DEVICE_TYPE = {
 	BATTERY: 2,
@@ -501,9 +507,18 @@ function slotIconSize(size) {
 
 function slotFonts(size, horizontal) {
 	return {
-		percent: Math.max(13, Math.round(size * 0.34)),
-		name: Math.max(11, Math.round(size * (horizontal ? 0.17 : 0.15))),
+		percent: Math.max(12, Math.round(size * (horizontal ? HORIZONTAL_PERCENT_RATIO : PERCENT_FONT_RATIO))),
+		name: Math.max(11, Math.round(size * (horizontal ? HORIZONTAL_NAME_RATIO : NAME_FONT_RATIO))),
 	};
+};
+
+function horizontalTextRatio(device) {
+	const nameLength = device?.name ? device.name.length : 0;
+	const percentLength = device ? `${device.percentage}%`.length : 0;
+	const nameWidth = nameLength * HORIZONTAL_CHAR_WIDTH * HORIZONTAL_NAME_RATIO;
+	const percentWidth = percentLength * HORIZONTAL_CHAR_WIDTH * HORIZONTAL_PERCENT_RATIO;
+
+	return Math.max(nameWidth, percentWidth) * HORIZONTAL_TEXT_SAFETY;
 };
 
 function addSlotLabels(entry, device, theme, createLabel, size) {
@@ -542,13 +557,13 @@ function applyLabelStyles(entry, device, theme, size) {
 	};
 };
 
-function horizontalSlotWidth(size) {
-	return size + SLOT_SPACING + Math.round(size * HORIZONTAL_TEXT_RATIO);
+function horizontalSlotWidth(size, textRatio) {
+	return size + SLOT_SPACING + Math.round(size * textRatio);
 };
 
 function buildSlot(device, theme, createLabel, size, layout) {
-	const {horizontal, showName} = layout;
-	const slotWidth = horizontal ? horizontalSlotWidth(size) : size;
+	const {horizontal, showName, textRatio} = layout;
+	const slotWidth = horizontal ? horizontalSlotWidth(size, textRatio) : size;
 
 	const slot = new St.BoxLayout({
 		orientation: horizontal ? Clutter.Orientation.HORIZONTAL : Clutter.Orientation.VERTICAL,
@@ -592,6 +607,7 @@ function buildSlot(device, theme, createLabel, size, layout) {
 		slotWidth,
 		horizontal,
 		showName,
+		textRatio,
 		textColumn: null,
 		nameLabel: null,
 		percentLabel: null,
@@ -605,7 +621,7 @@ function buildSlot(device, theme, createLabel, size, layout) {
 			y_align: Clutter.ActorAlign.CENTER,
 		});
 
-		textColumn.set_width(Math.round(size * HORIZONTAL_TEXT_RATIO));
+		textColumn.set_width(Math.round(size * textRatio));
 		slot.add_child(textColumn);
 		entry.textColumn = textColumn;
 	};
@@ -615,7 +631,7 @@ function buildSlot(device, theme, createLabel, size, layout) {
 	return entry;
 };
 
-function resizeSlot(entry, device, theme, size) {
+function resizeSlot(entry, device, theme, size, layout) {
 	const iconSize = slotIconSize(size);
 
 	entry.gauge.style = `width: ${size}px; height: ${size}px;`;
@@ -625,10 +641,11 @@ function resizeSlot(entry, device, theme, size) {
 	entry.icon.set_position(Math.round((size - iconSize) / 2), Math.round((size - iconSize) / 2));
 	applyLabelStyles(entry, device, theme, size);
 
-	entry.slotWidth = entry.horizontal ? horizontalSlotWidth(size) : size;
+	entry.textRatio = layout.textRatio;
+	entry.slotWidth = entry.horizontal ? horizontalSlotWidth(size, layout.textRatio) : size;
 
 	if (entry.textColumn) {
-		entry.textColumn.set_width(Math.round(size * HORIZONTAL_TEXT_RATIO));
+		entry.textColumn.set_width(Math.round(size * layout.textRatio));
 	};
 
 	if (!entry.exiting) {
@@ -647,9 +664,10 @@ function syncSlot(entry, device, theme, createLabel, size, layout) {
 	entry.slot.remove_all_transitions();
 	entry.slot.set_opacity(255);
 	entry.slot.set_scale(1, 1);
+	entry.slot.set_translation(0, 0, 0);
 
-	if (entry.size !== size) {
-		resizeSlot(entry, device, theme, size);
+	if (entry.size !== size || entry.textRatio !== layout.textRatio) {
+		resizeSlot(entry, device, theme, size, layout);
 	};
 
 	entry.ring.update(device, theme);
@@ -682,27 +700,20 @@ function enterSlot(entry, animate) {
 	const {slot} = entry;
 
 	slot.remove_all_transitions();
+	slot.set_translation(0, 0, 0);
 
 	if (!animate) {
 		slot.set_opacity(255);
 		return;
 	};
 
-	slot.set_pivot_point(0.5, 0.5);
-	slot.set_width(0);
 	slot.set_opacity(0);
-	slot.set_scale(0.6, 0.6);
+	slot.set_translation(Math.min(entry.slotWidth + SLOT_GAP, 140), 0, 0);
 	slot.ease({
-		width: entry.slotWidth,
+		translation_x: 0,
 		opacity: 255,
-		duration: 260,
+		duration: 280,
 		mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
-	});
-	slot.ease({
-		scale_x: 1,
-		scale_y: 1,
-		duration: 320,
-		mode: Clutter.AnimationMode.EASE_OUT_BACK,
 	});
 };
 
@@ -788,7 +799,7 @@ function bestGrid(count, availWidth, availHeight, style) {
 		let size;
 
 		if (style.horizontal) {
-			size = Math.min(cellHeight, (cellWidth - SLOT_SPACING) / (1 + HORIZONTAL_TEXT_RATIO));
+			size = Math.min(cellHeight, (cellWidth - SLOT_SPACING) / (1 + (style.textRatio ?? 0)));
 		} else {
 			const denom = 1 + PERCENT_TEXT_RATIO + (style.showName ? NAME_TEXT_RATIO : 0);
 			const gaps = (style.showName ? 2 : 1) * SLOT_SPACING;
@@ -810,11 +821,11 @@ function bestGrid(count, availWidth, availHeight, style) {
 	return best;
 };
 
-function bestLayout(count, availWidth, availHeight, showName) {
+function bestLayout(count, availWidth, availHeight, showName, textRatio) {
 	let best = null;
 
 	for (const horizontal of [false, true]) {
-		const grid = bestGrid(count, availWidth, availHeight, {horizontal, showName});
+		const grid = bestGrid(count, availWidth, availHeight, {horizontal, showName, textRatio});
 
 		if (!grid || (showName && grid.size < MIN_TEXT_GAUGE)) {
 			continue;
@@ -823,29 +834,29 @@ function bestLayout(count, availWidth, availHeight, showName) {
 		const score = grid.size + (horizontal ? 1 : 0);
 
 		if (!best || score > best.score) {
-			best = {...grid, horizontal, showName, score};
+			best = {...grid, horizontal, showName, textRatio, score};
 		};
 	};
 
 	return best;
 };
 
-function computeLayout(count, availWidth, availHeight) {
+function computeLayout(count, availWidth, availHeight, textRatio) {
 	if (count <= TEXT_SLOT_LIMIT) {
-		const named = bestLayout(count, availWidth, availHeight, true);
+		const named = bestLayout(count, availWidth, availHeight, true, textRatio);
 
 		if (named) {
 			return named;
 		};
 	};
 
-	const plain = bestLayout(count, availWidth, availHeight, false);
+	const plain = bestLayout(count, availWidth, availHeight, false, textRatio);
 
 	if (plain) {
 		return plain;
 	};
 
-	return {cols: count, rows: 1, size: MIN_GAUGE_SIZE, horizontal: false, showName: false, score: 0};
+	return {cols: count, rows: 1, size: MIN_GAUGE_SIZE, horizontal: false, showName: false, textRatio, score: 0};
 };
 
 function ensureRows(state, count) {
@@ -889,12 +900,13 @@ export function reconcile({body, widget, createLabel, theme, sizeForWidget, anim
 	};
 
 	const [width, height] = sizeForWidget ? sizeForWidget(widget) : [FALLBACK_WIDGET_WIDTH, FALLBACK_WIDGET_HEIGHT];
-	const availWidth = Math.max(MIN_GAUGE_SIZE, width - WIDGET_PADDING);
-	const availHeight = Math.max(MIN_GAUGE_SIZE, height - WIDGET_PADDING);
+	const availWidth = Math.max(MIN_GAUGE_SIZE, width - WIDGET_PADDING - LAYOUT_MARGIN * 2);
+	const availHeight = Math.max(MIN_GAUGE_SIZE, height - WIDGET_PADDING - LAYOUT_MARGIN * 2);
 	const count = Math.min(devices.length, MAX_SLOTS);
-	const layout = computeLayout(count, availWidth, availHeight);
-	const {cols, rows: rowCount, size, horizontal} = layout;
 	const targets = devices.slice(0, count);
+	const textRatio = targets.reduce((max, device) => Math.max(max, horizontalTextRatio(device)), 0);
+	const layout = computeLayout(count, availWidth, availHeight, textRatio);
+	const {cols, rows: rowCount, size, horizontal} = layout;
 	const targetKeys = new Set(targets.map(deviceKey));
 
 	for (const [key, entry] of [...slots]) {
