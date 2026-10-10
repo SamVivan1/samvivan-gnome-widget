@@ -441,6 +441,26 @@ function readDevices(force = false) {
 	return devices;
 };
 
+let deviceOrder = [];
+
+function orderDevices(devices) {
+	const present = new Set(devices.map(deviceKey));
+
+	for (const device of devices) {
+		const key = deviceKey(device);
+
+		if (!deviceOrder.includes(key)) {
+			deviceOrder.push(key);
+		};
+	};
+
+	deviceOrder = deviceOrder.filter(key => present.has(key));
+
+	const index = new Map(deviceOrder.map((key, order) => [key, order]));
+
+	return [...devices].sort((a, b) => index.get(deviceKey(a)) - index.get(deviceKey(b)));
+};
+
 export function batterySignature() {
 	return readDevices().map(device => [
 		device.name,
@@ -525,13 +545,12 @@ function addSlotLabels(entry, device, theme, createLabel, size) {
 	const {horizontal, showName} = entry;
 	const fonts = slotFonts(size, horizontal);
 	const parent = entry.textColumn || entry.slot;
-	const align = horizontal ? Clutter.ActorAlign.START : Clutter.ActorAlign.CENTER;
 
 	if (showName) {
 		const nameLabel = createLabel(device ? device.name : '', 'widget-battery-name', `font-size: ${fonts.name}px; color: ${theme.muted};`);
 
 		nameLabel.x_expand = horizontal ? false : true;
-		nameLabel.x_align = align;
+		nameLabel.x_align = Clutter.ActorAlign.CENTER;
 		nameLabel.clutter_text.set_line_wrap(false);
 		parent.add_child(nameLabel);
 		entry.nameLabel = nameLabel;
@@ -540,7 +559,7 @@ function addSlotLabels(entry, device, theme, createLabel, size) {
 	const percentLabel = createLabel(device ? `${device.percentage}%` : '', 'widget-battery-percent', `font-size: ${fonts.percent}px; color: ${device ? theme.text : theme.muted};`);
 
 	percentLabel.x_expand = false;
-	percentLabel.x_align = align;
+	percentLabel.x_align = Clutter.ActorAlign.CENTER;
 	parent.add_child(percentLabel);
 	entry.percentLabel = percentLabel;
 };
@@ -567,13 +586,15 @@ function buildSlot(device, theme, createLabel, size, layout) {
 
 	const slot = new St.BoxLayout({
 		orientation: horizontal ? Clutter.Orientation.HORIZONTAL : Clutter.Orientation.VERTICAL,
-		style_class: 'widget-battery-slot',
+		style_class: horizontal ? 'widget-battery-slot widget-battery-slot-horizontal' : 'widget-battery-slot',
 		x_align: Clutter.ActorAlign.CENTER,
 		y_align: Clutter.ActorAlign.CENTER,
 		clip_to_allocation: true,
 	});
 
-	slot.set_width(slotWidth);
+	if (!horizontal) {
+		slot.set_width(size);
+	};
 
 	const gauge = new St.Widget({
 		style_class: 'widget-battery-gauge',
@@ -617,11 +638,10 @@ function buildSlot(device, theme, createLabel, size, layout) {
 		const textColumn = new St.BoxLayout({
 			orientation: Clutter.Orientation.VERTICAL,
 			style_class: 'widget-battery-text',
-			x_align: Clutter.ActorAlign.START,
+			x_align: Clutter.ActorAlign.CENTER,
 			y_align: Clutter.ActorAlign.CENTER,
 		});
 
-		textColumn.set_width(Math.round(size * textRatio));
 		slot.add_child(textColumn);
 		entry.textColumn = textColumn;
 	};
@@ -644,12 +664,8 @@ function resizeSlot(entry, device, theme, size, layout) {
 	entry.textRatio = layout.textRatio;
 	entry.slotWidth = entry.horizontal ? horizontalSlotWidth(size, layout.textRatio) : size;
 
-	if (entry.textColumn) {
-		entry.textColumn.set_width(Math.round(size * layout.textRatio));
-	};
-
-	if (!entry.exiting) {
-		entry.slot.set_width(entry.slotWidth);
+	if (!entry.exiting && !entry.horizontal) {
+		entry.slot.set_width(size);
 	};
 
 	entry.iconSize = iconSize;
@@ -887,7 +903,7 @@ function pruneRows(state, keep) {
 export function reconcile({body, widget, createLabel, theme, sizeForWidget, animate = true}) {
 	const state = trayFor(body);
 	const {rows, slots} = state;
-	const devices = readDevices();
+	const devices = orderDevices(readDevices());
 
 	if (devices.length === 0) {
 		for (const [key, entry] of slots) {
