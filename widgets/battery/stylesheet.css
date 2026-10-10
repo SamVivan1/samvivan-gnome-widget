@@ -15,6 +15,10 @@
   spacing: 6px;
 }
 
+.widget-battery-text {
+  spacing: 2px;
+}
+
 .widget-battery-percent {
   font-weight: 800;
 }
