@@ -728,16 +728,38 @@ function enterSlot(entry, animate) {
 	slot.ease({
 		translation_x: 0,
 		opacity: 255,
-		duration: 280,
-		mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
+		duration: 360,
+		mode: Clutter.AnimationMode.EASE_OUT_BACK,
 	});
 };
 
-function exitSlot(entry, animate) {
+function offsetWithin(actor, ancestor) {
+	let x = 0;
+	let y = 0;
+	let node = actor;
+
+	while (node && node !== ancestor) {
+		const [px, py] = node.get_position();
+
+		if (Number.isFinite(px)) {
+			x += px;
+		};
+
+		if (Number.isFinite(py)) {
+			y += py;
+		};
+
+		node = node.get_parent();
+	};
+
+	return [x, y];
+};
+
+function startExit(entry, key, state, animate) {
 	const {slot} = entry;
 
 	entry.exiting = true;
-	slot.remove_all_transitions();
+	entry.exitStarted = true;
 
 	const finalize = () => {
 		const parent = slot.get_parent();
@@ -747,6 +769,14 @@ function exitSlot(entry, animate) {
 		};
 
 		slot.destroy();
+		state.slots.delete(key);
+
+		if (state.params) {
+			GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+				reconcile(state.params);
+				return GLib.SOURCE_REMOVE;
+			});
+		};
 	};
 
 	if (!animate) {
@@ -754,12 +784,49 @@ function exitSlot(entry, animate) {
 		return;
 	};
 
+	slot.remove_all_transitions();
+	slot.set_translation(0, 0, 0);
 	slot.ease({
-		translation_y: Math.round(entry.size + SLOT_GAP),
+		translation_y: Math.round(entry.size + SLOT_GAP * 2),
 		opacity: 0,
-		duration: 240,
-		mode: Clutter.AnimationMode.EASE_IN_CUBIC,
+		duration: 360,
+		mode: Clutter.AnimationMode.EASE_OUT_BOUNCE,
 		onComplete: finalize,
+	});
+};
+
+function settleSlots(slots, positionsBefore, stage, animate) {
+	if (!animate || !stage) {
+		return;
+	};
+
+	GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+		for (const [key, entry] of slots) {
+			const previous = positionsBefore.get(key);
+
+			if (!previous || entry.exiting || !entry.slot.get_parent()) {
+				continue;
+			};
+
+			const [nowX, nowY] = offsetWithin(entry.slot, stage);
+			const dx = Math.round(previous[0] - nowX);
+			const dy = Math.round(previous[1] - nowY);
+
+			if (Math.abs(dx) < 1 && Math.abs(dy) < 1) {
+				continue;
+			};
+
+			entry.slot.remove_all_transitions();
+			entry.slot.set_translation(dx, dy, 0);
+			entry.slot.ease({
+				translation_x: 0,
+				translation_y: 0,
+				duration: 320,
+				mode: Clutter.AnimationMode.EASE_OUT_BACK,
+			});
+		};
+
+		return GLib.SOURCE_REMOVE;
 	});
 };
 
@@ -779,6 +846,7 @@ function trayFor(body) {
 		return state;
 	};
 
+	body.clip_to_allocation = true;
 	body.destroy_all_children();
 
 	const tray = new St.BoxLayout({
@@ -900,16 +968,35 @@ function pruneRows(state, keep) {
 export function reconcile({body, widget, createLabel, theme, sizeForWidget, animate = true}) {
 	const state = trayFor(body);
 	const {rows, slots} = state;
-	const devices = orderDevices(readDevices());
+	const stage = body.get_parent();
+
+	state.params = {body, widget, createLabel, theme, sizeForWidget, animate};
+
+	const liveDevices = readDevices();
+	const liveKeys = new Set(liveDevices.map(deviceKey));
+	const exitingDevices = [];
+
+	for (const [key, entry] of slots) {
+		if (!liveKeys.has(key)) {
+			entry.exiting = true;
+
+			if (entry.device) {
+				exitingDevices.push(entry.device);
+			};
+		};
+	};
+
+	const devices = orderDevices([...liveDevices, ...exitingDevices]);
 
 	if (devices.length === 0) {
-		for (const [key, entry] of slots) {
-			slots.delete(key);
-			exitSlot(entry, animate);
-		};
-
 		pruneRows(state, 0);
 		return;
+	};
+
+	const positionsBefore = new Map();
+
+	for (const [key, entry] of slots) {
+		positionsBefore.set(key, offsetWithin(entry.slot, stage));
 	};
 
 	const [width, height] = sizeForWidget ? sizeForWidget(widget) : [FALLBACK_WIDGET_WIDTH, FALLBACK_WIDGET_HEIGHT];
@@ -920,14 +1007,6 @@ export function reconcile({body, widget, createLabel, theme, sizeForWidget, anim
 	const textRatio = targets.reduce((max, device) => Math.max(max, horizontalTextRatio(device)), 0);
 	const layout = computeLayout(count, availWidth, availHeight, textRatio);
 	const {cols, rows: rowCount, size, horizontal} = layout;
-	const targetKeys = new Set(targets.map(deviceKey));
-
-	for (const [key, entry] of [...slots]) {
-		if (!targetKeys.has(key)) {
-			slots.delete(key);
-			exitSlot(entry, animate);
-		};
-	};
 
 	ensureRows(state, rowCount);
 
@@ -936,6 +1015,16 @@ export function reconcile({body, widget, createLabel, theme, sizeForWidget, anim
 		const row = rows[Math.floor(index / cols)];
 		const column = index % cols;
 		let existing = slots.get(key);
+
+		if (existing?.exiting) {
+			if (existing.slot.get_parent() !== row) {
+				existing.slot.get_parent()?.remove_child(existing.slot);
+				row.add_child(existing.slot);
+			};
+
+			row.set_child_at_index(existing.slot, Math.min(column, row.get_n_children() - 1));
+			return;
+		};
 
 		if (existing && existing.horizontal !== horizontal) {
 			existing.slot.get_parent()?.remove_child(existing.slot);
@@ -953,16 +1042,25 @@ export function reconcile({body, widget, createLabel, theme, sizeForWidget, anim
 			};
 
 			row.set_child_at_index(existing.slot, Math.min(column, row.get_n_children() - 1));
+			existing.device = device;
 			return;
 		};
 
 		const entry = buildSlot(device, theme, createLabel, size, layout);
 
+		entry.device = device;
 		slots.set(key, entry);
 		row.insert_child_at_index(entry.slot, Math.min(column, row.get_n_children()));
 		enterSlot(entry, animate);
 	});
 
+	for (const [key, entry] of [...slots]) {
+		if (entry.exiting && !entry.exitStarted) {
+			startExit(entry, key, state, animate);
+		};
+	};
+
+	settleSlots(slots, positionsBefore, stage, animate);
 	pruneRows(state, rowCount);
 };
 
