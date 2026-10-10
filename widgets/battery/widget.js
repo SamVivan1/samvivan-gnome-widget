@@ -585,16 +585,52 @@ function buildSlot(device, theme, createLabel, size, layout) {
 	const slotWidth = horizontal ? horizontalSlotWidth(size, textRatio) : size;
 
 	const slot = new St.BoxLayout({
-		orientation: horizontal ? Clutter.Orientation.HORIZONTAL : Clutter.Orientation.VERTICAL,
 		style_class: horizontal ? 'widget-battery-slot widget-battery-slot-horizontal' : 'widget-battery-slot',
 		x_align: Clutter.ActorAlign.CENTER,
 		y_align: Clutter.ActorAlign.CENTER,
 		clip_to_allocation: true,
 	});
 
-	if (!horizontal) {
-		slot.set_width(size);
+	const entry = {
+		slot,
+		gauge: null,
+		ring: null,
+		icon: null,
+		iconSize: 0,
+		size,
+		slotWidth,
+		horizontal,
+		showName,
+		textRatio,
+		textColumn: null,
+		nameLabel: null,
+		percentLabel: null,
 	};
+
+	populateSlot(entry, device, theme, createLabel, size, layout);
+
+	return entry;
+};
+
+function populateSlot(entry, device, theme, createLabel, size, layout) {
+	const {slot} = entry;
+	const {horizontal, showName, textRatio} = layout;
+
+	slot.set_orientation(horizontal ? Clutter.Orientation.HORIZONTAL : Clutter.Orientation.VERTICAL);
+	slot.style_class = horizontal ? 'widget-battery-slot widget-battery-slot-horizontal' : 'widget-battery-slot';
+	slot.destroy_all_children();
+
+	entry.horizontal = horizontal;
+	entry.showName = showName;
+	entry.textRatio = textRatio;
+	entry.size = size;
+	entry.slotWidth = horizontal ? horizontalSlotWidth(size, textRatio) : size;
+	entry.textColumn = null;
+	entry.nameLabel = null;
+	entry.percentLabel = null;
+	entry.gauge = null;
+	entry.ring = null;
+	entry.icon = null;
 
 	const gauge = new St.Widget({
 		style_class: 'widget-battery-gauge',
@@ -618,21 +654,10 @@ function buildSlot(device, theme, createLabel, size, layout) {
 	gauge.add_child(icon);
 	slot.add_child(gauge);
 
-	const entry = {
-		slot,
-		gauge,
-		ring,
-		icon,
-		iconSize,
-		size,
-		slotWidth,
-		horizontal,
-		showName,
-		textRatio,
-		textColumn: null,
-		nameLabel: null,
-		percentLabel: null,
-	};
+	entry.gauge = gauge;
+	entry.ring = ring;
+	entry.icon = icon;
+	entry.iconSize = iconSize;
 
 	if (horizontal) {
 		const textColumn = new St.BoxLayout({
@@ -647,8 +672,6 @@ function buildSlot(device, theme, createLabel, size, layout) {
 	};
 
 	addSlotLabels(entry, device, theme, createLabel, size);
-
-	return entry;
 };
 
 function resizeSlot(entry, device, theme, size, layout) {
@@ -664,8 +687,12 @@ function resizeSlot(entry, device, theme, size, layout) {
 	entry.textRatio = layout.textRatio;
 	entry.slotWidth = entry.horizontal ? horizontalSlotWidth(size, layout.textRatio) : size;
 
-	if (!entry.exiting && !entry.horizontal) {
-		entry.slot.set_width(size);
+	if (!entry.exiting) {
+		if (entry.horizontal) {
+			entry.slot.set_width(-1);
+		} else {
+			entry.slot.set_width(size);
+		};
 	};
 
 	entry.iconSize = iconSize;
@@ -677,13 +704,13 @@ function syncSlot(entry, device, theme, createLabel, size, layout) {
 		return;
 	};
 
-	entry.slot.remove_all_transitions();
-	entry.slot.set_opacity(255);
-	entry.slot.set_scale(1, 1);
-	entry.slot.set_translation(0, 0, 0);
-
 	if (entry.size !== size || entry.textRatio !== layout.textRatio) {
 		resizeSlot(entry, device, theme, size, layout);
+	};
+
+	if (entry.horizontal !== layout.horizontal) {
+		populateSlot(entry, device, theme, createLabel, size, layout);
+		return;
 	};
 
 	entry.ring.update(device, theme);
@@ -712,10 +739,73 @@ function syncSlot(entry, device, theme, createLabel, size, layout) {
 	addSlotLabels(entry, device, theme, createLabel, size);
 };
 
+function measureSlot(entry) {
+	let width = entry.slotWidth || entry.size || MIN_GAUGE_SIZE;
+	let height = entry.size || MIN_GAUGE_SIZE;
+
+	try {
+		const [, naturalWidth] = entry.slot.get_preferred_width(-1);
+		const [, naturalHeight] = entry.slot.get_preferred_height(-1);
+
+		if (Number.isFinite(naturalWidth) && naturalWidth > 0) {
+			width = naturalWidth;
+		};
+
+		if (Number.isFinite(naturalHeight) && naturalHeight > 0) {
+			height = naturalHeight;
+		};
+	} catch (error) {
+	};
+
+	return {width, height};
+};
+
+function moveSlot(entry, targetX, targetY, animate, duration = 340) {
+	const {slot} = entry;
+	const [tx, ty] = slot.get_translation();
+	const fromX = (entry.x ?? targetX) + tx;
+	const fromY = (entry.y ?? targetY) + ty;
+	const toX = Math.round(targetX);
+	const toY = Math.round(targetY);
+
+	slot.remove_all_transitions();
+	slot.set_position(toX, toY);
+	entry.x = toX;
+	entry.y = toY;
+
+	if (!animate) {
+		slot.set_translation(0, 0, 0);
+		slot.set_opacity(255);
+		return;
+	};
+
+	const dx = Math.round(fromX) - toX;
+	const dy = Math.round(fromY) - toY;
+
+	if (slot.get_opacity() < 255) {
+		slot.ease_property('opacity', 255, {
+			duration: 220,
+			mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+		});
+	};
+
+	if (dx === 0 && dy === 0) {
+		slot.set_translation(0, 0, 0);
+		return;
+	};
+
+	slot.set_translation(dx, dy, 0);
+	slot.ease({
+		translation_x: 0,
+		translation_y: 0,
+		duration,
+		mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
+	});
+};
+
 function enterSlot(entry, animate) {
 	const {slot} = entry;
 
-	slot.remove_all_transitions();
 	slot.set_translation(0, 0, 0);
 
 	if (!animate) {
@@ -735,28 +825,6 @@ function enterSlot(entry, animate) {
 	});
 };
 
-function offsetWithin(actor, ancestor) {
-	let x = 0;
-	let y = 0;
-	let node = actor;
-
-	while (node && node !== ancestor) {
-		const [px, py] = node.get_position();
-
-		if (Number.isFinite(px)) {
-			x += px;
-		};
-
-		if (Number.isFinite(py)) {
-			y += py;
-		};
-
-		node = node.get_parent();
-	};
-
-	return [x, y];
-};
-
 function startExit(entry, key, state, animate) {
 	const {slot} = entry;
 	let finished = false;
@@ -765,7 +833,7 @@ function startExit(entry, key, state, animate) {
 	entry.exitStarted = true;
 
 	const finalize = () => {
-		if (finished) {
+		if (finished || entry.cancelled || state.slots.get(key) !== entry) {
 			return;
 		};
 
@@ -780,9 +848,16 @@ function startExit(entry, key, state, animate) {
 		slot.destroy();
 		state.slots.delete(key);
 
-		if (state.params) {
+		if (state.params && !state.reflowPending) {
+			state.reflowPending = true;
+
 			GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-				reconcile(state.params);
+				state.reflowPending = false;
+
+				if (state.params) {
+					reconcile(state.params);
+				};
+
 				return GLib.SOURCE_REMOVE;
 			});
 		};
@@ -796,7 +871,7 @@ function startExit(entry, key, state, animate) {
 	slot.remove_all_transitions();
 	slot.set_translation(0, 0, 0);
 
-	const lift = Math.min(Math.round(entry.size * 0.45), 30);
+	const lift = Math.min(12, Math.round(entry.size * 0.18));
 	const fall = Math.round(entry.size + lift + SLOT_GAP * 2);
 
 	slot.ease({
@@ -804,7 +879,7 @@ function startExit(entry, key, state, animate) {
 		duration: 150,
 		mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
 		onComplete: () => {
-			if (finished) {
+			if (finished || entry.cancelled) {
 				return;
 			};
 
@@ -821,57 +896,6 @@ function startExit(entry, key, state, animate) {
 	});
 };
 
-function flipSlots(slots, positionsBefore, stage, animate) {
-	if (!animate || !stage) {
-		return;
-	};
-
-	for (const [key, entry] of slots) {
-		const previous = positionsBefore.get(key);
-		const slot = entry.slot;
-
-		if (!previous || entry.exiting) {
-			continue;
-		};
-
-		if (slot._flipId) {
-			slot.disconnect(slot._flipId);
-			slot._flipId = 0;
-		};
-
-		slot._flipId = slot.connect('notify::allocation', () => {
-			slot.disconnect(slot._flipId);
-			slot._flipId = 0;
-
-			const [nowX, nowY] = offsetWithin(slot, stage);
-			const dx = Math.round(previous[0] - nowX);
-			const dy = Math.round(previous[1] - nowY);
-
-			if (Math.abs(dx) < 1 && Math.abs(dy) < 1) {
-				return;
-			};
-
-			slot.remove_all_transitions();
-			slot.set_translation(dx, dy, 0);
-			slot.ease({
-				translation_x: 0,
-				translation_y: 0,
-				duration: 300,
-				mode: Clutter.AnimationMode.EASE_OUT_BACK,
-			});
-		});
-	};
-};
-
-function rowBox() {
-	return new St.BoxLayout({
-		style_class: 'widget-battery-row',
-		x_expand: true,
-		y_align: Clutter.ActorAlign.CENTER,
-		x_align: Clutter.ActorAlign.CENTER,
-	});
-};
-
 function trayFor(body) {
 	const state = body._batteryState;
 
@@ -882,17 +906,15 @@ function trayFor(body) {
 	body.clip_to_allocation = true;
 	body.destroy_all_children();
 
-	const tray = new St.BoxLayout({
+	const tray = new St.Widget({
 		style_class: 'widget-battery-tray',
-		orientation: Clutter.Orientation.VERTICAL,
 		x_expand: true,
 		y_expand: true,
-		x_align: Clutter.ActorAlign.CENTER,
-		y_align: Clutter.ActorAlign.CENTER,
+		layout_manager: new Clutter.FixedLayout(),
 	});
 
 	body.add_child(tray);
-	body._batteryState = {tray, rows: [], slots: new Map()};
+	body._batteryState = {tray, slots: new Map()};
 
 	return body._batteryState;
 };
@@ -973,118 +995,150 @@ function computeLayout(count, availWidth, availHeight, textRatio) {
 	return {cols: count, rows: 1, size: MIN_GAUGE_SIZE, horizontal: false, showName: false, textRatio, score: 0};
 };
 
-function ensureRows(state, count) {
-	while (state.rows.length < count) {
-		const row = rowBox();
-
-		state.tray.add_child(row);
-		state.rows.push(row);
-	};
-};
-
-function pruneRows(state, keep) {
-	let index = state.rows.length - 1;
-
-	while (index >= keep) {
-		const row = state.rows[index];
-
-		if (row.get_n_children() > 0) {
-			break;
-		};
-
-		state.rows.splice(index, 1);
-		row.destroy();
-		index--;
-	};
-};
-
 export function reconcile({body, widget, createLabel, theme, sizeForWidget, animate = true}) {
 	const state = trayFor(body);
-	const {rows, slots} = state;
-	const stage = body.get_parent();
+	const {slots} = state;
 
 	state.params = {body, widget, createLabel, theme, sizeForWidget, animate};
 
 	const liveDevices = readDevices();
 	const liveKeys = new Set(liveDevices.map(deviceKey));
-	const exitingDevices = [];
+	const departing = [];
 
 	for (const [key, entry] of slots) {
-		if (!liveKeys.has(key)) {
-			entry.exiting = true;
-
-			if (entry.device) {
-				exitingDevices.push(entry.device);
+		if (liveKeys.has(key)) {
+			if (entry.exiting && !entry.exitStarted) {
+				entry.exiting = false;
+				entry.cancelled = true;
+				entry.exitStarted = false;
 			};
+		} else if (!entry.exiting) {
+			entry.exiting = true;
+			entry.cancelled = false;
+		};
+
+		if (entry.exiting && entry.device) {
+			departing.push(entry.device);
 		};
 	};
 
-	const devices = orderDevices([...liveDevices, ...exitingDevices]);
+	const ordered = orderDevices([...liveDevices, ...departing]);
+	const count = Math.min(ordered.length, MAX_SLOTS);
+	const targets = ordered.slice(0, count);
 
-	if (devices.length === 0) {
-		pruneRows(state, 0);
+	if (count === 0) {
+		for (const [key, entry] of [...slots]) {
+			if (entry.exiting && !entry.exitStarted) {
+				startExit(entry, key, state, animate);
+			};
+		};
+
 		return;
-	};
-
-	const positionsBefore = new Map();
-
-	for (const [key, entry] of slots) {
-		positionsBefore.set(key, offsetWithin(entry.slot, stage));
 	};
 
 	const [width, height] = sizeForWidget ? sizeForWidget(widget) : [FALLBACK_WIDGET_WIDTH, FALLBACK_WIDGET_HEIGHT];
 	const availWidth = Math.max(MIN_GAUGE_SIZE, width - WIDGET_PADDING - LAYOUT_MARGIN * 2);
 	const availHeight = Math.max(MIN_GAUGE_SIZE, height - WIDGET_PADDING - LAYOUT_MARGIN * 2);
-	const count = Math.min(devices.length, MAX_SLOTS);
-	const targets = devices.slice(0, count);
 	const textRatio = targets.reduce((max, device) => Math.max(max, horizontalTextRatio(device)), 0);
 	const layout = computeLayout(count, availWidth, availHeight, textRatio);
 	const {cols, rows: rowCount, size, horizontal} = layout;
 
-	ensureRows(state, rowCount);
+	const cellWidth = (availWidth - (cols - 1) * SLOT_GAP) / cols;
+	const cellHeight = (availHeight - (rowCount - 1) * SLOT_GAP) / rowCount;
+	const pitchX = cellWidth + SLOT_GAP;
+	const pitchY = cellHeight + SLOT_GAP;
+
+	const cellCenter = index => {
+		const row = Math.floor(index / cols);
+		const column = index % cols;
+		const rowSlots = Math.min(cols, count - row * cols);
+		const rowBlockWidth = rowSlots * cellWidth + Math.max(0, rowSlots - 1) * SLOT_GAP;
+		const rowStartX = LAYOUT_MARGIN + (availWidth - rowBlockWidth) / 2;
+
+		return [
+			rowStartX + column * pitchX + cellWidth / 2,
+			LAYOUT_MARGIN + row * pitchY + cellHeight / 2,
+		];
+	};
+
+	const centers = targets.map((device, index) => cellCenter(index));
+	const departingCenters = [];
+
+	targets.forEach((device, index) => {
+		const entry = slots.get(deviceKey(device));
+
+		if (entry?.exiting) {
+			departingCenters.push(centers[index]);
+		};
+	});
 
 	targets.forEach((device, index) => {
 		const key = deviceKey(device);
-		const row = rows[Math.floor(index / cols)];
-		const column = index % cols;
-		let existing = slots.get(key);
+		const [centerX, centerY] = centers[index];
+		let entry = slots.get(key);
 
-		if (existing?.exiting) {
-			if (existing.slot.get_parent() !== row) {
-				existing.slot.get_parent()?.remove_child(existing.slot);
-				row.add_child(existing.slot);
+		if (entry?.exiting) {
+			if (entry.exitStarted) {
+				return;
 			};
 
-			row.set_child_at_index(existing.slot, Math.min(column, row.get_n_children() - 1));
+			const measured = measureSlot(entry);
+
+			entry.x = Math.round(centerX - measured.width / 2);
+			entry.y = Math.round(centerY - measured.height / 2);
+			entry.slot.set_position(entry.x, entry.y);
 			return;
 		};
 
-		if (existing && existing.horizontal !== horizontal) {
-			existing.slot.get_parent()?.remove_child(existing.slot);
-			existing.slot.destroy();
-			slots.delete(key);
-			existing = null;
+		if (entry) {
+			syncSlot(entry, device, theme, createLabel, size, layout);
+		} else {
+			entry = buildSlot(device, theme, createLabel, size, layout);
+			entry.x = null;
+			entry.y = null;
+			entry.cancelled = false;
+			entry.exiting = false;
+			entry.exitStarted = false;
+			state.tray.add_child(entry.slot);
+			slots.set(key, entry);
 		};
-
-		if (existing) {
-			syncSlot(existing, device, theme, createLabel, size, layout);
-
-			if (existing.slot.get_parent() !== row) {
-				existing.slot.get_parent()?.remove_child(existing.slot);
-				row.add_child(existing.slot);
-			};
-
-			row.set_child_at_index(existing.slot, Math.min(column, row.get_n_children() - 1));
-			existing.device = device;
-			return;
-		};
-
-		const entry = buildSlot(device, theme, createLabel, size, layout);
 
 		entry.device = device;
-		slots.set(key, entry);
-		row.insert_child_at_index(entry.slot, Math.min(column, row.get_n_children()));
-		enterSlot(entry, animate);
+
+		const measured = measureSlot(entry);
+		let targetX = centerX - measured.width / 2;
+		let targetY = centerY - measured.height / 2;
+
+		if (entry.x === null) {
+			entry.x = Math.round(targetX);
+			entry.y = Math.round(targetY);
+			entry.slot.set_position(entry.x, entry.y);
+			enterSlot(entry, animate);
+			return;
+		};
+
+		for (const [departX, departY] of departingCenters) {
+			const dx = centerX - departX;
+			const dy = centerY - departY;
+			const dist = Math.hypot(dx, dy);
+
+			if (dist < 1) {
+				continue;
+			};
+
+			const strength = 10 / (1 + dist / 140);
+
+			targetX += (dx / dist) * strength;
+			targetY += (dy / dist) * strength;
+		};
+
+		const trayWidth = width - WIDGET_PADDING;
+		const trayHeight = height - WIDGET_PADDING;
+
+		targetX = Math.min(Math.max(targetX, 0), Math.max(0, trayWidth - measured.width));
+		targetY = Math.min(Math.max(targetY, 0), Math.max(0, trayHeight - measured.height));
+
+		moveSlot(entry, targetX, targetY, animate);
 	});
 
 	for (const [key, entry] of [...slots]) {
@@ -1092,9 +1146,6 @@ export function reconcile({body, widget, createLabel, theme, sizeForWidget, anim
 			startExit(entry, key, state, animate);
 		};
 	};
-
-	flipSlots(slots, positionsBefore, stage, animate);
-	pruneRows(state, rowCount);
 };
 
 export function render(params) {
