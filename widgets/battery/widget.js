@@ -32,6 +32,66 @@ const DEVICE_TYPE = {
 	OTHER_AUDIO: 21,
 };
 
+const DEVICE_FALLBACK_NAMES = {
+	[DEVICE_TYPE.BATTERY]: 'Battery',
+	[DEVICE_TYPE.UPS]: 'UPS',
+	[DEVICE_TYPE.MOUSE]: 'Mouse',
+	[DEVICE_TYPE.KEYBOARD]: 'Keyboard',
+	[DEVICE_TYPE.PDA]: 'PDA',
+	[DEVICE_TYPE.PHONE]: 'Phone',
+	[DEVICE_TYPE.MEDIA_PLAYER]: 'Media Player',
+	[DEVICE_TYPE.TABLET]: 'Tablet',
+	[DEVICE_TYPE.COMPUTER]: 'Computer',
+	[DEVICE_TYPE.GAMING_INPUT]: 'Gamepad',
+	[DEVICE_TYPE.PEN]: 'Stylus',
+	[DEVICE_TYPE.TOUCHPAD]: 'Touchpad',
+	[DEVICE_TYPE.HEADSET]: 'Headset',
+	[DEVICE_TYPE.SPEAKERS]: 'Speakers',
+	[DEVICE_TYPE.HEADPHONES]: 'Headphones',
+	[DEVICE_TYPE.OTHER_AUDIO]: 'Audio Device',
+};
+
+function fallbackNameForKind(kind) {
+	return DEVICE_FALLBACK_NAMES[kind] ?? 'Device';
+};
+
+function fallbackNameForBluetoothIcon(iconClass) {
+	const name = String(iconClass || '').toLowerCase();
+
+	if (!name || name === 'unknown') {
+		return null;
+	};
+	if (name.includes('mouse')) {
+		return 'Mouse';
+	};
+	if (name.includes('keyboard')) {
+		return 'Keyboard';
+	};
+	if (name.includes('tablet') || name.includes('pen')) {
+		return 'Tablet';
+	};
+	if (name.includes('gaming') || name.includes('joystick') || name.includes('gamepad')) {
+		return 'Gamepad';
+	};
+	if (name.includes('headset')) {
+		return 'Headset';
+	};
+	if (name.includes('headphone')) {
+		return 'Headphones';
+	};
+	if (name.includes('speaker') || name.includes('audio-card') || name.includes('audio')) {
+		return 'Speakers';
+	};
+	if (name.includes('phone')) {
+		return 'Phone';
+	};
+	if (name.includes('computer')) {
+		return 'Computer';
+	};
+
+	return null;
+};
+
 function variantValue(props, name, fallback = null) {
 	return props[name] ? props[name].deep_unpack() : fallback;
 };
@@ -108,17 +168,8 @@ function deviceName(props, kind) {
 	if (vendor) {
 		return vendor;
 	};
-	if (kind === DEVICE_TYPE.BATTERY) {
-		return 'Computer';
-	};
-	if (kind === DEVICE_TYPE.MOUSE) {
-		return 'Mouse';
-	};
-	if (kind === DEVICE_TYPE.KEYBOARD) {
-		return 'Keyboard';
-	};
 
-	return 'Device';
+	return fallbackNameForKind(kind);
 };
 
 function isBatteryLike(props) {
@@ -229,11 +280,13 @@ function readBlueZDevices() {
 				continue;
 			};
 
-			const iconName = bluezIconName(variantValue(deviceProps, 'Icon', null));
+			const iconClass = variantValue(deviceProps, 'Icon', null);
+			const iconName = bluezIconName(iconClass);
+			const alias = String(variantValue(deviceProps, 'Alias', '') || variantValue(deviceProps, 'Name', '') || '').trim();
 
 			devices.push({
 				source: 'bluez',
-				name: String(variantValue(deviceProps, 'Alias', '') || variantValue(deviceProps, 'Name', '') || 'Bluetooth'),
+				name: alias || fallbackNameForBluetoothIcon(iconClass) || 'Bluetooth Device',
 				percentage: Math.round(Math.max(0, Math.min(100, percentage))),
 				powerSupply: false,
 				iconName,
@@ -348,6 +401,13 @@ function createSlot(device, theme, createLabel) {
 	label.x_expand = false;
 	label.x_align = Clutter.ActorAlign.CENTER;
 	slot.add_child(label);
+
+	const nameLabel = createLabel(device ? device.name : '', 'widget-battery-name', `color: ${theme.muted};`);
+
+	nameLabel.x_expand = true;
+	nameLabel.x_align = Clutter.ActorAlign.CENTER;
+	nameLabel.clutter_text.set_line_wrap(false);
+	slot.add_child(nameLabel);
 	return slot;
 };
 
