@@ -131,7 +131,7 @@ function iconForDevice(device) {
 		return 'battery-missing-symbolic';
 	};
 
-	if (device.source === 'bluez' && device.iconName) {
+	if (device.iconName && ['bluez', 'gsconnect'].includes(device.source)) {
 		return device.iconName;
 	};
 
@@ -308,10 +308,91 @@ function readBlueZDevices() {
 	};
 };
 
+const GSCONNECT_BUS_NAME = 'org.gnome.Shell.Extensions.GSConnect';
+const GSCONNECT_ROOT_PATH = '/org/gnome/Shell/Extensions/GSConnect';
+const GSCONNECT_DEVICE_IFACE = 'org.gnome.Shell.Extensions.GSConnect.Device';
+
+function gsconnectBattery(path) {
+	try {
+		const reply = Gio.DBus.session.call_sync(
+			GSCONNECT_BUS_NAME,
+			path,
+			'org.gtk.Actions',
+			'Describe',
+			GLib.Variant.new('(s)', ['battery']),
+			null,
+			Gio.DBusCallFlags.NONE,
+			1000,
+			null);
+		const [[enabled, , states]] = reply.recursiveUnpack();
+		const state = Array.isArray(states) ? states[0] : null;
+
+		if (!enabled || !Array.isArray(state)) {
+			return null;
+		};
+
+		return {
+			level: Number(state[2]),
+			charging: Boolean(state[0]),
+		};
+	} catch (error) {
+		return null;
+	};
+};
+
+function readGSConnectDevices() {
+	try {
+		const [objects] = Gio.DBus.session.call_sync(
+			GSCONNECT_BUS_NAME,
+			GSCONNECT_ROOT_PATH,
+			'org.freedesktop.DBus.ObjectManager',
+			'GetManagedObjects',
+			null,
+			null,
+			Gio.DBusCallFlags.NONE,
+			1000,
+			null).deep_unpack();
+		const devices = [];
+
+		for (const [path, interfaces] of Object.entries(objects)) {
+			const deviceProps = interfaces[GSCONNECT_DEVICE_IFACE];
+
+			if (!deviceProps || !variantValue(deviceProps, 'Connected', false)) {
+				continue;
+			};
+
+			const battery = gsconnectBattery(path);
+
+			if (!battery || !Number.isFinite(battery.level) || battery.level < 0) {
+				continue;
+			};
+
+			const name = String(variantValue(deviceProps, 'Name', '') || '').trim();
+
+			devices.push({
+				source: 'gsconnect',
+				name: name || 'Phone',
+				kind: DEVICE_TYPE.PHONE,
+				percentage: Math.round(Math.max(0, Math.min(100, battery.level))),
+				powerSupply: false,
+				iconName: variantValue(deviceProps, 'IconName', null) || 'phone-symbolic',
+				nativePath: path,
+			});
+		};
+
+		return devices;
+	} catch (error) {
+		warn('gsconnect-read', `Could not read GSConnect batteries: ${error.message}`);
+		return [];
+	};
+};
+
 function deviceKey(device) {
 	const path = String(device.nativePath || '');
-
 	if (path.startsWith('/org/bluez/')) {
+		return path;
+	};
+	if (path.startsWith('/org/gnome/Shell/Extensions/GSConnect/Device/')) {
 		return path;
 	};
 
@@ -334,7 +415,7 @@ function mergeDevices(devices) {
 };
 
 function readDevices() {
-	return mergeDevices([...readUPowerDevices(), ...readBlueZDevices()]);
+	return mergeDevices([...readUPowerDevices(), ...readBlueZDevices(), ...readGSConnectDevices()]);
 };
 
 const BatteryRing = GObject.registerClass(

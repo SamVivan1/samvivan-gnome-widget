@@ -598,7 +598,10 @@ class WidgetController {
       Gio.DBus.system.signal_subscribe('org.freedesktop.UPower', 'org.freedesktop.DBus.Properties', 'PropertiesChanged', null, 'org.freedesktop.UPower.Device', Gio.DBusSignalFlags.NONE, refresh),
       Gio.DBus.system.signal_subscribe('org.bluez', 'org.freedesktop.DBus.ObjectManager', 'InterfacesAdded', '/', null, Gio.DBusSignalFlags.NONE, refresh),
       Gio.DBus.system.signal_subscribe('org.bluez', 'org.freedesktop.DBus.ObjectManager', 'InterfacesRemoved', '/', null, Gio.DBusSignalFlags.NONE, refresh),
-      Gio.DBus.system.signal_subscribe('org.bluez', 'org.freedesktop.DBus.Properties', 'PropertiesChanged', null, null, Gio.DBusSignalFlags.NONE, refreshBlueZ)
+      Gio.DBus.system.signal_subscribe('org.bluez', 'org.freedesktop.DBus.Properties', 'PropertiesChanged', null, null, Gio.DBusSignalFlags.NONE, refreshBlueZ),
+      Gio.DBus.session.signal_subscribe('org.gnome.Shell.Extensions.GSConnect', 'org.gtk.Actions', 'Changed', null, null, Gio.DBusSignalFlags.NONE, refresh),
+      Gio.DBus.session.signal_subscribe('org.gnome.Shell.Extensions.GSConnect', 'org.freedesktop.DBus.ObjectManager', 'InterfacesAdded', '/org/gnome/Shell/Extensions/GSConnect', null, Gio.DBusSignalFlags.NONE, refresh),
+      Gio.DBus.session.signal_subscribe('org.gnome.Shell.Extensions.GSConnect', 'org.freedesktop.DBus.ObjectManager', 'InterfacesRemoved', '/org/gnome/Shell/Extensions/GSConnect', null, Gio.DBusSignalFlags.NONE, refresh)
     );
   };
 
