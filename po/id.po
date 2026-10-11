@@ -1,0 +1,75 @@
+# Indonesian translation for the Desktop Widget GNOME Shell extension.
+# This file is distributed under the same license as the extension.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: desktop-widget 1.0.0\n"
+"Report-Msgid-Bugs-To: https://github.com/SamVivan1/samvivan-gnome-widget/issues\n"
+"Language: id\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "General"
+msgstr "Umum"
+
+msgid "Placement"
+msgstr "Penempatan"
+
+msgid "Monitor"
+msgstr "Monitor"
+
+msgid "Grid size"
+msgstr "Ukuran grid"
+
+msgid "Widget gap"
+msgstr "Jarak widget"
+
+msgid "Snap to grid"
+msgstr "Rapatkan ke grid"
+
+msgid "Behavior"
+msgstr "Perilaku"
+
+msgid "Edit mode"
+msgstr "Mode edit"
+
+msgid "Hide all widgets"
+msgstr "Sembunyikan semua widget"
+
+msgid "Widget opacity (%)"
+msgstr "Opasitas widget (%)"
+
+msgid "Top panel"
+msgstr "Panel atas"
+
+msgid "Show panel icon"
+msgstr "Tampilkan ikon panel"
+
+msgid "Photos"
+msgstr "Foto"
+
+msgid "Calendar"
+msgstr "Kalender"
+
+msgid "Agenda"
+msgstr "Agenda"
+
+msgid "Weather"
+msgstr "Cuaca"
+
+msgid "Battery"
+msgstr "Baterai"
+
+msgid "Clock"
+msgstr "Jam"
+
+msgid "Bambu Lab"
+msgstr "Bambu Lab"
+
+msgid "Widgets"
+msgstr "Widget"
+
+msgid "Developer"
+msgstr "Pengembang"

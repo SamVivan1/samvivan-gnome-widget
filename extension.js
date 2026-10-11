@@ -18,6 +18,16 @@ import * as PhotosWidget from './widgets/photos/widget.js';
 import * as WeatherWidget from './widgets/weather/widget.js';
 import { BambuData } from './lib/bambuData.js';
 import { CalendarData } from './lib/calendarData.js';
+import {
+  clamp,
+  snap as gridSnap,
+  sizeForWidget as widgetSize,
+  monitorWorkArea as areaForMonitor,
+  widgetFractions as fractionsForWidget,
+  positionForFractions as positionFromWidgetFractions,
+  rectForWidget as widgetRect,
+  rectsOverlap as rectsOverlapWithGap,
+} from './lib/geometry.js';
 import { configureLogger, resetLogger, warn } from './logger.js';
 import { WorkspaceIntegration } from './workspaceIntegration.js';
 
@@ -155,76 +165,40 @@ function hexToRgba(hex, alpha) {
   return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 };
 
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-};
-
 function snap(value) {
-  return SNAP_TO_GRID ? Math.round(value / GRID_SIZE) * GRID_SIZE : Math.round(value);
+  return gridSnap(value, {gridSize: GRID_SIZE, snapToGrid: SNAP_TO_GRID});
 };
 
 function sizeForWidget(widget) {
-  const [defaultWidth, defaultHeight] = WIDGET_SIZES[widget.size] ?? WIDGET_SIZES.small;
-
-  return [
-    Number.isFinite(widget.width) ? widget.width : defaultWidth,
-    Number.isFinite(widget.height) ? widget.height : defaultHeight,
-  ];
+  return widgetSize(widget, WIDGET_SIZES);
 };
 
 function monitorWorkArea(monitor) {
-  const top = (Main.panel?.height ?? 0) + WIDGET_GAP;
-
-  return {
-    x: WIDGET_GAP,
-    y: top,
-    width: Math.max(1, monitor.width - WIDGET_GAP * 2),
-    height: Math.max(1, monitor.height - top - WIDGET_GAP),
-  };
+  return areaForMonitor(monitor, {gap: WIDGET_GAP, panelHeight: Main.panel?.height ?? 0});
 };
 
 function widgetFractions(widget, monitor) {
-  const [width, height] = sizeForWidget(widget);
-  const area = monitorWorkArea(monitor);
-  const spanX = Math.max(1, area.width - width);
-  const spanY = Math.max(1, area.height - height);
-
-  return {
-    fx: clamp((widget.x - area.x) / spanX, 0, 1),
-    fy: clamp((widget.y - area.y) / spanY, 0, 1),
-  };
+  return fractionsForWidget(widget, monitor, {
+    gap: WIDGET_GAP,
+    panelHeight: Main.panel?.height ?? 0,
+    sizes: WIDGET_SIZES,
+  });
 };
 
 function positionForFractions(widget, monitor) {
-  const [width, height] = sizeForWidget(widget);
-  const area = monitorWorkArea(monitor);
-  const spanX = Math.max(0, area.width - width);
-  const spanY = Math.max(0, area.height - height);
-  const fx = clamp(Number.isFinite(widget.fx) ? widget.fx : 0, 0, 1);
-  const fy = clamp(Number.isFinite(widget.fy) ? widget.fy : 0, 0, 1);
-
-  return {
-    x: Math.round(area.x + fx * spanX),
-    y: Math.round(area.y + fy * spanY),
-  };
+  return positionFromWidgetFractions(widget, monitor, {
+    gap: WIDGET_GAP,
+    panelHeight: Main.panel?.height ?? 0,
+    sizes: WIDGET_SIZES,
+  });
 };
 
 function rectForWidget(widget) {
-  const [width, height] = sizeForWidget(widget);
-
-  return {
-    x: widget.x,
-    y: widget.y,
-    width,
-    height,
-  };
+  return widgetRect(widget, WIDGET_SIZES);
 };
 
 function rectsOverlap(a, b) {
-  return a.x < b.x + b.width + WIDGET_GAP &&
-    a.x + a.width + WIDGET_GAP > b.x &&
-    a.y < b.y + b.height + WIDGET_GAP &&
-    a.y + a.height + WIDGET_GAP > b.y;
+  return rectsOverlapWithGap(a, b, WIDGET_GAP);
 };
 
 function raiseActor(actor) {

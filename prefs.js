@@ -5,7 +5,7 @@ import GLib from 'gi://GLib';
 import Gtk from 'gi://Gtk';
 import Soup from 'gi://Soup';
 
-import { ExtensionPreferences } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
+import { ExtensionPreferences, gettext as _ } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
 import * as Immich from './widgets/photos/immich.js';
 
@@ -13,13 +13,13 @@ const LAYOUT_KEY = 'layout-json';
 const EXTENSION_PATH = GLib.path_get_dirname(GLib.filename_from_uri(import.meta.url)[0]);
 
 const WIDGET_LABELS = {
-  clock: 'Clock',
-  calendar: 'Calendar',
-  agenda: 'Agenda',
-  weather: 'Weather',
-  photos: 'Photos',
-  battery: 'Battery',
-  bambu: 'Bambu Lab',
+  clock: _('Clock'),
+  calendar: _('Calendar'),
+  agenda: _('Agenda'),
+  weather: _('Weather'),
+  photos: _('Photos'),
+  battery: _('Battery'),
+  bambu: _('Bambu Lab'),
 };
 
 const WIDGET_DEFAULT_SIZES = {
@@ -63,7 +63,7 @@ function readLayout(settings) {
 };
 
 function monitorChoices(display) {
-  const choices = [{index: -1, label: 'Primary monitor'}];
+  const choices = [{index: -1, label: _('Primary monitor')}];
 
   if (display) {
     const monitors = display.get_monitors();
@@ -101,19 +101,19 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
   _buildGeneralPage(window) {
     const page = new Adw.PreferencesPage({
       name: 'general',
-      title: 'General',
+      title: _('General'),
       icon_name: 'emblem-system-symbolic',
     });
 
     const placement = new Adw.PreferencesGroup({
-      title: 'Placement',
+      title: _('Placement'),
       description: 'Where the widgets live and how they are positioned.',
     });
 
     const choices = monitorChoices(window.get_display());
     const labels = choices.map(choice => choice.label);
     const monitorRow = new Adw.ComboRow({
-      title: 'Monitor',
+      title: _('Monitor'),
       model: Gtk.StringList.new(labels),
     });
     const currentIndex = this._settings.get_int('monitor-index');
@@ -125,48 +125,48 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     placement.add(monitorRow);
 
     const gridRow = new Adw.SpinRow({
-      title: 'Grid size',
-      subtitle: 'Snap grid in pixels used while dragging widgets',
+      title: _('Grid size'),
+      subtitle: _('Snap grid in pixels used while dragging widgets'),
       adjustment: new Gtk.Adjustment({lower: 1, upper: 200, step_increment: 1, page_increment: 10}),
     });
     this._settings.bind('grid-size', gridRow, 'value', Gio.SettingsBindFlags.DEFAULT);
     placement.add(gridRow);
 
     const gapRow = new Adw.SpinRow({
-      title: 'Widget gap',
-      subtitle: 'Spacing in pixels between widgets and the screen edges',
+      title: _('Widget gap'),
+      subtitle: _('Spacing in pixels between widgets and the screen edges'),
       adjustment: new Gtk.Adjustment({lower: 0, upper: 200, step_increment: 1, page_increment: 10}),
     });
     this._settings.bind('widget-gap', gapRow, 'value', Gio.SettingsBindFlags.DEFAULT);
     placement.add(gapRow);
 
     const snapRow = new Adw.SwitchRow({
-      title: 'Snap to grid',
-      subtitle: 'Snap widget positions to the grid while dragging',
+      title: _('Snap to grid'),
+      subtitle: _('Snap widget positions to the grid while dragging'),
     });
     this._settings.bind('snap-to-grid', snapRow, 'active', Gio.SettingsBindFlags.DEFAULT);
     placement.add(snapRow);
 
     page.add(placement);
 
-    const behavior = new Adw.PreferencesGroup({title: 'Behavior'});
+    const behavior = new Adw.PreferencesGroup({title: _('Behavior')});
 
     const editRow = new Adw.SwitchRow({
-      title: 'Edit mode',
-      subtitle: 'Show drag handles and remove buttons on the widgets',
+      title: _('Edit mode'),
+      subtitle: _('Show drag handles and remove buttons on the widgets'),
     });
     this._settings.bind('edit-mode', editRow, 'active', Gio.SettingsBindFlags.DEFAULT);
     behavior.add(editRow);
 
     const hideRow = new Adw.SwitchRow({
-      title: 'Hide all widgets',
-      subtitle: 'Temporarily hide every widget without deleting the layout',
+      title: _('Hide all widgets'),
+      subtitle: _('Temporarily hide every widget without deleting the layout'),
     });
     this._settings.bind('hide-all', hideRow, 'active', Gio.SettingsBindFlags.DEFAULT);
     behavior.add(hideRow);
 
     const opacityRow = new Adw.SpinRow({
-      title: 'Widget opacity (%)',
+      title: _('Widget opacity (%)'),
       adjustment: new Gtk.Adjustment({lower: 10, upper: 100, step_increment: 1, page_increment: 10}),
     });
     this._settings.bind('widget-opacity', opacityRow, 'value', Gio.SettingsBindFlags.DEFAULT);
@@ -175,13 +175,13 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     page.add(behavior);
 
     const panel = new Adw.PreferencesGroup({
-      title: 'Top panel',
+      title: _('Top panel'),
       description: 'Control the Desktop Widget button in the top panel.',
     });
 
     const panelIconRow = new Adw.SwitchRow({
-      title: 'Show panel icon',
-      subtitle: 'Show the Desktop Widget button in the top panel',
+      title: _('Show panel icon'),
+      subtitle: _('Show the Desktop Widget button in the top panel'),
     });
     this._settings.bind('show-panel-icon', panelIconRow, 'active', Gio.SettingsBindFlags.DEFAULT);
     panel.add(panelIconRow);
@@ -194,7 +194,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
   _buildPhotosPage() {
     const page = new Adw.PreferencesPage({
       name: 'photos',
-      title: 'Photos',
+      title: _('Photos'),
       icon_name: 'image-x-generic-symbolic',
     });
 
@@ -203,13 +203,13 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     const sizes = ['preview', 'thumbnail', 'fullsize'];
 
     const sourceGroup = new Adw.PreferencesGroup({
-      title: 'Display',
+      title: _('Display'),
       description: 'Where the Photos widget gets its images and how often it changes.',
     });
 
     const sourceRow = new Adw.ComboRow({
-      title: 'Photo source',
-      subtitle: 'Immich is used first; local photos are a fallback when unavailable',
+      title: _('Photo source'),
+      subtitle: _('Immich is used first; local photos are a fallback when unavailable'),
       model: Gtk.StringList.new(['Immich + local (fallback)', 'Immich only', 'Local only']),
     });
     sourceRow.set_selected(Math.max(0, sources.indexOf(this._settings.get_string('photos-source'))));
@@ -219,7 +219,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     sourceGroup.add(sourceRow);
 
     const intervalRow = new Adw.SpinRow({
-      title: 'Change interval (minutes)',
+      title: _('Change interval (minutes)'),
       adjustment: new Gtk.Adjustment({lower: 1, upper: 1440, step_increment: 1, page_increment: 5}),
     });
     intervalRow.set_value(Math.max(1, Math.round(this._settings.get_int('photo-interval') / 60) || 30));
@@ -231,18 +231,18 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     page.add(sourceGroup);
 
     const immichGroup = new Adw.PreferencesGroup({
-      title: 'Immich',
+      title: _('Immich'),
       description: 'Pull random photos from your Immich server. Create an API key under Account Settings → API Keys.',
     });
 
-    const urlRow = new Adw.EntryRow({title: 'Server URL'});
+    const urlRow = new Adw.EntryRow({title: _('Server URL')});
     urlRow.set_text(this._settings.get_string('immich-server-url'));
     urlRow.connect('notify::text', () => {
       this._settings.set_string('immich-server-url', urlRow.get_text().trim());
     });
     immichGroup.add(urlRow);
 
-    const keyRow = new Adw.PasswordEntryRow({title: 'API key'});
+    const keyRow = new Adw.PasswordEntryRow({title: _('API key')});
     keyRow.set_text(this._settings.get_string('immich-api-key'));
     keyRow.connect('notify::text', () => {
       this._settings.set_string('immich-api-key', keyRow.get_text().trim());
@@ -250,19 +250,19 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     immichGroup.add(keyRow);
 
     const scopeRow = new Adw.ComboRow({
-      title: 'Show',
+      title: _('Show'),
       model: Gtk.StringList.new(['All photos', 'Favorites only', 'Specific album']),
     });
     scopeRow.set_selected(Math.max(0, scopes.indexOf(this._settings.get_string('immich-scope'))));
     immichGroup.add(scopeRow);
 
-    const albumRow = new Adw.ComboRow({title: 'Album'});
-    albumRow.set_model(Gtk.StringList.new(['Loading albums…']));
+    const albumRow = new Adw.ComboRow({title: _('Album')});
+    albumRow.set_model(Gtk.StringList.new([_('Loading albums…')]));
     albumRow.set_sensitive(false);
     immichGroup.add(albumRow);
 
     const sizeRow = new Adw.ComboRow({
-      title: 'Image quality',
+      title: _('Image quality'),
       model: Gtk.StringList.new(['Preview (recommended)', 'Thumbnail (lightest)', 'Full size']),
     });
     sizeRow.set_selected(Math.max(0, sizes.indexOf(this._settings.get_string('immich-size'))));
@@ -277,7 +277,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
     const populateAlbums = () => {
       if (albums.length === 0) {
-        albumRow.set_model(Gtk.StringList.new(['No albums found']));
+        albumRow.set_model(Gtk.StringList.new([_('No albums found')]));
         albumRow.set_sensitive(false);
         return;
       };
@@ -304,7 +304,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     });
 
     const loadAlbums = () => {
-      albumRow.set_model(Gtk.StringList.new(['Loading albums…']));
+      albumRow.set_model(Gtk.StringList.new([_('Loading albums…')]));
       albumRow.set_sensitive(false);
 
       Immich.fetchAlbumChoices(this._settings).then(choices => {
@@ -313,7 +313,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
         populateAlbums();
       }).catch(() => {
         albums.length = 0;
-        albumRow.set_model(Gtk.StringList.new(['Album list unavailable']));
+        albumRow.set_model(Gtk.StringList.new([_('Album list unavailable')]));
         albumRow.set_sensitive(false);
       });
     };
@@ -353,16 +353,16 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
   _buildCalendarPage() {
     const page = new Adw.PreferencesPage({
       name: 'calendar',
-      title: 'Calendar',
+      title: _('Calendar'),
       icon_name: 'x-office-calendar-symbolic',
     });
 
     const group = new Adw.PreferencesGroup({
-      title: 'Calendars',
+      title: _('Calendars'),
       description: 'Which calendars the Calendar and Agenda widgets read from Evolution. Deselecting every calendar shows all of them.',
     });
 
-    const statusRow = new Adw.ActionRow({title: 'Loading calendars…'});
+    const statusRow = new Adw.ActionRow({title: _('Loading calendars…')});
     group.add(statusRow);
     page.add(group);
 
@@ -464,23 +464,23 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
   _buildBambuPage() {
     const page = new Adw.PreferencesPage({
       name: 'bambu',
-      title: 'Bambu Lab',
+      title: _('Bambu Lab'),
       icon_name: 'printer-symbolic',
     });
 
     const group = new Adw.PreferencesGroup({
-      title: 'Bridge connection',
+      title: _('Bridge connection'),
       description: 'Point the widget at the self-hosted Bambu bridge (see homelab/bambu-bridge). Run it next to the printer and expose it through a Cloudflare Tunnel.',
     });
 
-    const urlRow = new Adw.EntryRow({title: 'Bridge URL'});
+    const urlRow = new Adw.EntryRow({title: _('Bridge URL')});
     urlRow.set_text(this._settings.get_string('bambu-endpoint-url'));
     urlRow.connect('notify::text', () => {
       this._settings.set_string('bambu-endpoint-url', urlRow.get_text().trim());
     });
     group.add(urlRow);
 
-    const tokenRow = new Adw.PasswordEntryRow({title: 'Bearer token'});
+    const tokenRow = new Adw.PasswordEntryRow({title: _('Bearer token')});
     tokenRow.set_text(this._settings.get_string('bambu-token'));
     tokenRow.connect('notify::text', () => {
       this._settings.set_string('bambu-token', tokenRow.get_text().trim());
@@ -488,19 +488,19 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     group.add(tokenRow);
 
     const refreshRow = new Adw.SpinRow({
-      title: 'Refresh interval (seconds)',
-      subtitle: 'How often the widget polls the bridge (3-300)',
+      title: _('Refresh interval (seconds)'),
+      subtitle: _('How often the widget polls the bridge (3-300)'),
       adjustment: new Gtk.Adjustment({lower: 3, upper: 300, step_increment: 1, page_increment: 5}),
     });
     this._settings.bind('bambu-refresh', refreshRow, 'value', Gio.SettingsBindFlags.DEFAULT);
     group.add(refreshRow);
 
     const testRow = new Adw.ActionRow({
-      title: 'Connection status',
-      subtitle: 'Not tested yet',
+      title: _('Connection status'),
+      subtitle: _('Not tested yet'),
     });
     const testButton = new Gtk.Button({
-      label: 'Test connection',
+      label: _('Test connection'),
       valign: Gtk.Align.CENTER,
     });
     testButton.connect('clicked', () => this._testBambuConnection(testRow, testButton));
@@ -516,37 +516,37 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
   _buildBambuOfflineGroup() {
     const group = new Adw.PreferencesGroup({
-      title: 'Offline face',
+      title: _('Offline face'),
       description: 'What to show when the bridge is reachable but the printer is offline.',
     });
 
     const funRow = new Adw.SwitchRow({
-      title: 'Animated face',
-      subtitle: 'Show a cute mochi face that reacts to temperature, battery and CPU load instead of a plain “Printer offline” message',
+      title: _('Animated face'),
+      subtitle: _('Show a cute mochi face that reacts to temperature, battery and CPU load instead of a plain “Printer offline” message'),
     });
     this._settings.bind('bambu-offline-fun', funRow, 'active', Gio.SettingsBindFlags.DEFAULT);
     group.add(funRow);
 
     const alwaysRow = new Adw.SwitchRow({
-      title: 'Always show the face',
-      subtitle: 'Show it even when the printer is online or the bridge is unreachable (good for testing)',
+      title: _('Always show the face'),
+      subtitle: _('Show it even when the printer is online or the bridge is unreachable (good for testing)'),
     });
     this._settings.bind('bambu-offline-always', alwaysRow, 'active', Gio.SettingsBindFlags.DEFAULT);
     group.add(alwaysRow);
 
     const accentRow = new Adw.SwitchRow({
-      title: 'Use system accent colour',
-      subtitle: 'Turn off to pick a custom colour for the face',
+      title: _('Use system accent colour'),
+      subtitle: _('Turn off to pick a custom colour for the face'),
     });
     group.add(accentRow);
 
-    const colorRow = new Adw.ActionRow({title: 'Face colour'});
+    const colorRow = new Adw.ActionRow({title: _('Face colour')});
     const colorButton = new Gtk.ColorButton({valign: Gtk.Align.CENTER, use_alpha: false});
 
     colorRow.add_suffix(colorButton);
     group.add(colorRow);
 
-    const captionRow = new Adw.EntryRow({title: 'Caption (leave empty to hide)'});
+    const captionRow = new Adw.EntryRow({title: _('Caption (leave empty to hide)')});
     captionRow.set_text(this._settings.get_string('bambu-offline-caption'));
     captionRow.connect('notify::text', () => {
       this._settings.set_string('bambu-offline-caption', captionRow.get_text());
@@ -654,7 +654,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
     if (!endpoint || !token) {
       row.subtitle = 'Set the bridge URL and token first';
-      this._toast('Set the bridge URL and token first');
+      this._toast(_('Set the bridge URL and token first'));
       return;
     };
 
@@ -667,7 +667,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     if (!message) {
       row.subtitle = 'Invalid bridge URL';
       button.set_sensitive(true);
-      this._toast('Invalid bridge URL');
+      this._toast(_('Invalid bridge URL'));
       return;
     };
 
@@ -684,7 +684,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
       if (!settled) {
         session.abort();
         row.subtitle = 'Connection timed out after 15s';
-        this._toast('Connection timed out');
+        this._toast(_('Connection timed out'));
         finish();
       };
 
@@ -719,7 +719,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
         };
       } catch (error) {
         row.subtitle = `Connection failed: ${error.message}`;
-        this._toast('Connection failed — see Bambu Lab page');
+        this._toast(_('Connection failed — see Bambu Lab page'));
       } finally {
         finish();
       };
@@ -737,38 +737,38 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
   _buildDeveloperPage() {
     const page = new Adw.PreferencesPage({
       name: 'developer',
-      title: 'Developer',
+      title: _('Developer'),
       icon_name: 'applications-engineering-symbolic',
     });
 
     const master = new Adw.PreferencesGroup({
-      title: 'Developer mode',
+      title: _('Developer mode'),
       description: 'Reveal extra controls for testing widgets without real-world conditions.',
     });
 
     const devRow = new Adw.SwitchRow({
-      title: 'Enable developer mode',
-      subtitle: 'Show testing controls such as forcing the Bambu face mood',
+      title: _('Enable developer mode'),
+      subtitle: _('Show testing controls such as forcing the Bambu face mood'),
     });
     this._settings.bind('dev-mode', devRow, 'active', Gio.SettingsBindFlags.DEFAULT);
     master.add(devRow);
     page.add(master);
 
     const faceGroup = new Adw.PreferencesGroup({
-      title: 'Bambu face',
+      title: _('Bambu face'),
       description: 'Preview every mood without stressing the CPU or draining the battery. Turn on “Always show the face” on the Bambu Lab page to see it while the printer is online.',
     });
 
     const cycleRow = new Adw.SwitchRow({
-      title: 'Cycle all moods',
-      subtitle: 'Rotate through chill, hot, sleepy, charging, busy and overload automatically',
+      title: _('Cycle all moods'),
+      subtitle: _('Rotate through chill, hot, sleepy, charging, busy and overload automatically'),
     });
     this._settings.bind('bambu-dev-cycle', cycleRow, 'active', Gio.SettingsBindFlags.DEFAULT);
     faceGroup.add(cycleRow);
 
     const moods = ['auto', 'chill', 'hot', 'sleepy', 'charging', 'busy', 'overload'];
     const moodRow = new Adw.ComboRow({
-      title: 'Force mood',
+      title: _('Force mood'),
       model: Gtk.StringList.new(['Auto (real sensors)', 'Chill', 'Hot', 'Sleepy', 'Charging', 'Busy', 'Overloaded']),
     });
     moodRow.set_selected(Math.max(0, moods.indexOf(this._settings.get_string('bambu-dev-mood'))));
@@ -804,18 +804,18 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
   _buildWidgetsPage() {
     const page = new Adw.PreferencesPage({
       name: 'widgets',
-      title: 'Widgets',
+      title: _('Widgets'),
       icon_name: 'view-grid-symbolic',
     });
 
     const listGroup = new Adw.PreferencesGroup({
-      title: 'Individual widgets',
+      title: _('Individual widgets'),
       description: 'Add, remove, show or hide each widget and fine-tune its position and size.',
     });
     page.add(listGroup);
 
     const addGroup = new Adw.PreferencesGroup({
-      title: 'Add widget',
+      title: _('Add widget'),
       description: 'Adds a new widget to the layout below.',
     });
     page.add(addGroup);
@@ -837,8 +837,8 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
       if (widgets.length === 0) {
         const empty = new Adw.ActionRow({
-          title: 'No widgets configured',
-          subtitle: 'Add one from the "Add widget" section below.',
+          title: _('No widgets configured'),
+          subtitle: _('Add one from the "Add widget" section below.'),
         });
         listGroup.add(empty);
         rows.push(empty);
@@ -854,7 +854,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
         };
       };
 
-      const resetRow = new Adw.ButtonRow({title: 'Reset to default layout'});
+      const resetRow = new Adw.ButtonRow({title: _('Reset to default layout')});
       resetRow.add_css_class('destructive-action');
       resetRow.connect('activated', () => {
         this._settings.set_string(LAYOUT_KEY, '');
@@ -908,7 +908,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
       row.set_subtitle(this._subtitleFor(widget));
     };
 
-    const visibleRow = new Adw.SwitchRow({title: 'Visible'});
+    const visibleRow = new Adw.SwitchRow({title: _('Visible')});
     visibleRow.set_active(widget.hidden !== true);
     visibleRow.connect('notify::active', () => {
       widget.hidden = !visibleRow.get_active();
@@ -940,7 +940,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     addSpin('Width', 'width', 80, 10000);
     addSpin('Height', 'height', 80, 10000);
 
-    const removeRow = new Adw.ButtonRow({title: 'Remove widget'});
+    const removeRow = new Adw.ButtonRow({title: _('Remove widget')});
     removeRow.add_css_class('destructive-action');
     removeRow.connect('activated', () => onRemove());
     row.add_row(removeRow);

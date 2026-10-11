@@ -1,0 +1,31 @@
+name: Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libglib2.0-bin
+
+      - name: ESM parse check
+        run: make check
+
+      - name: Compile GSettings schema
+        run: glib-compile-schemas schemas/
+
+      - name: Unit tests
+        run: node --test tests/*.test.mjs
+
+      - name: Lint bridge (ruff)
+        run: |
+          python3 -m pip install --user --quiet ruff
+          ruff check homelab/bambu-bridge

@@ -221,7 +221,8 @@ make uninstall      # removes the extension
 .
 ├── install.sh            # one-liner installer
 ├── uninstall.sh          # one-liner uninstaller (--purge to wipe data)
-├── Makefile              # make check/install/uninstall/pack
+├── Makefile              # make check/test/install/uninstall/pack (+ i18n targets)
+├── package.json          # node --test entry point (dev only, not packaged)
 ├── scripts/              # check.sh (ESM parse) + pack.py (build release zip)
 ├── extension.js          # GNOME Shell entry, layout/drag/resize, panel menu
 ├── prefs.js              # libadwaita preferences UI
@@ -229,9 +230,14 @@ make uninstall      # removes the extension
 ├── logger.js             # Logging helpers
 ├── stylesheet.css        # Global styles
 ├── schemas/              # GSettings schema
+├── po/                   # gettext translations (POTFILES.in, LINGUAS, *.po)
+├── tests/                # node --test unit tests (gi-free logic)
 ├── lib/
 │   ├── bambuData.js      # polls the Bambu bridge, caches + refreshes status
-│   └── calendarData.js   # runs tools/eds_events.py, caches + refreshes events
+│   ├── bambuStatus.js    # pure status signature (change detection)
+│   ├── calendarData.js   # runs tools/eds_events.py, caches + refreshes events
+│   ├── geometry.js       # pure layout/fraction math (testable without gi)
+│   └── mood.js           # pure face-mood conditions + thresholds
 ├── tools/
 │   └── eds_events.py     # EDS -> JSON helper (separate process, avoids shell crash)
 ├── widgets/
@@ -246,6 +252,18 @@ make uninstall      # removes the extension
 │   └── bambu-bridge/     # self-hosted printer bridge (Docker, not packaged)
 └── workspaceIntegration.js
 ```
+
+### Checks and tests
+```bash
+make check        # ESM parse check for every tracked .js file
+make test         # node --test tests/*.test.mjs (pure logic, no gi needed)
+make pot          # regenerate po/desktop-widget.pot (needs gettext)
+make update-po    # merge new strings into po/*.po
+make translations # compile po/*.po into locale/<lang>/LC_MESSAGES/*.mo
+```
+Prefer putting gi-free logic (math, parsing, thresholds) in `lib/` so it can be
+covered by `node --test`. Both `make check` and the unit tests run in CI
+(`.github/workflows/check.yml`).
 
 ### Widget module contract
 Each widget module must export:

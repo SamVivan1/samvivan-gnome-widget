@@ -4,6 +4,8 @@ import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import St from 'gi://St';
 
+import { conditionsFor, dominantMood, normalizeThresholds } from '../../lib/mood.js';
+
 export const type = 'bambu';
 export const label = 'Bambu Lab';
 export const stylesheet = 'widgets/bambu/stylesheet.css';
@@ -139,15 +141,10 @@ const ProgressRing = GObject.registerClass(
 		};
 	});
 
-const HOT_TEMP_C = 60;
-const LOW_BATTERY = 20;
-const HIGH_LOAD = 85;
-const HIGH_RAM = 90;
 const HOT_COLOR = '#ff5b52';
 const CRITICAL_COLOR = '#ff4d4d';
 const CRITICAL_STRESS = 3;
 const DEV_MOODS = ['chill', 'hot', 'sleepy', 'charging', 'busy', 'overload'];
-const MOOD_PRIORITY = ['hot', 'overload', 'sleepy', 'charging', 'busy'];
 const DEV_CYCLE_SECONDS = 3.5;
 
 function luminance(hex) {
@@ -354,12 +351,7 @@ const MochiFace = GObject.registerClass(
 			this._animate = animate;
 			this._dev = dev || null;
 			this._onStatus = onStatus || null;
-			this._thresholds = {
-				hot: thresholds?.hot ?? HOT_TEMP_C,
-				battery: thresholds?.battery ?? LOW_BATTERY,
-				load: thresholds?.load ?? HIGH_LOAD,
-				ram: thresholds?.ram ?? HIGH_RAM,
-			};
+			this._thresholds = normalizeThresholds(thresholds);
 			this._timerId = 0;
 			this._frame = 0;
 			this._temp = null;
@@ -432,39 +424,17 @@ const MochiFace = GObject.registerClass(
 		};
 
 		_conditions() {
-			const active = [];
-
-			if (this._temp !== null && this._temp >= this._thresholds.hot) {
-				active.push('hot');
-			};
-
-			if (this._ram !== null && this._ram >= this._thresholds.ram) {
-				active.push('overload');
-			};
-
-			if (this._battery !== null && this._battery <= this._thresholds.battery && !this._charging) {
-				active.push('sleepy');
-			};
-
-			if (this._charging && this._battery !== null && this._battery < 100) {
-				active.push('charging');
-			};
-
-			if (this._load !== null && this._load >= this._thresholds.load) {
-				active.push('busy');
-			};
-
-			return active;
+			return conditionsFor({
+				temp: this._temp,
+				load: this._load,
+				ram: this._ram,
+				battery: this._battery,
+				charging: this._charging,
+			}, this._thresholds);
 		};
 
 		_dominant(active) {
-			for (const mood of MOOD_PRIORITY) {
-				if (active.includes(mood)) {
-					return mood;
-				};
-			};
-
-			return 'chill';
+			return dominantMood(active);
 		};
 
 		_selectMood() {

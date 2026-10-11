@@ -1,9 +1,47 @@
 EXTUUID := desktop-widget@samvivan
 PREFIX  := $(HOME)/.local/share/gnome-shell/extensions/$(EXTUUID)
+GETTEXT_DOMAIN := desktop-widget
+POT := po/$(GETTEXT_DOMAIN).pot
+XGETTEXT_FLAGS = --language=JavaScript --keyword=_ --from-code=UTF-8 \
+	--package-name="Desktop Widget" --package-version=1.0.0 \
+	--copyright-holder="desktop-widget@samvivan"
 
 .PHONY: check
 check:
 	@bash scripts/check.sh
+
+.PHONY: test
+test:
+	@node --test tests/*.test.mjs
+
+.PHONY: pot
+pot:
+	@command -v xgettext >/dev/null 2>&1 || { echo "xgettext not found (install gettext)"; exit 1; }
+	@xgettext $(XGETTEXT_FLAGS) -o po/desktop-widget.pot $(shell grep -v '^#' po/POTFILES.in)
+	@echo "Wrote po/desktop-widget.pot"
+
+.PHONY: update-po
+update-po: pot
+	@for po in po/*.po; do \
+		command -v msgmerge >/dev/null 2>&1 || { echo "msgmerge not found (install gettext)"; exit 1; }; \
+		msgmerge --quiet --update "$$po" po/desktop-widget.pot; \
+	done
+	@echo "Updated po/*.po"
+
+.PHONY: translations
+translations:
+	@command -v msgfmt >/dev/null 2>&1 || { echo "msgfmt not found (install gettext)"; exit 1; }
+	@for po in po/*.po; do \
+		lang=$$(basename "$$po" .po); \
+		mkdir -p "locale/$$lang/LC_MESSAGES"; \
+		msgfmt -c -o "locale/$$lang/LC_MESSAGES/desktop-widget.mo" "$$po"; \
+	done
+	@echo "Compiled translations into locale/"
+
+.PHONY: clean-translations
+clean-translations:
+	@rm -rf locale
+
 
 .PHONY: clean
 clean:
