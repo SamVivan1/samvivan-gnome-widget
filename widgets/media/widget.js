@@ -7,7 +7,7 @@ import St from 'gi://St';
 import { activeLyricIndex } from '../../lib/lyrics.js';
 
 export const type = 'media';
-export const label = 'Now Playing';
+export const label = 'Music';
 export const stylesheet = 'widgets/media/stylesheet.css';
 export const defaultSize = 'medium';
 export const defaultInLayout = false;
@@ -274,7 +274,7 @@ const MediaView = GObject.registerClass(
 			const view = this._media?.view;
 
 			if (!view) {
-				this._title.text = 'Now Playing';
+				this._title.text = 'Music';
 				this._artist.text = 'No media player detected';
 				this._setLyrics('', '');
 				this._hint.hide();
@@ -286,7 +286,7 @@ const MediaView = GObject.registerClass(
 			this._visualizer.setPlaying(this._playing);
 
 			this._title.text = view.title || (view.available ? 'Unknown track' : 'Nothing playing');
-			this._artist.text = [view.artist, view.album].filter(part => part && part.length > 0).join(' — ');
+			this._artist.text = view.artist || 'Unknown artist';
 			this._updateArt(view.artUrl);
 
 			this._progress.show();

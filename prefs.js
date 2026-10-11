@@ -23,7 +23,7 @@ function widgetLabels() {
     photos: _('Photos'),
     battery: _('Battery'),
     bambu: _('Bambu Lab'),
-    media: _('Now Playing'),
+    media: _('Music'),
   };
 };
 
@@ -530,13 +530,13 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
   _buildMediaPage() {
     const page = new Adw.PreferencesPage({
-      title: _('Now Playing'),
+      title: _('Music'),
       icon_name: 'audio-x-generic-symbolic',
     });
 
     const group = new Adw.PreferencesGroup({
       title: _('Lyrics'),
-      description: 'The Now Playing widget reads what other apps play over MPRIS. Time-synced lyrics are fetched from lrclib.net and cached under ~/.cache/desktop-widget/lyrics.',
+      description: 'The Music widget reads what other apps play over MPRIS. Time-synced lyrics are fetched from lrclib.net and cached under ~/.cache/desktop-widget/lyrics.',
     });
 
     const showRow = new Adw.SwitchRow({

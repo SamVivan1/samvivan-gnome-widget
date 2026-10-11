@@ -15,7 +15,7 @@ A lightweight desktop widget suite for GNOME Shell 50. Forked from `widgets@dist
 - **Photos** – Rotate local images or random photos from your Immich library, with automatic fallback. Supports all photos, favorites-only, or a specific album. Configurable interval and image quality.
 - **Battery** – System battery + GSConnect phone battery (when available). Devices slide in from the right when they connect and drop away when they disconnect, keeping a stable connect order (respects GNOME reduce-motion).
  - **Bambu Lab** – Live 3D printer progress (state, file, remaining time, layer, temperatures, AMS) from a self-hosted bridge that talks to your printer over the LAN
- - **Now Playing** – Shows what other apps are playing over MPRIS (title, artist, album art, progress) with a decorative bar visualizer and time-synced lyrics fetched from [lrclib.net](https://lrclib.net) and cached locally
+ - **Music** – Shows what other apps are playing over MPRIS (title, artist, album art, progress) with a decorative bar visualizer and time-synced lyrics fetched from [lrclib.net](https://lrclib.net) and cached locally
  - **Placement** – Drag, resize, snap-to-grid, configurable grid gap, multi-monitor support (`-1` = primary)
 - **Behavior** – Edit/Hide-all modes, widget opacity (10–100%), optional top-panel icon
 - **Panel menu** – Quick toggle/edit/add/reset widgets from the top bar
@@ -112,7 +112,7 @@ Open preferences via: `gnome-extensions prefs desktop-widget@samvivan` or panel 
 - **Use system accent colour / Face colour** – colour the face with the GNOME accent or a custom colour
 - **Caption** – text shown under the face (leave empty to hide; while printing this is replaced by the live state and progress)
 
-### Now Playing
+### Music
 - **Show lyrics** – fetch time-synced lyrics from [lrclib.net](https://lrclib.net) and highlight the current line. Lyrics are cached under `~/.cache/desktop-widget/lyrics/`, so each song is downloaded only once
 - **Lyrics offset (ms)** – shift the lyric timing (−5000–5000 ms) to line it up with the audio
 - The widget follows whatever app is currently playing over MPRIS (Spotify, Rhythmbox, Firefox, mpv, …), showing title, artist, album art, a progress bar and a decorative bar visualizer. It has no playback controls by design — use your media-control extension or the app itself
@@ -186,7 +186,7 @@ See [`homelab/bambu-bridge/README.md`](homelab/bambu-bridge/README.md) for full 
 | `dev-mode` | `b` | `false` | Developer mode: reveal testing controls |
 | `bambu-dev-mood` | `s` | `'auto'` | Force the face mood (auto/chill/hot/sleepy/charging/busy/overload/printing/paused/error/done) |
 | `bambu-dev-cycle` | `b` | `false` | Cycle through every face mood automatically |
-| `media-show-lyrics` | `b` | `true` | Fetch and show synced lyrics in the Now Playing widget |
+| `media-show-lyrics` | `b` | `true` | Fetch and show synced lyrics in the Music widget |
 | `media-lyrics-offset-ms` | `i` | `0` | Shift lyric timing (−5000–5000 ms) |
 
 ## Uninstall
