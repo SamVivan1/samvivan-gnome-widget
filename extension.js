@@ -298,6 +298,9 @@ class WidgetController {
     connect('bambu-endpoint-url', () => this._reconfigureBambu());
     connect('bambu-token', () => this._reconfigureBambu());
     connect('bambu-refresh', () => this._reconfigureBambu());
+    connect('bambu-offline-fun', () => this._refreshBambuViews(true));
+    connect('bambu-offline-color', () => this._refreshBambuViews(true));
+    connect('bambu-offline-caption', () => this._refreshBambuViews(true));
   };
 
   _reconfigureBambu() {
@@ -355,6 +358,7 @@ class WidgetController {
     this._calendarData.start();
 
     this._bambuData = new BambuData(this._layoutSettings);
+    this._bambuRenderKey = null;
     this._bambuUnsubscribe = this._bambuData.subscribe(() => this._refreshBambuViews());
 
     this._createLayer();
@@ -668,10 +672,18 @@ class WidgetController {
     };
   };
 
-  _refreshBambuViews() {
+  _refreshBambuViews(force = false) {
     if (this._editMode || this._dragging) {
       return;
     };
+
+    const key = this._bambuData?.renderKey?.() ?? null;
+
+    if (!force && key !== null && key === this._bambuRenderKey) {
+      return;
+    };
+
+    this._bambuRenderKey = key;
 
     for (const view of this._views.values()) {
       if (view.widget.type === 'bambu') {

@@ -106,5 +106,20 @@
       <summary>Bambu refresh interval</summary>
       <description>How often the Bambu widget polls the bridge, in seconds (3-300).</description>
     </key>
+    <key name="bambu-offline-fun" type="b">
+      <default>true</default>
+      <summary>Animated robot when printer offline</summary>
+      <description>Show a cute animated robot face instead of the plain "Printer offline" hint when the bridge is reachable but the printer is not.</description>
+    </key>
+    <key name="bambu-offline-color" type="s">
+      <default>''</default>
+      <summary>Offline robot colour</summary>
+      <description>Hex colour (for example #3584e4) for the offline robot, or empty to follow the system accent colour.</description>
+    </key>
+    <key name="bambu-offline-caption" type="s">
+      <default>'Printer is napping…'</default>
+      <summary>Offline robot caption</summary>
+      <description>Caption shown under the offline robot. Leave empty to hide it.</description>
+    </key>
   </schema>
-</schemalist>
+  </schemalist>

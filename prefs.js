@@ -1,4 +1,5 @@
 import Adw from 'gi://Adw';
+import Gdk from 'gi://Gdk';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Gtk from 'gi://Gtk';
@@ -39,6 +40,12 @@ const WIDGET_DIMENSIONS = {
 
 function widgetLabel(type) {
   return WIDGET_LABELS[type] ?? type;
+};
+
+function rgbaToHex(rgba) {
+  const channel = value => Math.round(Math.max(0, Math.min(1, value)) * 255).toString(16).padStart(2, '0');
+
+  return `#${channel(rgba.red)}${channel(rgba.green)}${channel(rgba.blue)}`;
 };
 
 function readLayout(settings) {
@@ -501,7 +508,90 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
     page.add(group);
 
+    page.add(this._buildBambuOfflineGroup());
+
     return page;
+  };
+
+  _buildBambuOfflineGroup() {
+    const group = new Adw.PreferencesGroup({
+      title: 'Offline robot',
+      description: 'What to show when the bridge is reachable but the printer is offline.',
+    });
+
+    const funRow = new Adw.SwitchRow({
+      title: 'Animated robot',
+      subtitle: 'Show a cute animated robot instead of a plain “Printer offline” message',
+    });
+    this._settings.bind('bambu-offline-fun', funRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+    group.add(funRow);
+
+    const accentRow = new Adw.SwitchRow({
+      title: 'Use system accent colour',
+      subtitle: 'Turn off to pick a custom colour for the robot',
+    });
+    group.add(accentRow);
+
+    const colorRow = new Adw.ActionRow({title: 'Robot colour'});
+    const colorButton = new Gtk.ColorButton({valign: Gtk.Align.CENTER, use_alpha: false});
+
+    colorRow.add_suffix(colorButton);
+    group.add(colorRow);
+
+    const captionRow = new Adw.EntryRow({title: 'Caption (leave empty to hide)'});
+    captionRow.set_text(this._settings.get_string('bambu-offline-caption'));
+    captionRow.connect('notify::text', () => {
+      this._settings.set_string('bambu-offline-caption', captionRow.get_text());
+    });
+    group.add(captionRow);
+
+    let syncing = false;
+
+    const applyColorState = () => {
+      const enabled = this._settings.get_boolean('bambu-offline-fun');
+      const hex = this._settings.get_string('bambu-offline-color');
+      const usesAccent = !hex;
+
+      syncing = true;
+      accentRow.set_active(usesAccent);
+      syncing = false;
+
+      accentRow.set_sensitive(enabled);
+      colorRow.set_sensitive(enabled);
+      colorButton.set_sensitive(enabled && !usesAccent);
+
+      if (!usesAccent) {
+        const rgba = new Gdk.RGBA();
+
+        if (rgba.parse(hex)) {
+          colorButton.set_rgba(rgba);
+        };
+      };
+    };
+
+    accentRow.connect('notify::active', () => {
+      if (syncing) {
+        return;
+      };
+
+      if (accentRow.get_active()) {
+        this._settings.set_string('bambu-offline-color', '');
+      } else {
+        this._settings.set_string('bambu-offline-color', rgbaToHex(colorButton.get_rgba()));
+      };
+
+      applyColorState();
+    });
+
+    colorButton.connect('color-set', () => {
+      this._settings.set_string('bambu-offline-color', rgbaToHex(colorButton.get_rgba()));
+      applyColorState();
+    });
+
+    funRow.connect('notify::active', applyColorState);
+    applyColorState();
+
+    return group;
   };
 
   _toast(message, timeout = 4) {
