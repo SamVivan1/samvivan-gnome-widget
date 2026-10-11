@@ -504,42 +504,98 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     return page;
   };
 
+  _toast(message, timeout = 4) {
+    try {
+      this._window.add_toast?.(new Adw.Toast({title: message, timeout}));
+    } catch (error) {
+      // older libadwaita without add_toast; the row subtitle still shows the result
+    };
+  };
+
+  _bambuEndpoint() {
+    const raw = this._settings.get_string('bambu-endpoint-url').trim().replace(/\/+$/, '');
+
+    if (!raw) {
+      return '';
+    };
+
+    return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  };
+
   _testBambuConnection(row, button) {
-    const endpoint = this._settings.get_string('bambu-endpoint-url').trim().replace(/\/+$/, '');
+    const endpoint = this._bambuEndpoint();
     const token = this._settings.get_string('bambu-token').trim();
 
     if (!endpoint || !token) {
       row.subtitle = 'Set the bridge URL and token first';
+      this._toast('Set the bridge URL and token first');
       return;
     };
 
-    row.subtitle = 'Testing…';
+    row.subtitle = `Testing ${endpoint}/health…`;
     button.set_sensitive(false);
 
-    const session = new Soup.Session({timeout: 10, user_agent: 'desktop-widget'});
+    const session = new Soup.Session({timeout: 12, user_agent: 'desktop-widget'});
     const message = Soup.Message.new('GET', `${endpoint}/health`);
+
+    if (!message) {
+      row.subtitle = 'Invalid bridge URL';
+      button.set_sensitive(true);
+      this._toast('Invalid bridge URL');
+      return;
+    };
 
     message.request_headers.append('Authorization', `Bearer ${token}`);
     message.request_headers.append('accept', 'application/json');
 
+    let settled = false;
+    const finish = () => {
+      settled = true;
+      button.set_sensitive(true);
+    };
+
+    const timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 15, () => {
+      if (!settled) {
+        session.abort();
+        row.subtitle = 'Connection timed out after 15s';
+        this._toast('Connection timed out');
+        finish();
+      };
+
+      return GLib.SOURCE_REMOVE;
+    });
+
     session.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (source, result) => {
+      if (settled) {
+        return;
+      };
+
+      GLib.source_remove(timeoutId);
+
       try {
         const bytes = source.send_and_read_finish(result);
         const status = message.get_status();
 
         if (status !== Soup.Status.OK) {
-          row.subtitle = `Bridge replied with HTTP ${status}`;
+          row.subtitle = status === Soup.Status.BAD_GATEWAY
+            ? 'HTTP 502 — the tunnel is up but the bridge is not running'
+            : status === Soup.Status.UNAUTHORIZED
+              ? 'HTTP 401 — token does not match API_TOKEN'
+              : `Bridge replied with HTTP ${status}`;
+          this._toast(row.subtitle);
         } else {
           const payload = JSON.parse(new TextDecoder().decode(bytes.get_data()));
 
           row.subtitle = payload.connected === true
             ? 'Bridge reachable, printer connected'
-            : 'Bridge reachable, printer not connected';
+            : `Bridge reachable, printer not connected (mock=${payload.mock === true})`;
+          this._toast(row.subtitle);
         };
       } catch (error) {
         row.subtitle = `Connection failed: ${error.message}`;
+        this._toast('Connection failed — see Bambu Lab page');
       } finally {
-        button.set_sensitive(true);
+        finish();
       };
     });
   };

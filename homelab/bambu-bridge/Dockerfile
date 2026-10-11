@@ -11,6 +11,8 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 COPY app.py bambu_client.py ./
 
+ENV PORT=8080
 EXPOSE 8080
 
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080"]
+# Honor PORT so the container listens where docker-compose publishes it.
+CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT:-8080}"]

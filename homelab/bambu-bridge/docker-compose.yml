@@ -10,6 +10,8 @@ services:
       - "8083:8083"
     networks:
       - bambu-net
+    volumes:
+      - bambu-data:/app/data
     # The container reaches the printer over the LAN through NAT on this
     # bridge network. Uncomment only if your printer must be reached
     # through the host network namespace (this disables ``ports``).
@@ -26,3 +28,6 @@ networks:
     ipam:
       config:
         - subnet: 172.16.0.0/24
+
+volumes:
+  bambu-data:

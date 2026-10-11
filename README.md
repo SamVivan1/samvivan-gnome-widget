@@ -127,10 +127,11 @@ printer --MQTT(LAN)--> bambu-bridge --HTTPS+token--> cloudflared --> widget
 ```
 
 1. On the printer, enable **LAN mode** (Settings → Network; **Developer Mode** on newer firmware) and note the LAN IP, serial number, and 8-digit access code.
-2. On the homelab host: `cd homelab/bambu-bridge && cp .env.example .env`, set `BAMBU_IP`, `BAMBU_SERIAL`, `BAMBU_ACCESS_CODE`, and a long random `API_TOKEN`, then `docker compose up -d --build`.
-3. Publish it with a Cloudflare Tunnel (see the bridge README for the exact `cloudflared` commands).
-4. In Preferences → Bambu Lab, set the Bridge URL (e.g. `https://bambu.example.com`) and the same token, then use **Test connection**.
-5. Add the widget from the panel menu or Preferences → Widgets.
+2. On the homelab host: `cd homelab/bambu-bridge && cp .env.example .env`, set `BAMBU_IP`, `BAMBU_SERIAL`, `BAMBU_ACCESS_CODE` (leave `API_TOKEN=auto`), then `docker compose up -d --build`. The bridge generates a token and prints it in the log.
+3. Read the token: `docker compose logs bambu-bridge | grep -A3 "API token"`.
+4. Publish it with a Cloudflare Tunnel (see the bridge README for the exact `cloudflared` commands).
+5. In Preferences → Bambu Lab, set the Bridge URL (e.g. `https://bambu.example.com`) and paste the token from the log, then use **Test connection**.
+6. Add the widget from the panel menu or Preferences → Widgets.
 
 See [`homelab/bambu-bridge/README.md`](homelab/bambu-bridge/README.md) for full details (endpoints, mock mode, Docker Compose, tunnel).
 

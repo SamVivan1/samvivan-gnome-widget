@@ -9,7 +9,8 @@ Environment:
     BAMBU_IP            printer LAN IP (required unless BAMBU_MOCK=1)
     BAMBU_SERIAL        printer serial number (required unless BAMBU_MOCK=1)
     BAMBU_ACCESS_CODE   LAN access code, 8 digits (required unless BAMBU_MOCK=1)
-    API_TOKEN           shared secret; clients send ``Authorization: Bearer``
+    API_TOKEN           shared secret; leave empty or ``auto`` to generate one
+    API_TOKEN_FILE      where a generated token is stored (default ./data/api_token)
     PORT                listen port (default 8080)
     BAMBU_POLL          snapshot refresh seconds (default 1.0)
     BAMBU_MOCK          set to 1 to serve simulated data (no printer needed)
@@ -20,6 +21,7 @@ from __future__ import annotations
 import hmac
 import logging
 import os
+import secrets
 
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 
@@ -37,8 +39,38 @@ def _env_flag(name: str) -> bool:
     return _env(name).lower() in {"1", "true", "yes", "on"}
 
 
+def _resolve_token() -> tuple[str, str]:
+    """Return (token, source). Generates and persists one when unset."""
+    configured = _env("API_TOKEN")
+
+    if configured and configured.lower() != "auto":
+        return configured, "API_TOKEN environment variable"
+
+    token_file = _env("API_TOKEN_FILE", os.path.join(os.getcwd(), "data", "api_token"))
+
+    try:
+        with open(token_file, encoding="utf-8") as handle:
+            existing = handle.read().strip()
+        if existing:
+            return existing, f"generated token file {token_file}"
+    except OSError:
+        pass
+
+    token = secrets.token_hex(32)
+
+    try:
+        os.makedirs(os.path.dirname(token_file) or ".", exist_ok=True)
+        with open(token_file, "w", encoding="utf-8") as handle:
+            handle.write(token)
+        os.chmod(token_file, 0o600)
+        return token, f"newly generated token saved to {token_file}"
+    except OSError as error:
+        _LOGGER.warning("could not persist generated token to %s: %s", token_file, error)
+        return token, "newly generated token (not persisted)"
+
+
 MOCK = _env_flag("BAMBU_MOCK")
-API_TOKEN = _env("API_TOKEN")
+API_TOKEN, API_TOKEN_SOURCE = _resolve_token()
 
 client = BambuClient(
     printer_ip=_env("BAMBU_IP"),
@@ -52,8 +84,6 @@ app = FastAPI(title="Bambu Bridge", version="1.0.0")
 
 
 def _validate_config() -> None:
-    if not API_TOKEN:
-        raise SystemExit("API_TOKEN is required (use a long random string)")
     if MOCK:
         return
     missing = [name for name in ("BAMBU_IP", "BAMBU_SERIAL", "BAMBU_ACCESS_CODE") if not _env(name)]
@@ -71,16 +101,38 @@ def require_token(authorization: str = Header(default="")) -> None:
         )
 
 
+def _print_token_banner() -> None:
+    line = "=" * 72
+    _LOGGER.info(line)
+    _LOGGER.info("Bambu Bridge API token (%s)", API_TOKEN_SOURCE)
+    _LOGGER.info("")
+    _LOGGER.info("    %s", API_TOKEN)
+    _LOGGER.info("")
+    _LOGGER.info("Paste it into: Preferences -> Bambu Lab -> Bearer token")
+    _LOGGER.info(line)
+
+
 @app.on_event("startup")
 def _startup() -> None:
     _validate_config()
     _LOGGER.info("starting bambu bridge (mock=%s)", MOCK)
+    _print_token_banner()
     client.start()
 
 
 @app.on_event("shutdown")
 def _shutdown() -> None:
     client.stop()
+
+
+@app.get("/")
+def root() -> dict:
+    return {
+        "service": "bambu-bridge",
+        "ok": True,
+        "mock": MOCK,
+        "endpoints": ["/health", "/status"],
+    };
 
 
 @app.get("/health")
