@@ -898,6 +898,12 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
       spin.set_value(Math.round(widget[key] ?? 0));
       spin.connect('notify::value', () => {
         widget[key] = Math.round(spin.get_value());
+
+        if (key === 'x' || key === 'y') {
+          delete widget.fx;
+          delete widget.fy;
+        };
+
         save();
       });
       row.add_row(spin);

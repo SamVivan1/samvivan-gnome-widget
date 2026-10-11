@@ -172,6 +172,43 @@ function sizeForWidget(widget) {
   ];
 };
 
+function monitorWorkArea(monitor) {
+  const top = (Main.panel?.height ?? 0) + WIDGET_GAP;
+
+  return {
+    x: WIDGET_GAP,
+    y: top,
+    width: Math.max(1, monitor.width - WIDGET_GAP * 2),
+    height: Math.max(1, monitor.height - top - WIDGET_GAP),
+  };
+};
+
+function widgetFractions(widget, monitor) {
+  const [width, height] = sizeForWidget(widget);
+  const area = monitorWorkArea(monitor);
+  const spanX = Math.max(1, area.width - width);
+  const spanY = Math.max(1, area.height - height);
+
+  return {
+    fx: clamp((widget.x - area.x) / spanX, 0, 1),
+    fy: clamp((widget.y - area.y) / spanY, 0, 1),
+  };
+};
+
+function positionForFractions(widget, monitor) {
+  const [width, height] = sizeForWidget(widget);
+  const area = monitorWorkArea(monitor);
+  const spanX = Math.max(0, area.width - width);
+  const spanY = Math.max(0, area.height - height);
+  const fx = clamp(Number.isFinite(widget.fx) ? widget.fx : 0, 0, 1);
+  const fy = clamp(Number.isFinite(widget.fy) ? widget.fy : 0, 0, 1);
+
+  return {
+    x: Math.round(area.x + fx * spanX),
+    y: Math.round(area.y + fy * spanY),
+  };
+};
+
 function rectForWidget(widget) {
   const [width, height] = sizeForWidget(widget);
 
@@ -329,6 +366,7 @@ class WidgetController {
 
   _onGlobalChanged() {
     this._applyGlobalSettings();
+    this._anchorWidgets();
     this._resolveLayout(null, false, true);
   };
 
@@ -477,7 +515,7 @@ class WidgetController {
         const savedWidth = Number.isFinite(widget.width) ? widget.width : defaultWidth;
         const savedHeight = Number.isFinite(widget.height) ? widget.height : defaultHeight;
 
-        return {
+        const parsed = {
           id: String(widget.id),
           type: String(widget.type),
           size,
@@ -488,6 +526,27 @@ class WidgetController {
           hidden: widget.hidden === true,
           data: widget.data && typeof widget.data === 'object' ? widget.data : {},
         };
+
+        if (Number.isFinite(widget.fx) && Number.isFinite(widget.fy)) {
+          parsed.fx = clamp(widget.fx, 0, 1);
+          parsed.fy = clamp(widget.fy, 0, 1);
+        };
+
+        const monitor = this._monitor();
+
+        if (monitor) {
+          if (!Number.isFinite(parsed.fx) || !Number.isFinite(parsed.fy)) {
+            const fractions = widgetFractions(parsed, monitor);
+            parsed.fx = fractions.fx;
+            parsed.fy = fractions.fy;
+          };
+
+          const position = positionForFractions(parsed, monitor);
+          parsed.x = position.x;
+          parsed.y = position.y;
+        };
+
+        return parsed;
       });
   };
 
@@ -498,6 +557,17 @@ class WidgetController {
   };
 
   _saveWidgets() {
+    const monitor = this._monitor();
+
+    if (monitor) {
+      for (const widget of this._widgets) {
+        const fractions = widgetFractions(widget, monitor);
+
+        widget.fx = fractions.fx;
+        widget.fy = fractions.fy;
+      };
+    };
+
     const serialized = JSON.stringify({widgets: this._widgets});
 
     this._lastLayoutJson = serialized;
@@ -543,6 +613,21 @@ class WidgetController {
     this._workspaceIntegration.setSource(this._layer);
   };
 
+  _anchorWidgets() {
+    const monitor = this._monitor();
+
+    if (!monitor) {
+      return;
+    };
+
+    for (const widget of this._widgets) {
+      const position = positionForFractions(widget, monitor);
+
+      widget.x = position.x;
+      widget.y = position.y;
+    };
+  };
+
   _syncLayerGeometry() {
     const monitor = this._monitor();
 
@@ -553,7 +638,8 @@ class WidgetController {
     this._layer.set_position(monitor.x, monitor.y);
     this._layer.set_size(monitor.width, monitor.height);
     raiseActor(this._layer);
-    this._resolveLayout(null, false, true);
+    this._anchorWidgets();
+    this._resolveLayout(null, false, false);
 
     this._workspaceIntegration.queueSync();
   };
