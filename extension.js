@@ -20,6 +20,8 @@ import * as WeatherWidget from './widgets/weather/widget.js';
 import { BambuData } from './lib/bambuData.js';
 import { CalendarData } from './lib/calendarData.js';
 import { MprisData } from './lib/mpris.js';
+import { Notifier } from './lib/notifier.js';
+import { bambuNotification } from './lib/bambuNotify.js';
 import {
   clamp,
   snap as gridSnap,
@@ -145,6 +147,22 @@ function accentColor(settings) {
   const accent = settings?.get_string('accent-color') ?? 'blue';
 
   return ACCENT_COLORS[accent] ?? ACCENT_COLORS.blue;
+};
+
+function bambuEventBody(status, event) {
+  const job = status?.job ?? {};
+  const name = job.file || 'Unknown file';
+
+  switch (event.id) {
+    case 'printer-connected':
+      return 'The printer is online.';
+    case 'printer-disconnected':
+      return 'The printer went offline — check the bridge and LAN mode.';
+    case 'print-failed':
+      return name;
+    default:
+      return name;
+  };
 };
 
 function darkStyleEnabled(settings) {
@@ -396,6 +414,8 @@ class WidgetController {
     this._bambuData = new BambuData(this._layoutSettings);
     this._bambuRenderKey = null;
     this._bambuUnsubscribe = this._bambuData.subscribe(() => this._refreshBambuViews());
+    this._bambuNotifier = new Notifier('Desktop Widget', 'printer-symbolic');
+    this._bambuLastStatus = null;
 
     this._mprisData = new MprisData();
     this._mprisRenderKey = null;
@@ -485,6 +505,9 @@ class WidgetController {
     this._bambuUnsubscribe = null;
     this._bambuData?.stop();
     this._bambuData = null;
+
+    this._bambuNotifier?.clear();
+    this._bambuNotifier = null;
 
     this._mprisUnsubscribe?.();
     this._mprisUnsubscribe = null;
@@ -785,11 +808,30 @@ class WidgetController {
 
     this._bambuRenderKey = key;
 
+    this._notifyBambuEvents();
+
     for (const view of this._views.values()) {
       if (view.widget.type === 'bambu') {
         this._fillWidgetBody(view.widget, view.body);
       };
     };
+  };
+
+  _notifyBambuEvents() {
+    if (!this._layoutSettings.get_boolean('bambu-notify')) {
+      return;
+    };
+
+    const status = this._bambuData?.status ?? null;
+    const event = bambuNotification(this._bambuLastStatus, status);
+
+    this._bambuLastStatus = status;
+
+    if (!event) {
+      return;
+    };
+
+    this._bambuNotifier.show(event.title, bambuEventBody(this._bambuData?.status ?? null, event));
   };
 
   _refreshMediaViews(force = false) {

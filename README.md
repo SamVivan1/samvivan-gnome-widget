@@ -104,6 +104,7 @@ Open preferences via: `gnome-extensions prefs desktop-widget@samvivan` or panel 
 - **Bridge URL** – base URL of the `bambu-bridge` service (e.g. `https://bambu.example.com`)
 - **Bearer token** – shared secret matching the bridge's `API_TOKEN`
 - **Refresh interval (seconds)** – 3–300 seconds (default 5)
+- **Print notifications** – notify when the printer connects or disconnects, and when a print starts, resumes, pauses, finishes or fails (notifications are not controls)
 - **Test connection** – checks the bridge `/health` endpoint and printer connectivity
 - **Animated face** – when the bridge is reachable but the printer is offline (or the bridge is unreachable), show a dasai-mochi face (two big eyes + a small mouth) instead of a plain message. The face also mirrors the laptop's own vitals: chip ≥ 60 °C → flushed/panting with sweat and steam, battery ≤ 20 % (unplugged) → sleepy, charging → sparkly and happy, high CPU load → dizzy
 - **Always show the face** – show it even when the printer is online or the bridge is unreachable (good for testing / decoration)
@@ -176,6 +177,7 @@ See [`homelab/bambu-bridge/README.md`](homelab/bambu-bridge/README.md) for full 
 | `bambu-endpoint-url` | `s` | `''` | Bambu bridge base URL |
 | `bambu-token` | `s` | `''` | Bambu bridge bearer token |
 | `bambu-refresh` | `i` | `5` | Bambu poll interval (seconds) |
+| `bambu-notify` | `b` | `true` | Notify on printer connect/disconnect and print start/pause/finish/fail |
 | `bambu-offline-fun` | `b` | `true` | Mochi face when the printer is offline |
 | `bambu-offline-always` | `b` | `false` | Always show the face (even when online) |
 | `bambu-face-online` | `b` | `false` | Show the face while printing (reacts to print events) |
@@ -244,13 +246,15 @@ make uninstall      # removes the extension
 ├── tests/                # node --test unit tests (gi-free logic)
 ├── lib/
 │   ├── bambuData.js      # polls the Bambu bridge, caches + refreshes status
+│   ├── bambuNotify.js    # pure printer-state -> notification mapping (testable without gi)
 │   ├── bambuStatus.js    # pure status signature (change detection)
 │   ├── calendarData.js   # runs tools/eds_events.py, caches + refreshes events
 │   ├── geometry.js       # pure layout/fraction math (testable without gi)
 │   ├── lyrics.js         # pure LRC parsing + active-line lookup (testable without gi)
 │   ├── lyricsClient.js   # lrclib.net fetch + on-disk lyrics cache
 │   ├── mood.js           # pure face-mood conditions + thresholds
-│   └── mpris.js          # MPRIS (now-playing) provider over D-Bus
+│   ├── mpris.js          # MPRIS (now-playing) provider over D-Bus
+│   └── notifier.js       # message-tray notifications with an extension-owned source
 ├── tools/
 │   └── eds_events.py     # EDS -> JSON helper (separate process, avoids shell crash)
 ├── widgets/

@@ -498,6 +498,13 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     this._settings.bind('bambu-refresh', refreshRow, 'value', Gio.SettingsBindFlags.DEFAULT);
     group.add(refreshRow);
 
+    const notifyRow = new Adw.SwitchRow({
+      title: _('Print notifications'),
+      subtitle: _('Tell me when the printer connects or disconnects, and when a print starts, pauses, finishes or fails'),
+    });
+    this._settings.bind('bambu-notify', notifyRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+    group.add(notifyRow);
+
     const testRow = new Adw.ActionRow({
       title: _('Connection status'),
       subtitle: _('Not tested yet'),

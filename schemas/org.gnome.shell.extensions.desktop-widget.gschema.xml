@@ -106,6 +106,11 @@
       <summary>Bambu refresh interval</summary>
       <description>How often the Bambu widget polls the bridge, in seconds (3-300).</description>
     </key>
+    <key name="bambu-notify" type="b">
+      <default>true</default>
+      <summary>Print notifications</summary>
+      <description>Send a notification when the printer connects or disconnects, and when a print starts, resumes, pauses, finishes or fails.</description>
+    </key>
     <key name="bambu-offline-fun" type="b">
       <default>true</default>
       <summary>Animated face when printer offline</summary>
