@@ -326,6 +326,12 @@ class WidgetController {
     this._bambuData?.reconfigure();
   };
 
+  _syncBambuPolling() {
+    const active = this._widgets.some(widget => widget.type === 'bambu');
+
+    this._bambuData?.setEnabled(active);
+  };
+
   _applyCalendarSources() {
     if (!this._calendarData) {
       return;
@@ -413,6 +419,11 @@ class WidgetController {
       this
     );
 
+    St.Settings.get().connectObject(
+      'notify::enable-animations', () => this._refreshBambuViews(true),
+      this
+    );
+
     this._timeouts.push(GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 30, () => {
       this._refreshWidgets();
       return GLib.SOURCE_CONTINUE;
@@ -436,6 +447,7 @@ class WidgetController {
 
     global.stage.disconnectObject(this);
     Main.layoutManager.disconnectObject(this);
+    St.Settings.get().disconnectObject(this);
     this._interfaceSettings.disconnectObject(this);
     this._weatherSettings.disconnectObject(this);
 
@@ -1044,6 +1056,8 @@ class WidgetController {
 
       this._createWidget(widget);
     };
+
+    this._syncBambuPolling();
   };
 
   _refreshWidgets() {

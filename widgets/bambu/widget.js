@@ -146,6 +146,8 @@ const CRITICAL_COLOR = '#ff4d4d';
 const CRITICAL_STRESS = 3;
 const DEV_MOODS = ['chill', 'hot', 'sleepy', 'charging', 'busy', 'overload'];
 const DEV_CYCLE_SECONDS = 3.5;
+const ACTIVE_TICK_MS = 120;
+const IDLE_TICK_MS = 500;
 
 function luminance(hex) {
 	const [r, g, b] = hexToRgb(hex);
@@ -363,6 +365,7 @@ const MochiFace = GObject.registerClass(
 			this._active = [];
 			this._nextBlink = 0;
 			this._blinkUntil = 0;
+			this._tickDelay = IDLE_TICK_MS;
 			this._lookUntil = 0;
 			this._smileUntil = 0;
 			this._lookX = 0;
@@ -376,16 +379,7 @@ const MochiFace = GObject.registerClass(
 
 			if (animate) {
 				this._scheduleBlink(this._now());
-				this._timerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 120, () => {
-					if (!this.get_parent()) {
-						this._timerId = 0;
-						return GLib.SOURCE_REMOVE;
-					};
-
-					this._advance();
-					this.queue_repaint();
-					return GLib.SOURCE_CONTINUE;
-				});
+				this._scheduleTick();
 			};
 
 			this.connect('destroy', this._onDestroy.bind(this));
@@ -468,6 +462,32 @@ const MochiFace = GObject.registerClass(
 			this._nextBlink = now + 2 + Math.random() * 3.5;
 		};
 
+		_idleTick() {
+			const now = this._now();
+
+			return this._mood === 'chill' &&
+				now >= this._blinkUntil &&
+				now >= this._smileUntil;
+		};
+
+		_scheduleTick() {
+			const delay = this._idleTick() ? IDLE_TICK_MS : ACTIVE_TICK_MS;
+
+			this._tickDelay = delay;
+			this._timerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, delay, () => {
+				this._timerId = 0;
+
+				if (!this.get_parent()) {
+					return GLib.SOURCE_REMOVE;
+				};
+
+				this._advance();
+				this.queue_repaint();
+				this._scheduleTick();
+				return GLib.SOURCE_REMOVE;
+			});
+		};
+
 		_advance() {
 			const now = this._now();
 
@@ -492,7 +512,7 @@ const MochiFace = GObject.registerClass(
 					this._lookUntil = now + 1 + Math.random() * 2;
 				};
 
-				if (now >= this._smileUntil && Math.random() < 0.02) {
+				if (now >= this._smileUntil && Math.random() < 0.02 * (this._tickDelay / ACTIVE_TICK_MS)) {
 					this._smileUntil = now + 1.2;
 				};
 			} else {
