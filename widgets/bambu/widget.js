@@ -142,8 +142,9 @@ const ProgressRing = GObject.registerClass(
 const HOT_TEMP_C = 60;
 const LOW_BATTERY = 20;
 const HIGH_LOAD = 85;
+const HIGH_RAM = 90;
 const HOT_COLOR = '#ff5b52';
-const DEV_MOODS = ['chill', 'hot', 'sleepy', 'charging', 'busy'];
+const DEV_MOODS = ['chill', 'hot', 'sleepy', 'charging', 'busy', 'overload'];
 const DEV_CYCLE_SECONDS = 3.5;
 
 function luminance(hex) {
@@ -281,8 +282,59 @@ function readLoad() {
 	return Math.max(0, Math.min(100, Math.round((load / cores) * 100)));
 };
 
+function readMemory() {
+	const text = readSysFile('/proc/meminfo');
+
+	if (!text) {
+		return null;
+	};
+
+	let total = null;
+	let available = null;
+	let free = null;
+	let buffers = null;
+	let cached = null;
+
+	for (const line of text.split('\n')) {
+		const [key, rawValue] = line.split(':');
+
+		if (!key || !rawValue) {
+			continue;
+		};
+
+		const value = Number(rawValue.trim().split(/\s+/)[0]);
+
+		if (!Number.isFinite(value)) {
+			continue;
+		};
+
+		switch (key) {
+			case 'MemTotal': total = value; break;
+			case 'MemAvailable': available = value; break;
+			case 'MemFree': free = value; break;
+			case 'Buffers': buffers = value; break;
+			case 'Cached': cached = value; break;
+			default: break;
+		};
+	};
+
+	if (!Number.isFinite(total) || total <= 0) {
+		return null;
+	};
+
+	if (!Number.isFinite(available)) {
+		if (!Number.isFinite(free)) {
+			return null;
+		};
+
+		available = free + (buffers || 0) + (cached || 0);
+	};
+
+	return Math.max(0, Math.min(100, Math.round(((total - available) / total) * 100)));
+};
+
 // A dasai-mochi style face: two big eyes and a small mouth that reacts to the
-// laptop's own vitals (chip temperature, battery, CPU load).
+// laptop's own vitals (chip temperature, battery, CPU load and RAM usage).
 const MochiFace = GObject.registerClass(
 	class MochiFace extends St.DrawingArea {
 		_init(color, theme, animate, dev, onStatus, thresholds) {
@@ -303,11 +355,13 @@ const MochiFace = GObject.registerClass(
 				hot: thresholds?.hot ?? HOT_TEMP_C,
 				battery: thresholds?.battery ?? LOW_BATTERY,
 				load: thresholds?.load ?? HIGH_LOAD,
+				ram: thresholds?.ram ?? HIGH_RAM,
 			};
 			this._timerId = 0;
 			this._frame = 0;
 			this._temp = null;
 			this._load = null;
+			this._ram = null;
 			this._battery = null;
 			this._charging = false;
 			this._mood = 'chill';
@@ -350,6 +404,7 @@ const MochiFace = GObject.registerClass(
 
 			this._temp = readTemperature();
 			this._load = readLoad();
+			this._ram = readMemory();
 			this._battery = battery.percentage;
 			this._charging = battery.charging;
 		};
@@ -362,8 +417,9 @@ const MochiFace = GObject.registerClass(
 			const temp = this._temp === null ? '--' : `${Math.round(this._temp)}°C`;
 			const battery = this._battery === null ? '--' : `${this._battery}%`;
 			const load = this._load === null ? '--' : `load ${this._load}%`;
+			const ram = this._ram === null ? '--' : `ram ${this._ram}%`;
 
-			return `${this._mood} · ${temp} · ${battery} · ${load}`;
+			return `${this._mood} · ${temp} · ${battery} · ${load} · ${ram}`;
 		};
 
 		_notifyStatus() {
@@ -373,6 +429,10 @@ const MochiFace = GObject.registerClass(
 		_selectMood() {
 			if (this._temp !== null && this._temp >= this._thresholds.hot) {
 				return 'hot';
+			};
+
+			if (this._ram !== null && this._ram >= this._thresholds.ram) {
+				return 'overload';
 			};
 
 			if (this._battery !== null && this._battery <= this._thresholds.battery && !this._charging) {
@@ -470,6 +530,21 @@ const MochiFace = GObject.registerClass(
 				cr.arc(cx, cy + eyeH * 0.22, eyeW, Math.PI * 1.12, Math.PI * 1.88);
 				cr.setSourceRGBA(...rgb, 1);
 				cr.stroke();
+				return;
+			};
+
+			if (mode === 'strain') {
+				const eh = eyeH * 0.64;
+
+				cr.newPath();
+				roundedRect(cr, cx - eyeW / 2, cy - eh / 2, eyeW, eh, eyeW / 2);
+				cr.setSourceRGBA(...rgb, 1);
+				cr.fill();
+
+				cr.newPath();
+				cr.arc(cx, cy - eh * 0.1, Math.min(eyeW, eh) * 0.18, 0, Math.PI * 2);
+				cr.setSourceRGBA(...hexToRgba(ink, 0.92));
+				cr.fill();
 				return;
 			};
 
@@ -614,6 +689,48 @@ const MochiFace = GObject.registerClass(
 			};
 		};
 
+		_loader(cr, w, h, now, rgb) {
+			const cx = 0.5 * w;
+			const cy = 0.17 * h;
+			const radius = Math.min(0.11 * h, 0.16 * w);
+
+			cr.setLineCap(1);
+			cr.setLineWidth(Math.max(2, 0.022 * h));
+
+			cr.newPath();
+			cr.arc(cx, cy, radius, 0, Math.PI * 2);
+			cr.setSourceRGBA(...rgb, 0.18);
+			cr.stroke();
+
+			const start = now * 3.2;
+
+			cr.newPath();
+			cr.arc(cx, cy, radius, start, start + Math.PI * 0.75);
+			cr.setSourceRGBA(...rgb, 0.9);
+			cr.stroke();
+		};
+
+		_puffs(cr, w, h, now, rgb) {
+			for (let i = 0; i < 2; i++) {
+				const dir = i === 0 ? -1 : 1;
+
+				for (let j = 0; j < 2; j++) {
+					const phase = (now * 0.55 + j * 0.5 + i * 0.25) % 1;
+					const alpha = Math.sin(phase * Math.PI) * 0.6;
+					const px = (i === 0 ? 0.14 : 0.86) * w + dir * phase * 0.08 * w;
+					const py = (0.58 - phase * 0.3) * h;
+					const pr = (0.03 + phase * 0.03) * h;
+
+					for (const [dx, dy, s] of [[-0.8, 0, 0.7], [0, 0, 1], [0.8, 0, 0.7]]) {
+						cr.newPath();
+						cr.arc(px + dx * pr, py + dy * pr, pr * s, 0, Math.PI * 2);
+						cr.setSourceRGBA(...rgb, alpha);
+						cr.fill();
+					};
+				};
+			};
+		};
+
 		vfunc_repaint() {
 			const cr = this.get_context();
 			const [width, height] = this.get_surface_size();
@@ -635,6 +752,14 @@ const MochiFace = GObject.registerClass(
 
 			cr.save();
 			cr.translate(0, bob);
+
+			if (mood === 'overload' && this._animate) {
+				const pulse = 1 + Math.sin(now * 3.2) * 0.035;
+
+				cr.translate(0.5 * w, 0.5 * h);
+				cr.scale(pulse, pulse);
+				cr.translate(-0.5 * w, -0.5 * h);
+			};
 
 			const eyeH = Math.min(0.42 * h, 0.92 * w);
 			const eyeW = eyeH * 0.58;
@@ -659,6 +784,10 @@ const MochiFace = GObject.registerClass(
 				};
 			};
 
+			if (mood === 'overload' && this._animate) {
+				this._loader(cr, w, h, now, rgb);
+			};
+
 			let eyeMode;
 
 			if (mood === 'sleepy') {
@@ -667,6 +796,8 @@ const MochiFace = GObject.registerClass(
 				eyeMode = 'happy';
 			} else if (mood === 'busy') {
 				eyeMode = 'dizzy';
+			} else if (mood === 'overload') {
+				eyeMode = 'strain';
 			} else if (blink) {
 				eyeMode = 'closed';
 			} else {
@@ -686,6 +817,8 @@ const MochiFace = GObject.registerClass(
 				mouthMode = 'smile';
 			} else if (mood === 'busy') {
 				mouthMode = 'open';
+			} else if (mood === 'overload') {
+				mouthMode = 'open';
 			} else {
 				mouthMode = now < this._smileUntil ? 'smile' : 'flat';
 			};
@@ -702,6 +835,10 @@ const MochiFace = GObject.registerClass(
 
 			if (mood === 'busy' && this._animate) {
 				this._dizzy(cr, w, h, now, rgb);
+			};
+
+			if (mood === 'overload' && this._animate) {
+				this._puffs(cr, w, h, now, rgb);
 			};
 
 			cr.restore();
@@ -932,6 +1069,7 @@ export function render({body, widget, createLabel, theme, sizeForWidget, bambu, 
 			hot: settings.get_int('bambu-hot-temp'),
 			battery: settings.get_int('bambu-low-battery'),
 			load: settings.get_int('bambu-high-load'),
+			ram: settings.get_int('bambu-high-ram'),
 		},
 	});
 

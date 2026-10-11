@@ -573,6 +573,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     addThreshold('Hot above', 'Temperature (°C) at or above which the face looks hot', 'bambu-hot-temp', 30, 110);
     addThreshold('Sleepy below', 'Battery (%) at or below which the face looks sleepy while unplugged', 'bambu-low-battery', 0, 100);
     addThreshold('Busy above', 'CPU load (%) at or above which the face looks busy', 'bambu-high-load', 0, 100);
+    addThreshold('Overloaded above', 'RAM usage (%) at or above which the face looks overloaded', 'bambu-high-ram', 0, 100);
 
     let syncing = false;
 
@@ -760,15 +761,15 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
     const cycleRow = new Adw.SwitchRow({
       title: 'Cycle all moods',
-      subtitle: 'Rotate through chill, hot, sleepy, charging and busy automatically',
+      subtitle: 'Rotate through chill, hot, sleepy, charging, busy and overload automatically',
     });
     this._settings.bind('bambu-dev-cycle', cycleRow, 'active', Gio.SettingsBindFlags.DEFAULT);
     faceGroup.add(cycleRow);
 
-    const moods = ['auto', 'chill', 'hot', 'sleepy', 'charging', 'busy'];
+    const moods = ['auto', 'chill', 'hot', 'sleepy', 'charging', 'busy', 'overload'];
     const moodRow = new Adw.ComboRow({
       title: 'Force mood',
-      model: Gtk.StringList.new(['Auto (real sensors)', 'Chill', 'Hot', 'Sleepy', 'Charging', 'Busy']),
+      model: Gtk.StringList.new(['Auto (real sensors)', 'Chill', 'Hot', 'Sleepy', 'Charging', 'Busy', 'Overloaded']),
     });
     moodRow.set_selected(Math.max(0, moods.indexOf(this._settings.get_string('bambu-dev-mood'))));
     moodRow.connect('notify::selected', () => {

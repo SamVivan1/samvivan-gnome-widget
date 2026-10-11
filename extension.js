@@ -342,6 +342,7 @@ class WidgetController {
     connect('bambu-hot-temp', () => this._refreshBambuViews(true));
     connect('bambu-low-battery', () => this._refreshBambuViews(true));
     connect('bambu-high-load', () => this._refreshBambuViews(true));
+    connect('bambu-high-ram', () => this._refreshBambuViews(true));
     connect('dev-mode', () => this._refreshBambuViews(true));
     connect('bambu-dev-mood', () => this._refreshBambuViews(true));
     connect('bambu-dev-cycle', () => this._refreshBambuViews(true));
