@@ -30,6 +30,9 @@ const HORIZONTAL_PERCENT_RATIO = 0.27;
 const HORIZONTAL_NAME_RATIO = 0.15;
 const HORIZONTAL_TEXT_SAFETY = 1.15;
 const HORIZONTAL_CHAR_WIDTH = 0.64;
+const HORIZONTAL_GAP = 16;
+const MIN_TEXT_WIDTH = 56;
+const NAME_MIN_FONT = 10;
 
 const DEVICE_TYPE = {
 	BATTERY: 2,
@@ -541,15 +544,27 @@ function horizontalTextRatio(device) {
 	return Math.max(nameWidth, percentWidth) * HORIZONTAL_TEXT_SAFETY;
 };
 
+function nameLabelSpec(entry, device, size) {
+	const name = String(device ? device.name : '');
+	const fonts = slotFonts(size, entry.horizontal);
+	const font = entry.textWidth > 0 ? fitNameFont(name, entry.textWidth, fonts.name) : fonts.name;
+	const limit = entry.textWidth > 0
+		? Math.max(1, Math.floor(entry.textWidth / (HORIZONTAL_CHAR_WIDTH * font)))
+		: entry.nameLimit;
+
+	return {text: fitName(name, limit), font};
+};
+
 function addSlotLabels(entry, device, theme, createLabel, size) {
-	const {horizontal, showName} = entry;
+	const {horizontal, showName, textWidth} = entry;
 	const fonts = slotFonts(size, horizontal);
 	const parent = entry.textColumn || entry.slot;
 
 	if (showName) {
-		const nameLabel = createLabel(fitName(device ? device.name : '', entry.nameLimit), 'widget-battery-name', `font-size: ${fonts.name}px; color: ${theme.muted};`);
+		const {text, font} = nameLabelSpec(entry, device, size);
+		const nameLabel = createLabel(text, 'widget-battery-name', `font-size: ${font}px; color: ${theme.muted};`);
 
-		nameLabel.x_expand = horizontal ? false : true;
+		nameLabel.x_expand = textWidth > 0 ? true : !horizontal;
 		nameLabel.x_align = Clutter.ActorAlign.CENTER;
 		nameLabel.clutter_text.set_line_wrap(false);
 		parent.add_child(nameLabel);
@@ -558,7 +573,7 @@ function addSlotLabels(entry, device, theme, createLabel, size) {
 
 	const percentLabel = createLabel(device ? `${device.percentage}%` : '', 'widget-battery-percent', `font-size: ${fonts.percent}px; color: ${device ? theme.text : theme.muted};`);
 
-	percentLabel.x_expand = false;
+	percentLabel.x_expand = textWidth > 0;
 	percentLabel.x_align = Clutter.ActorAlign.CENTER;
 	parent.add_child(percentLabel);
 	entry.percentLabel = percentLabel;
@@ -566,9 +581,10 @@ function addSlotLabels(entry, device, theme, createLabel, size) {
 
 function applyLabelStyles(entry, device, theme, size) {
 	const fonts = slotFonts(size, entry.horizontal);
+	const {font} = nameLabelSpec(entry, device, size);
 
 	if (entry.nameLabel) {
-		entry.nameLabel.style = `font-size: ${fonts.name}px; color: ${theme.muted};`;
+		entry.nameLabel.style = `font-size: ${font}px; color: ${theme.muted};`;
 	};
 
 	if (entry.percentLabel) {
@@ -576,13 +592,30 @@ function applyLabelStyles(entry, device, theme, size) {
 	};
 };
 
-function horizontalSlotWidth(size, textRatio) {
+function horizontalSlotWidth(size, textRatio, textWidth = null) {
+	if (Number.isFinite(textWidth) && textWidth > 0) {
+		return size + HORIZONTAL_GAP + Math.round(textWidth);
+	};
+
 	return size + SLOT_SPACING + Math.round(size * textRatio);
+};
+
+function fitNameFont(name, maxWidth, baseFont) {
+	const length = String(name ?? '').length;
+
+	if (!(maxWidth > 0) || length === 0) {
+		return baseFont;
+	};
+
+	const estimate = maxWidth / (length * HORIZONTAL_CHAR_WIDTH);
+
+	return Math.max(NAME_MIN_FONT, Math.min(baseFont, Math.floor(estimate)));
 };
 
 function buildSlot(device, theme, createLabel, size, layout) {
 	const {horizontal, showName, textRatio} = layout;
-	const slotWidth = horizontal ? horizontalSlotWidth(size, textRatio) : size;
+	const textWidth = layout.textWidth ?? null;
+	const slotWidth = horizontal ? horizontalSlotWidth(size, textRatio, textWidth) : size;
 
 	const slot = new St.BoxLayout({
 		style_class: horizontal ? 'widget-battery-slot widget-battery-slot-horizontal' : 'widget-battery-slot',
@@ -606,6 +639,7 @@ function buildSlot(device, theme, createLabel, size, layout) {
 		nameLabel: null,
 		percentLabel: null,
 		nameLimit: null,
+		textWidth: null,
 	};
 
 	populateSlot(entry, device, theme, createLabel, size, layout);
@@ -625,7 +659,8 @@ function populateSlot(entry, device, theme, createLabel, size, layout) {
 	entry.showName = showName;
 	entry.textRatio = textRatio;
 	entry.size = size;
-	entry.slotWidth = horizontal ? horizontalSlotWidth(size, textRatio) : size;
+	entry.textWidth = layout.textWidth ?? null;
+	entry.slotWidth = horizontal ? horizontalSlotWidth(size, textRatio, entry.textWidth) : size;
 	entry.nameLimit = layout.nameLimit ?? null;
 	entry.textColumn = null;
 	entry.nameLabel = null;
@@ -669,6 +704,10 @@ function populateSlot(entry, device, theme, createLabel, size, layout) {
 			y_align: Clutter.ActorAlign.CENTER,
 		});
 
+		if (Number.isFinite(entry.textWidth) && entry.textWidth > 0) {
+			textColumn.set_width(Math.round(entry.textWidth));
+		};
+
 		slot.add_child(textColumn);
 		entry.textColumn = textColumn;
 	};
@@ -684,11 +723,17 @@ function resizeSlot(entry, device, theme, size, layout) {
 	entry.ring.style = `width: ${size}px; height: ${size}px;`;
 	entry.icon.set_size(iconSize, iconSize);
 	entry.icon.set_position(Math.round((size - iconSize) / 2), Math.round((size - iconSize) / 2));
-	applyLabelStyles(entry, device, theme, size);
 
 	entry.textRatio = layout.textRatio;
-	entry.slotWidth = entry.horizontal ? horizontalSlotWidth(size, layout.textRatio) : size;
+	entry.textWidth = layout.textWidth ?? null;
+	entry.slotWidth = entry.horizontal ? horizontalSlotWidth(size, layout.textRatio, entry.textWidth) : size;
 	entry.nameLimit = layout.nameLimit ?? null;
+
+	applyLabelStyles(entry, device, theme, size);
+
+	if (entry.textColumn && Number.isFinite(entry.textWidth) && entry.textWidth > 0) {
+		entry.textColumn.set_width(Math.round(entry.textWidth));
+	};
 
 	if (!entry.exiting) {
 		if (entry.horizontal) {
@@ -711,7 +756,7 @@ function syncSlot(entry, device, theme, createLabel, size, layout) {
 		resizeSlot(entry, device, theme, size, layout);
 	};
 
-	if (entry.horizontal !== layout.horizontal) {
+	if (entry.horizontal !== layout.horizontal || (entry.textWidth ?? null) !== (layout.textWidth ?? null)) {
 		populateSlot(entry, device, theme, createLabel, size, layout);
 		return;
 	};
@@ -722,7 +767,7 @@ function syncSlot(entry, device, theme, createLabel, size, layout) {
 
 	if (entry.showName === layout.showName) {
 		if (entry.nameLabel) {
-			entry.nameLabel.text = device ? device.name : '';
+			entry.nameLabel.text = nameLabelSpec(entry, device, size).text;
 		};
 
 		if (entry.percentLabel) {
@@ -995,12 +1040,10 @@ function fitName(name, limit) {
 	return `${value.slice(0, limit - 1)}\u2026`;
 };
 
-function singleDeviceLayout(availWidth, availHeight, textRatio) {
-	const usable = Math.max(MIN_TEXT_GAUGE, availWidth - SLOT_SPACING);
-	const ratio = Math.min(textRatio, Math.max(0, usable / MIN_TEXT_GAUGE - 1));
-	const size = Math.max(Math.min(availHeight, usable / (1 + ratio)), MIN_TEXT_GAUGE);
-	const room = Math.max(0, size * ratio - SLOT_SPACING);
-	const charWidth = HORIZONTAL_CHAR_WIDTH * Math.max(11, Math.round(size * HORIZONTAL_NAME_RATIO));
+function singleDeviceLayout(availWidth, availHeight) {
+	const cap = Math.max(MIN_GAUGE_SIZE, availWidth - HORIZONTAL_GAP - MIN_TEXT_WIDTH);
+	const size = Math.max(MIN_GAUGE_SIZE, Math.min(availHeight, availWidth * 0.5, cap));
+	const textWidth = Math.max(MIN_TEXT_WIDTH, availWidth - size - HORIZONTAL_GAP);
 
 	return {
 		cols: 1,
@@ -1008,15 +1051,15 @@ function singleDeviceLayout(availWidth, availHeight, textRatio) {
 		size,
 		horizontal: true,
 		showName: true,
-		textRatio: ratio,
-		nameLimit: Math.max(4, Math.floor(room / charWidth)),
+		textRatio: textWidth / size,
+		textWidth,
 		score: 1,
 	};
 };
 
 function computeLayout(count, availWidth, availHeight, textRatio) {
 	if (count === 1) {
-		return singleDeviceLayout(availWidth, availHeight, textRatio);
+		return singleDeviceLayout(availWidth, availHeight);
 	};
 
 	if (count <= TEXT_SLOT_LIMIT) {
