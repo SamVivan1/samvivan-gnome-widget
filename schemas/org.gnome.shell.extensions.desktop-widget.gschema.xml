@@ -109,7 +109,12 @@
     <key name="bambu-offline-fun" type="b">
       <default>true</default>
       <summary>Animated robot when printer offline</summary>
-      <description>Show a cute animated robot face instead of the plain "Printer offline" hint when the bridge is reachable but the printer is not.</description>
+      <description>Show a cute animated robot face instead of a plain "Printer offline" hint when the bridge is reachable but the printer is not.</description>
+    </key>
+    <key name="bambu-offline-always" type="b">
+      <default>false</default>
+      <summary>Always show the offline robot</summary>
+      <description>Show the robot even when the printer is online or the bridge is unreachable. Useful for testing or as a decoration.</description>
     </key>
     <key name="bambu-offline-color" type="s">
       <default>''</default>

@@ -547,12 +547,39 @@ export function render({body, widget, createLabel, theme, sizeForWidget, bambu, 
 		return;
 	};
 
+	const fun = settings?.get_boolean('bambu-offline-fun') ?? false;
+	const always = settings?.get_boolean('bambu-offline-always') ?? false;
+
+	const showScene = () => buildOfflineScene({
+		body,
+		createLabel,
+		theme,
+		animate: animate !== false,
+		color: settings.get_string('bambu-offline-color') || theme.accent,
+		caption: settings.get_string('bambu-offline-caption').trim(),
+	});
+
+	if (always && fun) {
+		showScene();
+		return;
+	};
+
 	if (bambu.state === 'unavailable') {
 		addCenteredHint(body, createLabel, theme, 'Configure the Bambu bridge endpoint and token in Settings');
 		return;
 	};
 
-	if (bambu.state === 'error' || bambu.state === 'idle') {
+	if (bambu.state === 'error') {
+		if (fun) {
+			showScene();
+			return;
+		};
+
+		addCenteredHint(body, createLabel, theme, bambu.error || 'Bambu bridge unreachable');
+		return;
+	};
+
+	if (bambu.state === 'idle') {
 		addCenteredHint(body, createLabel, theme, bambu.error || 'Connecting to the Bambu bridge…');
 		return;
 	};
@@ -565,15 +592,8 @@ export function render({body, widget, createLabel, theme, sizeForWidget, bambu, 
 	};
 
 	if (status.connected !== true) {
-		if (settings?.get_boolean('bambu-offline-fun')) {
-			buildOfflineScene({
-				body,
-				createLabel,
-				theme,
-				animate: animate !== false,
-				color: settings.get_string('bambu-offline-color') || theme.accent,
-				caption: settings.get_string('bambu-offline-caption').trim(),
-			});
+		if (fun) {
+			showScene();
 			return;
 		};
 

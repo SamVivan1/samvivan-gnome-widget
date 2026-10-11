@@ -526,6 +526,13 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     this._settings.bind('bambu-offline-fun', funRow, 'active', Gio.SettingsBindFlags.DEFAULT);
     group.add(funRow);
 
+    const alwaysRow = new Adw.SwitchRow({
+      title: 'Always show the robot',
+      subtitle: 'Show it even when the printer is online or the bridge is unreachable (good for testing)',
+    });
+    this._settings.bind('bambu-offline-always', alwaysRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+    group.add(alwaysRow);
+
     const accentRow = new Adw.SwitchRow({
       title: 'Use system accent colour',
       subtitle: 'Turn off to pick a custom colour for the robot',
@@ -548,7 +555,8 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     let syncing = false;
 
     const applyColorState = () => {
-      const enabled = this._settings.get_boolean('bambu-offline-fun');
+      const enabled = this._settings.get_boolean('bambu-offline-fun')
+        || this._settings.get_boolean('bambu-offline-always');
       const hex = this._settings.get_string('bambu-offline-color');
       const usesAccent = !hex;
 
@@ -589,6 +597,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     });
 
     funRow.connect('notify::active', applyColorState);
+    alwaysRow.connect('notify::active', applyColorState);
     applyColorState();
 
     return group;

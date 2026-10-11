@@ -104,7 +104,8 @@ Open preferences via: `gnome-extensions prefs desktop-widget@samvivan` or panel 
 - **Bearer token** – shared secret matching the bridge's `API_TOKEN`
 - **Refresh interval (seconds)** – 3–300 seconds (default 5)
 - **Test connection** – checks the bridge `/health` endpoint and printer connectivity
-- **Animated robot** – when the bridge is reachable but the printer is offline, show a cute animated robot instead of a plain message
+- **Animated robot** – when the bridge is reachable but the printer is offline (or the bridge is unreachable), show a cute animated robot instead of a plain message
+- **Always show the robot** – show it even when the printer is online or the bridge is unreachable (good for testing / decoration)
 - **Use system accent colour / Robot colour** – colour the robot with the GNOME accent or a custom colour
 - **Caption** – text shown under the robot (leave empty to hide)
 
@@ -163,6 +164,7 @@ See [`homelab/bambu-bridge/README.md`](homelab/bambu-bridge/README.md) for full 
 | `bambu-token` | `s` | `''` | Bambu bridge bearer token |
 | `bambu-refresh` | `i` | `5` | Bambu poll interval (seconds) |
 | `bambu-offline-fun` | `b` | `true` | Animated robot when the printer is offline |
+| `bambu-offline-always` | `b` | `false` | Always show the robot (even when online) |
 | `bambu-offline-color` | `s` | `''` | Robot colour hex (empty = system accent) |
 | `bambu-offline-caption` | `s` | `'Printer is napping…'` | Caption under the robot (empty = hidden) |
 
@@ -199,7 +201,7 @@ make uninstall      # removes the extension
 - **Photos stay same / don't rotate**: Check interval and source in Preferences → Photos. For Immich, verify URL/API key reachability.
 - **Immich shows "Album list unavailable"**: Server URL or API key wrong; check network/firewall. Albums load with 600ms debounce after changes.
 - **Bambu widget says "Configure…"**: Set the bridge URL and token in Preferences → Bambu Lab and use **Test connection**.
-- **Bambu widget shows a robot / "Printer offline"**: The bridge is reachable but its MQTT link to the printer is down — check LAN/Developer Mode and the access code, then `docker compose logs -f` on the host. Disable the animated robot (Preferences → Bambu Lab → Animated robot) to show a plain message instead.
+- **Bambu widget shows a robot / "Printer offline"**: The bridge is reachable but its MQTT link to the printer is down (or the bridge itself is unreachable) — check LAN/Developer Mode and the access code, then `docker compose logs -f` on the host. Disable the animated robot (Preferences → Bambu Lab → Animated robot) or toggle **Always show the robot** to force/decorate it.
 - **Extension crashes at enable**: Try disabling, clearing layout? If needed, reset via panel menu or clear `layout-json` in dconf (advanced).
 - **Live reload on Wayland**: `Alt+F2 → r` is disabled; logout/login is the safe way.
 
