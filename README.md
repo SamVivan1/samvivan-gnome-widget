@@ -14,8 +14,9 @@ A lightweight desktop widget suite for GNOME Shell 50. Forked from `widgets@dist
 - **Weather** – Uses GNOME Weather locations
 - **Photos** – Rotate local images or random photos from your Immich library, with automatic fallback. Supports all photos, favorites-only, or a specific album. Configurable interval and image quality.
 - **Battery** – System battery + GSConnect phone battery (when available). Devices slide in from the right when they connect and drop away when they disconnect, keeping a stable connect order (respects GNOME reduce-motion).
+- **Bambu Lab** – Live 3D printer progress (state, file, remaining time, layer, temperatures, AMS) from a self-hosted bridge that talks to your printer over the LAN
 - **Placement** – Drag, resize, snap-to-grid, configurable grid gap, multi-monitor support (`-1` = primary)
-- **Behavior** – Edit/Lock/Hide-all modes, widget opacity (10–100%), optional top-panel icon
+- **Behavior** – Edit/Hide-all modes, widget opacity (10–100%), optional top-panel icon
 - **Panel menu** – Quick toggle/edit/add/reset widgets from the top bar
 
 ## Requirements
@@ -23,6 +24,7 @@ A lightweight desktop widget suite for GNOME Shell 50. Forked from `widgets@dist
 - GNOME Shell 50
 - `glib-compile-schemas` (usually present on Linux distros with GNOME)
 - For Immich: a running Immich server + API key
+- For Bambu Lab: the self-hosted `homelab/bambu-bridge` service reachable over HTTP(S) (see [Bambu Lab Setup](#bambu-lab-setup))
 - For Calendar/Agenda events: `python3-gi` and the Evolution Data Server introspection packages (see below). Without them the widgets still work but only as a plain month view / empty agenda.
 
 ### Calendar data (optional)
@@ -89,13 +91,19 @@ Open preferences via: `gnome-extensions prefs desktop-widget@samvivan` or panel 
 - **Grid size** – snap grid while dragging (1–200 px)
 - **Widget gap** – spacing from edges (0–200 px)
 - **Snap to grid** – toggle
-- **Edit/Lock/Hide all/Opacity** – behavior
+- **Edit/Hide all/Opacity** – behavior
 - **Show panel icon** – toggle top panel button
 
 ### Photos
 - **Photo source** – `Immich + local (fallback)`, `Immich only`, `Local only`
 - **Change interval (minutes)** – 1–1440 minutes (default 30)
 - **Immich** – Server URL, API key, scope (`All photos`, `Favorites only`, `Specific album`), album dropdown, image quality (`Preview` recommended / `Thumbnail` / `Full size`)
+
+### Bambu Lab
+- **Bridge URL** – base URL of the `bambu-bridge` service (e.g. `https://bambu.example.com`)
+- **Bearer token** – shared secret matching the bridge's `API_TOKEN`
+- **Refresh interval (seconds)** – 3–300 seconds (default 5)
+- **Test connection** – checks the bridge `/health` endpoint and printer connectivity
 
 ### Widgets
 - Per-widget visibility, X/Y, Width/Height
@@ -109,6 +117,22 @@ Open preferences via: `gnome-extensions prefs desktop-widget@samvivan` or panel 
 4. Choose scope: `all` / `favorites` / `album` (album dropdown loads automatically)
 5. Set image quality and interval
 6. Thumbnails are cached to `~/.cache/desktop-widget/immich/<hash>/` and pruned automatically
+
+## Bambu Lab Setup
+
+The Bambu Lab widget does not talk to the printer directly. A small self-hosted service (`homelab/bambu-bridge`) keeps a persistent local MQTT connection to the printer and exposes its status as JSON over HTTP. Run it on a homelab host next to the printer and expose it through a Cloudflare Tunnel:
+
+```
+printer --MQTT(LAN)--> bambu-bridge --HTTPS+token--> cloudflared --> widget
+```
+
+1. On the printer, enable **LAN mode** (Settings → Network; **Developer Mode** on newer firmware) and note the LAN IP, serial number, and 8-digit access code.
+2. On the homelab host: `cd homelab/bambu-bridge && cp .env.example .env`, set `BAMBU_IP`, `BAMBU_SERIAL`, `BAMBU_ACCESS_CODE`, and a long random `API_TOKEN`, then `docker compose up -d --build`.
+3. Publish it with a Cloudflare Tunnel (see the bridge README for the exact `cloudflared` commands).
+4. In Preferences → Bambu Lab, set the Bridge URL (e.g. `https://bambu.example.com`) and the same token, then use **Test connection**.
+5. Add the widget from the panel menu or Preferences → Widgets.
+
+See [`homelab/bambu-bridge/README.md`](homelab/bambu-bridge/README.md) for full details (endpoints, mock mode, Docker Compose, tunnel).
 
 ## Settings keys (reference)
 
@@ -131,6 +155,9 @@ Open preferences via: `gnome-extensions prefs desktop-widget@samvivan` or panel 
 | `immich-album-id` | `s` | `''` | Album ID when scope=album |
 | `immich-size` | `s` | `'preview'` | `thumbnail`/`preview`/`fullsize` |
 | `calendar-sources` | `as` | `[]` | EDS calendar UIDs to show (empty = all enabled) |
+| `bambu-endpoint-url` | `s` | `''` | Bambu bridge base URL |
+| `bambu-token` | `s` | `''` | Bambu bridge bearer token |
+| `bambu-refresh` | `i` | `5` | Bambu poll interval (seconds) |
 
 ## Uninstall
 
@@ -164,6 +191,8 @@ make uninstall      # removes the extension
 - **Widgets don't appear after install**: Wayland requires logout/login. Also check `gnome-extensions list --enabled`.
 - **Photos stay same / don't rotate**: Check interval and source in Preferences → Photos. For Immich, verify URL/API key reachability.
 - **Immich shows "Album list unavailable"**: Server URL or API key wrong; check network/firewall. Albums load with 600ms debounce after changes.
+- **Bambu widget says "Configure…"**: Set the bridge URL and token in Preferences → Bambu Lab and use **Test connection**.
+- **Bambu widget shows "Printer offline"**: The bridge is reachable but its MQTT link to the printer is down — check LAN/Developer Mode and the access code, then `docker compose logs -f` on the host.
 - **Extension crashes at enable**: Try disabling, clearing layout? If needed, reset via panel menu or clear `layout-json` in dconf (advanced).
 - **Live reload on Wayland**: `Alt+F2 → r` is disabled; logout/login is the safe way.
 
@@ -183,6 +212,7 @@ make uninstall      # removes the extension
 ├── stylesheet.css        # Global styles
 ├── schemas/              # GSettings schema
 ├── lib/
+│   ├── bambuData.js      # polls the Bambu bridge, caches + refreshes status
 │   └── calendarData.js   # runs tools/eds_events.py, caches + refreshes events
 ├── tools/
 │   └── eds_events.py     # EDS -> JSON helper (separate process, avoids shell crash)
@@ -192,7 +222,10 @@ make uninstall      # removes the extension
 │   ├── agenda/           # today + upcoming events
 │   ├── weather/
 │   ├── photos/           # rotation + Immich + local sources
-│   └── battery/          # system + GSConnect
+│   ├── battery/          # system + GSConnect
+│   └── bambu/            # 3D printer progress from the bridge
+├── homelab/
+│   └── bambu-bridge/     # self-hosted printer bridge (Docker, not packaged)
 └── workspaceIntegration.js
 ```
 

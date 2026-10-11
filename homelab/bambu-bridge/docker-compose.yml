@@ -1,0 +1,14 @@
+services:
+  bambu-bridge:
+    build: .
+    image: bambu-bridge:latest
+    container_name: bambu-bridge
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    # The container reaches the printer over the LAN with its default
+    # bridge network. Uncomment only if your printer must be reached
+    # through the host network namespace.
+    # network_mode: host

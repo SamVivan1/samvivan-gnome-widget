@@ -65,7 +65,7 @@ fi
 
 rm -rf "$EXT_DIR"
 mkdir -p "$EXT_DIR"
-rsync -a --exclude=".git" --exclude="screenshots" --exclude="docs" --exclude="build" --exclude="*.zip" "$SRCDIR/" "$EXT_DIR/"
+rsync -a --exclude=".git" --exclude="screenshots" --exclude="docs" --exclude="build" --exclude="homelab" --exclude="*.zip" "$SRCDIR/" "$EXT_DIR/"
 
 if command -v glib-compile-schemas >/dev/null 2>&1; then
   glib-compile-schemas "$EXT_DIR/schemas/" || true

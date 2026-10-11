@@ -1,0 +1,76 @@
+.widget-bambu-main {
+  spacing: 22px;
+}
+
+.widget-bambu-ring-wrap {
+  /* size set inline */
+}
+
+.widget-bambu-ring-value {
+  font-weight: 800;
+}
+
+.widget-bambu-ring-overlay {
+  spacing: 2px;
+}
+
+.widget-bambu-info {
+  spacing: 6px;
+}
+
+.widget-bambu-header {
+  spacing: 8px;
+}
+
+.widget-bambu-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.widget-bambu-badge {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background-color: rgba(127, 127, 127, 0.18);
+}
+
+.widget-bambu-file {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.widget-bambu-meta-row {
+  spacing: 6px;
+}
+
+.widget-bambu-meta-icon {
+  icon-size: 14px;
+}
+
+.widget-bambu-meta-text {
+  font-size: 14px;
+}
+
+.widget-bambu-ams {
+  spacing: 6px;
+}
+
+.widget-bambu-ams-dot {
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+}
+
+.widget-bambu-ams-dot-active {
+  border: 2px solid rgba(255, 255, 255, 0.85);
+}
+
+.widget-bambu-ams-text {
+  font-size: 13px;
+  margin-left: 2px;
+}
+
+.widget-bambu-hint {
+  font-size: 15px;
+  text-align: center;
+}

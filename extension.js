@@ -10,11 +10,13 @@ import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import * as AgendaWidget from './widgets/agenda/widget.js';
+import * as BambuWidget from './widgets/bambu/widget.js';
 import * as BatteryWidget from './widgets/battery/widget.js';
 import * as CalendarWidget from './widgets/calendar/widget.js';
 import * as ClockWidget from './widgets/clock/widget.js';
 import * as PhotosWidget from './widgets/photos/widget.js';
 import * as WeatherWidget from './widgets/weather/widget.js';
+import { BambuData } from './lib/bambuData.js';
 import { CalendarData } from './lib/calendarData.js';
 import { configureLogger, resetLogger, warn } from './logger.js';
 import { WorkspaceIntegration } from './workspaceIntegration.js';
@@ -39,14 +41,17 @@ const WIDGET_MODULES = [
   WeatherWidget,
   PhotosWidget,
   BatteryWidget,
+  BambuWidget,
 ];
 const WIDGETS = new Map(WIDGET_MODULES.map(widgetModule => [widgetModule.type, widgetModule]));
 const WIDGET_TYPES = WIDGET_MODULES.map(widgetModule => [widgetModule.type, widgetModule.label]);
-const DEFAULT_WIDGETS = WIDGET_MODULES.map(widgetModule => ({
-  id: `${widgetModule.type}-default`,
-  type: widgetModule.type,
-  size: widgetModule.defaultSize,
-}));
+const DEFAULT_WIDGETS = WIDGET_MODULES
+  .filter(widgetModule => widgetModule.defaultInLayout !== false)
+  .map(widgetModule => ({
+    id: `${widgetModule.type}-default`,
+    type: widgetModule.type,
+    size: widgetModule.defaultSize,
+  }));
 const WIDGET_APP_IDS = Object.fromEntries(WIDGET_MODULES
   .filter(widgetModule => widgetModule.appIds)
   .map(widgetModule => [widgetModule.type, widgetModule.appIds]));
@@ -290,6 +295,13 @@ class WidgetController {
     connect('widget-opacity', () => this._applyOpacity());
     connect('show-panel-icon', () => this._syncIndicator());
     connect('calendar-sources', () => this._applyCalendarSources());
+    connect('bambu-endpoint-url', () => this._reconfigureBambu());
+    connect('bambu-token', () => this._reconfigureBambu());
+    connect('bambu-refresh', () => this._reconfigureBambu());
+  };
+
+  _reconfigureBambu() {
+    this._bambuData?.reconfigure();
   };
 
   _applyCalendarSources() {
@@ -342,8 +354,12 @@ class WidgetController {
     this._applyCalendarSources();
     this._calendarData.start();
 
+    this._bambuData = new BambuData(this._layoutSettings);
+    this._bambuUnsubscribe = this._bambuData.subscribe(() => this._refreshBambuViews());
+
     this._createLayer();
     this._rebuildWidgets();
+    this._bambuData.start();
     this._refreshWeather(true);
     this._workspaceIntegration.enable(this._layer);
 
@@ -413,6 +429,11 @@ class WidgetController {
     this._calendarUnsubscribe = null;
     this._calendarData?.stop();
     this._calendarData = null;
+
+    this._bambuUnsubscribe?.();
+    this._bambuUnsubscribe = null;
+    this._bambuData?.stop();
+    this._bambuData = null;
 
     this._cancelActiveDrag();
 
@@ -642,6 +663,18 @@ class WidgetController {
 
     for (const view of this._views.values()) {
       if (view.widget.type === 'weather') {
+        this._fillWidgetBody(view.widget, view.body);
+      };
+    };
+  };
+
+  _refreshBambuViews() {
+    if (this._editMode || this._dragging) {
+      return;
+    };
+
+    for (const view of this._views.values()) {
+      if (view.widget.type === 'bambu') {
         this._fillWidgetBody(view.widget, view.body);
       };
     };
@@ -941,6 +974,7 @@ class WidgetController {
     this._refreshWeather(false);
     this._refreshCalendarViews();
     this._refreshBatteryViews();
+    this._refreshBambuViews();
     this._pruneStaleViews();
   };
 
@@ -1319,6 +1353,7 @@ class WidgetController {
       weather: this._weather,
       weatherLocation: this._weatherLocation,
       calendar: this._calendarData,
+      bambu: this._bambuData,
       createLabel: this._label.bind(this),
       sizeForWidget,
       settings: this._layoutSettings,

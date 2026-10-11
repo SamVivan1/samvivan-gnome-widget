@@ -2,6 +2,7 @@ import Adw from 'gi://Adw';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Gtk from 'gi://Gtk';
+import Soup from 'gi://Soup';
 
 import { ExtensionPreferences } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
@@ -17,6 +18,7 @@ const WIDGET_LABELS = {
   weather: 'Weather',
   photos: 'Photos',
   battery: 'Battery',
+  bambu: 'Bambu Lab',
 };
 
 const WIDGET_DEFAULT_SIZES = {
@@ -26,6 +28,7 @@ const WIDGET_DEFAULT_SIZES = {
   weather: 'small',
   photos: 'medium',
   battery: 'medium',
+  bambu: 'medium',
 };
 
 const WIDGET_DIMENSIONS = {
@@ -83,6 +86,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     window.add(this._buildGeneralPage(window));
     window.add(this._buildPhotosPage());
     window.add(this._buildCalendarPage());
+    window.add(this._buildBambuPage());
     window.add(this._buildWidgetsPage());
   };
 
@@ -447,6 +451,97 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
       group.add(row);
       switches.push({uid: source.uid, row});
     };
+  };
+
+  _buildBambuPage() {
+    const page = new Adw.PreferencesPage({
+      name: 'bambu',
+      title: 'Bambu Lab',
+      icon_name: 'printer-symbolic',
+    });
+
+    const group = new Adw.PreferencesGroup({
+      title: 'Bridge connection',
+      description: 'Point the widget at the self-hosted Bambu bridge (see homelab/bambu-bridge). Run it next to the printer and expose it through a Cloudflare Tunnel.',
+    });
+
+    const urlRow = new Adw.EntryRow({title: 'Bridge URL'});
+    urlRow.set_text(this._settings.get_string('bambu-endpoint-url'));
+    urlRow.connect('notify::text', () => {
+      this._settings.set_string('bambu-endpoint-url', urlRow.get_text().trim());
+    });
+    group.add(urlRow);
+
+    const tokenRow = new Adw.PasswordEntryRow({title: 'Bearer token'});
+    tokenRow.set_text(this._settings.get_string('bambu-token'));
+    tokenRow.connect('notify::text', () => {
+      this._settings.set_string('bambu-token', tokenRow.get_text().trim());
+    });
+    group.add(tokenRow);
+
+    const refreshRow = new Adw.SpinRow({
+      title: 'Refresh interval (seconds)',
+      subtitle: 'How often the widget polls the bridge (3-300)',
+      adjustment: new Gtk.Adjustment({lower: 3, upper: 300, step_increment: 1, page_increment: 5}),
+    });
+    this._settings.bind('bambu-refresh', refreshRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+    group.add(refreshRow);
+
+    const testRow = new Adw.ActionRow({
+      title: 'Connection status',
+      subtitle: 'Not tested yet',
+    });
+    const testButton = new Gtk.Button({
+      label: 'Test connection',
+      valign: Gtk.Align.CENTER,
+    });
+    testButton.connect('clicked', () => this._testBambuConnection(testRow, testButton));
+    testRow.add_suffix(testButton);
+    group.add(testRow);
+
+    page.add(group);
+
+    return page;
+  };
+
+  _testBambuConnection(row, button) {
+    const endpoint = this._settings.get_string('bambu-endpoint-url').trim().replace(/\/+$/, '');
+    const token = this._settings.get_string('bambu-token').trim();
+
+    if (!endpoint || !token) {
+      row.subtitle = 'Set the bridge URL and token first';
+      return;
+    };
+
+    row.subtitle = 'Testing…';
+    button.set_sensitive(false);
+
+    const session = new Soup.Session({timeout: 10, user_agent: 'desktop-widget'});
+    const message = Soup.Message.new('GET', `${endpoint}/health`);
+
+    message.request_headers.append('Authorization', `Bearer ${token}`);
+    message.request_headers.append('accept', 'application/json');
+
+    session.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (source, result) => {
+      try {
+        const bytes = source.send_and_read_finish(result);
+        const status = message.get_status();
+
+        if (status !== Soup.Status.OK) {
+          row.subtitle = `Bridge replied with HTTP ${status}`;
+        } else {
+          const payload = JSON.parse(new TextDecoder().decode(bytes.get_data()));
+
+          row.subtitle = payload.connected === true
+            ? 'Bridge reachable, printer connected'
+            : 'Bridge reachable, printer not connected';
+        };
+      } catch (error) {
+        row.subtitle = `Connection failed: ${error.message}`;
+      } finally {
+        button.set_sensitive(true);
+      };
+    });
   };
 
   _subtitleFor(widget) {

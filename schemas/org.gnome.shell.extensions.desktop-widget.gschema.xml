@@ -91,5 +91,20 @@
       <summary>Calendar sources</summary>
       <description>UIDs of the Evolution Data Server calendar sources shown by the Calendar and Agenda widgets. An empty list uses every enabled calendar.</description>
     </key>
+    <key name="bambu-endpoint-url" type="s">
+      <default>''</default>
+      <summary>Bambu bridge URL</summary>
+      <description>Base URL of the self-hosted Bambu bridge, for example https://bambu.example.com.</description>
+    </key>
+    <key name="bambu-token" type="s">
+      <default>''</default>
+      <summary>Bambu bridge token</summary>
+      <description>Bearer token sent to the Bambu bridge with every request.</description>
+    </key>
+    <key name="bambu-refresh" type="i">
+      <default>5</default>
+      <summary>Bambu refresh interval</summary>
+      <description>How often the Bambu widget polls the bridge, in seconds (3-300).</description>
+    </key>
   </schema>
 </schemalist>

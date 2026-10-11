@@ -14,7 +14,7 @@ import zipfile
 
 EXT = "desktop-widget@samvivan"
 
-EXCLUDE_TOP_DIRS = {".github", "docs", "scripts", "screenshots", "build"}
+EXCLUDE_TOP_DIRS = {".github", "docs", "scripts", "screenshots", "build", "homelab"}
 EXCLUDE_FILES = {
     "README.md",
     "Makefile",
