@@ -144,6 +144,8 @@ const LOW_BATTERY = 20;
 const HIGH_LOAD = 85;
 const HIGH_RAM = 90;
 const HOT_COLOR = '#ff5b52';
+const CRITICAL_COLOR = '#ff4d4d';
+const CRITICAL_STRESS = 3;
 const DEV_MOODS = ['chill', 'hot', 'sleepy', 'charging', 'busy', 'overload'];
 const MOOD_PRIORITY = ['hot', 'overload', 'sleepy', 'charging', 'busy'];
 const DEV_CYCLE_SECONDS = 3.5;
@@ -754,6 +756,123 @@ const MochiFace = GObject.registerClass(
 			};
 		};
 
+		_fan(cr, w, h, now, rgb) {
+			const cx = 0.14 * w;
+			const cy = 0.16 * h;
+			const radius = Math.min(0.1 * h, 0.13 * w);
+
+			cr.save();
+			cr.translate(cx, cy);
+			cr.rotate(now * 5);
+
+			for (let i = 0; i < 3; i++) {
+				cr.save();
+				cr.rotate((i * 2 * Math.PI) / 3);
+				cr.newPath();
+				cr.moveTo(0, 0);
+				cr.curveTo(radius * 0.4, -radius * 0.22, radius * 0.9, -radius * 0.26, radius, 0);
+				cr.curveTo(radius * 0.9, radius * 0.26, radius * 0.4, radius * 0.22, 0, 0);
+				cr.closePath();
+				cr.setSourceRGBA(...rgb, 0.7);
+				cr.fill();
+				cr.restore();
+			};
+
+			cr.newPath();
+			cr.arc(0, 0, radius * 0.16, 0, Math.PI * 2);
+			cr.setSourceRGBA(...rgb, 0.95);
+			cr.fill();
+			cr.restore();
+		};
+
+		_ekg(cr, w, h, now, rgb) {
+			const baseY = 0.92 * h;
+			const amp = 0.1 * h;
+			const steps = 72;
+			const sample = p => {
+				if (p < 0.08) {
+					return Math.sin((p / 0.08) * Math.PI) * 0.35;
+				};
+
+				if (p < 0.16) {
+					return 0;
+				};
+
+				if (p < 0.20) {
+					return -((p - 0.16) / 0.04) * 0.25;
+				};
+
+				if (p < 0.24) {
+					return -0.25 + ((p - 0.20) / 0.04) * 1.45;
+				};
+
+				if (p < 0.28) {
+					return 1.2 - ((p - 0.24) / 0.04) * 1.7;
+				};
+
+				if (p < 0.34) {
+					return -0.5 + ((p - 0.28) / 0.06) * 0.5;
+				};
+
+				if (p < 0.5) {
+					return Math.sin(((p - 0.34) / 0.16) * Math.PI) * 0.4;
+				};
+
+				return 0;
+			};
+
+			cr.setLineCap(1);
+			cr.setLineJoin(1);
+			cr.setLineWidth(Math.max(1.4, 0.011 * h));
+			cr.newPath();
+
+			for (let i = 0; i <= steps; i++) {
+				const x = (i / steps) * w;
+				const y = baseY - sample((now * 0.5 + i / steps) % 1) * amp;
+
+				if (i === 0) {
+					cr.moveTo(x, y);
+				} else {
+					cr.lineTo(x, y);
+				};
+			};
+
+			cr.setSourceRGBA(...rgb, 0.7);
+			cr.stroke();
+		};
+
+		_alarm(cr, w, h, now, rgb) {
+			const cx = 0.5 * w;
+			const cy = 0.5 * h;
+			const base = Math.min(w, h);
+
+			cr.setLineCap(1);
+
+			for (let i = 0; i < 2; i++) {
+				const phase = (now * 1.1 + i * 0.5) % 1;
+				const alpha = (1 - phase) * 0.45;
+
+				cr.newPath();
+				cr.arc(cx, cy, base * (0.4 + phase * 0.22), 0, Math.PI * 2);
+				cr.setLineWidth(Math.max(2, 0.012 * base));
+				cr.setSourceRGBA(...rgb, alpha);
+				cr.stroke();
+			};
+
+			const ax = 0.85 * w;
+			const ay = 0.16 * h;
+			const s = Math.min(0.1 * h, 0.13 * w);
+			const pulse = 0.5 + 0.5 * Math.sin(now * 6);
+
+			cr.setSourceRGBA(...rgb, 0.55 + 0.45 * pulse);
+			cr.newPath();
+			roundedRect(cr, ax - s * 0.12, ay - s * 0.5, s * 0.24, s * 0.62, s * 0.12);
+			cr.fill();
+			cr.newPath();
+			cr.arc(ax, ay + s * 0.42, s * 0.15, 0, Math.PI * 2);
+			cr.fill();
+		};
+
 		vfunc_repaint() {
 			const cr = this.get_context();
 			const [width, height] = this.get_surface_size();
@@ -769,7 +888,8 @@ const MochiFace = GObject.registerClass(
 			const mood = this._mood;
 			const active = this._active.length ? this._active : [mood];
 			const stress = active.filter(item => item !== 'charging').length;
-			const baseColor = active.includes('hot') ? HOT_COLOR : this._color;
+			const critical = stress >= CRITICAL_STRESS;
+			const baseColor = critical ? CRITICAL_COLOR : (active.includes('hot') ? HOT_COLOR : this._color);
 			const rgb = hexToRgb(baseColor);
 			const catchInk = contrastInk(baseColor, this._theme?.text);
 			const bob = active.includes('sleepy') && this._animate ? Math.sin(now * 2) * 0.02 * h : 0;
@@ -817,6 +937,18 @@ const MochiFace = GObject.registerClass(
 
 			if (active.includes('overload') && this._animate) {
 				this._loader(cr, w, h, now, rgb);
+			};
+
+			if (active.includes('hot') && this._animate) {
+				this._fan(cr, w, h, now, rgb);
+			};
+
+			if (active.includes('busy') && this._animate) {
+				this._ekg(cr, w, h, now, rgb);
+			};
+
+			if (critical && this._animate) {
+				this._alarm(cr, w, h, now, rgb);
 			};
 
 			let eyeMode;
