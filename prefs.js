@@ -553,6 +553,27 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     });
     group.add(captionRow);
 
+    const thresholdRows = [];
+
+    const addThreshold = (title, subtitle, key, lower, upper) => {
+      const row = new Adw.SpinRow({
+        title,
+        subtitle,
+        adjustment: new Gtk.Adjustment({lower, upper, step_increment: 1, page_increment: 5}),
+      });
+
+      row.set_value(this._settings.get_int(key));
+      row.connect('notify::value', () => {
+        this._settings.set_int(key, Math.round(row.get_value()));
+      });
+      group.add(row);
+      thresholdRows.push(row);
+    };
+
+    addThreshold('Hot above', 'Temperature (°C) at or above which the face looks hot', 'bambu-hot-temp', 30, 110);
+    addThreshold('Sleepy below', 'Battery (%) at or below which the face looks sleepy while unplugged', 'bambu-low-battery', 0, 100);
+    addThreshold('Busy above', 'CPU load (%) at or above which the face looks busy', 'bambu-high-load', 0, 100);
+
     let syncing = false;
 
     const applyColorState = () => {
@@ -568,6 +589,10 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
       accentRow.set_sensitive(enabled);
       colorRow.set_sensitive(enabled);
       colorButton.set_sensitive(enabled && !usesAccent);
+
+      for (const row of thresholdRows) {
+        row.set_sensitive(enabled);
+      };
 
       if (!usesAccent) {
         const rgba = new Gdk.RGBA();

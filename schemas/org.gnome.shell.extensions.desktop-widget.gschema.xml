@@ -126,6 +126,24 @@
       <summary>Offline face caption</summary>
       <description>Caption shown under the offline face. Leave empty to hide it.</description>
     </key>
+    <key name="bambu-hot-temp" type="i">
+      <range min="30" max="110"/>
+      <default>60</default>
+      <summary>Face hot temperature threshold</summary>
+      <description>Temperature in degrees Celsius at or above which the offline face looks hot.</description>
+    </key>
+    <key name="bambu-low-battery" type="i">
+      <range min="0" max="100"/>
+      <default>20</default>
+      <summary>Face low battery threshold</summary>
+      <description>Battery percentage at or below which the offline face looks sleepy (while not charging).</description>
+    </key>
+    <key name="bambu-high-load" type="i">
+      <range min="0" max="100"/>
+      <default>85</default>
+      <summary>Face high CPU load threshold</summary>
+      <description>CPU load percentage at or above which the offline face looks busy.</description>
+    </key>
     <key name="dev-mode" type="b">
       <default>false</default>
       <summary>Developer mode</summary>

@@ -285,7 +285,7 @@ function readLoad() {
 // laptop's own vitals (chip temperature, battery, CPU load).
 const MochiFace = GObject.registerClass(
 	class MochiFace extends St.DrawingArea {
-		_init(color, theme, animate, dev, onStatus) {
+		_init(color, theme, animate, dev, onStatus, thresholds) {
 			super._init({
 				style_class: 'widget-bambu-mochi',
 				x_expand: true,
@@ -299,6 +299,11 @@ const MochiFace = GObject.registerClass(
 			this._animate = animate;
 			this._dev = dev || null;
 			this._onStatus = onStatus || null;
+			this._thresholds = {
+				hot: thresholds?.hot ?? HOT_TEMP_C,
+				battery: thresholds?.battery ?? LOW_BATTERY,
+				load: thresholds?.load ?? HIGH_LOAD,
+			};
 			this._timerId = 0;
 			this._frame = 0;
 			this._temp = null;
@@ -366,11 +371,11 @@ const MochiFace = GObject.registerClass(
 		};
 
 		_selectMood() {
-			if (this._temp !== null && this._temp >= HOT_TEMP_C) {
+			if (this._temp !== null && this._temp >= this._thresholds.hot) {
 				return 'hot';
 			};
 
-			if (this._battery !== null && this._battery <= LOW_BATTERY && !this._charging) {
+			if (this._battery !== null && this._battery <= this._thresholds.battery && !this._charging) {
 				return 'sleepy';
 			};
 
@@ -378,7 +383,7 @@ const MochiFace = GObject.registerClass(
 				return 'charging';
 			};
 
-			if (this._load !== null && this._load >= HIGH_LOAD) {
+			if (this._load !== null && this._load >= this._thresholds.load) {
 				return 'busy';
 			};
 
@@ -717,13 +722,13 @@ function addCenteredHint(body, createLabel, theme, text) {
 	body.add_child(new St.Widget({y_expand: true}));
 };
 
-function buildOfflineScene({body, createLabel, theme, animate, color, caption, dev}) {
+function buildOfflineScene({body, createLabel, theme, animate, color, caption, dev, thresholds}) {
 	let statusLabel = null;
 	const face = new MochiFace(color, theme, animate, dev, text => {
 		if (statusLabel) {
 			statusLabel.text = text;
 		};
-	});
+	}, thresholds);
 
 	body.add_child(face);
 
@@ -923,6 +928,11 @@ export function render({body, widget, createLabel, theme, sizeForWidget, bambu, 
 				cycle: settings.get_boolean('bambu-dev-cycle'),
 			}
 			: null,
+		thresholds: {
+			hot: settings.get_int('bambu-hot-temp'),
+			battery: settings.get_int('bambu-low-battery'),
+			load: settings.get_int('bambu-high-load'),
+		},
 	});
 
 	if (always && fun) {
