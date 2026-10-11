@@ -223,30 +223,56 @@ function isBatteryLike(props) {
 	].includes(kind);
 };
 
-function upowerCall(path, iface, method, params = null) {
-	return Gio.DBus.system.call_sync(
-		'org.freedesktop.UPower',
-		path,
-		iface,
-		method,
-		params,
-		null,
-		Gio.DBusCallFlags.NONE,
-		1000,
-		null);
+const DBUS_TIMEOUT_MS = 1000;
+
+function dbusCall(bus, busName, objectPath, interfaceName, method, params = null, timeout = DBUS_TIMEOUT_MS) {
+	return new Promise((resolve, reject) => {
+		bus.call(
+			busName,
+			objectPath,
+			interfaceName,
+			method,
+			params,
+			null,
+			Gio.DBusCallFlags.NONE,
+			timeout,
+			null,
+			(source, result) => {
+				try {
+					resolve(source.call_finish(result));
+				} catch (error) {
+					reject(error);
+				};
+			});
+	});
 };
 
-function readUPowerDevices() {
+async function readUPowerDevices() {
 	try {
-		const [paths] = upowerCall('/org/freedesktop/UPower', 'org.freedesktop.UPower', 'EnumerateDevices').deep_unpack();
+		const reply = await dbusCall(
+			Gio.DBus.system,
+			'org.freedesktop.UPower',
+			'/org/freedesktop/UPower',
+			'org.freedesktop.UPower',
+			'EnumerateDevices');
+		const [paths] = reply.deep_unpack();
 		const devices = [];
 
 		for (const path of paths) {
-			const [props] = upowerCall(
-				path,
-				'org.freedesktop.DBus.Properties',
-				'GetAll',
-				GLib.Variant.new('(s)', ['org.freedesktop.UPower.Device'])).deep_unpack();
+			let props;
+
+			try {
+				const deviceReply = await dbusCall(
+					Gio.DBus.system,
+					'org.freedesktop.UPower',
+					path,
+					'org.freedesktop.DBus.Properties',
+					'GetAll',
+					GLib.Variant.new('(s)', ['org.freedesktop.UPower.Device']));
+				[props] = deviceReply.deep_unpack();
+			} catch (error) {
+				continue;
+			};
 
 			if (!isBatteryLike(props)) {
 				continue;
@@ -273,18 +299,15 @@ function readUPowerDevices() {
 	};
 };
 
-function readBlueZDevices() {
+async function readBlueZDevices() {
 	try {
-		const [objects] = Gio.DBus.system.call_sync(
+		const reply = await dbusCall(
+			Gio.DBus.system,
 			'org.bluez',
 			'/',
 			'org.freedesktop.DBus.ObjectManager',
-			'GetManagedObjects',
-			null,
-			null,
-			Gio.DBusCallFlags.NONE,
-			1000,
-			null).deep_unpack();
+			'GetManagedObjects');
+		const [objects] = reply.deep_unpack();
 		const devices = [];
 
 		for (const [path, interfaces] of Object.entries(objects)) {
@@ -326,18 +349,15 @@ const GSCONNECT_BUS_NAME = 'org.gnome.Shell.Extensions.GSConnect';
 const GSCONNECT_ROOT_PATH = '/org/gnome/Shell/Extensions/GSConnect';
 const GSCONNECT_DEVICE_IFACE = 'org.gnome.Shell.Extensions.GSConnect.Device';
 
-function gsconnectBattery(path) {
+async function gsconnectBattery(path) {
 	try {
-		const reply = Gio.DBus.session.call_sync(
+		const reply = await dbusCall(
+			Gio.DBus.session,
 			GSCONNECT_BUS_NAME,
 			path,
 			'org.gtk.Actions',
 			'Describe',
-			GLib.Variant.new('(s)', ['battery']),
-			null,
-			Gio.DBusCallFlags.NONE,
-			1000,
-			null);
+			GLib.Variant.new('(s)', ['battery']));
 		const [[enabled, , states]] = reply.recursiveUnpack();
 		const state = Array.isArray(states) ? states[0] : null;
 
@@ -354,18 +374,15 @@ function gsconnectBattery(path) {
 	};
 };
 
-function readGSConnectDevices() {
+async function readGSConnectDevices() {
 	try {
-		const [objects] = Gio.DBus.session.call_sync(
+		const reply = await dbusCall(
+			Gio.DBus.session,
 			GSCONNECT_BUS_NAME,
 			GSCONNECT_ROOT_PATH,
 			'org.freedesktop.DBus.ObjectManager',
-			'GetManagedObjects',
-			null,
-			null,
-			Gio.DBusCallFlags.NONE,
-			1000,
-			null).deep_unpack();
+			'GetManagedObjects');
+		const [objects] = reply.deep_unpack();
 		const devices = [];
 
 		for (const [path, interfaces] of Object.entries(objects)) {
@@ -375,7 +392,7 @@ function readGSConnectDevices() {
 				continue;
 			};
 
-			const battery = gsconnectBattery(path);
+			const battery = await gsconnectBattery(path);
 
 			if (!battery || !Number.isFinite(battery.level) || battery.level < 0) {
 				continue;
@@ -429,19 +446,71 @@ function mergeDevices(devices) {
 };
 
 const DEVICES_CACHE_MS = 2000;
+const DBUS_REFRESH_MIN_MS = 750;
 let devicesCache = null;
+let devicesFetch = null;
+let devicesFetchStarted = 0;
 
-function readDevices(force = false) {
+function cachedDevices() {
+	return devicesCache ? devicesCache.devices : [];
+};
+
+function devicesAreStale() {
+	return !devicesCache || Date.now() - devicesCache.time >= DEVICES_CACHE_MS;
+};
+
+function devicesSignature(devices) {
+	return devices.map(device => [
+		device.name,
+		device.kind ?? '',
+		device.percentage,
+		device.powerSupply ? 1 : 0,
+		device.iconName ?? '',
+	].join(':')).join('|');
+};
+
+let devicesSignatureListener = null;
+
+export function setBatterySignatureListener(listener) {
+	devicesSignatureListener = listener;
+};
+
+function refreshDevices() {
 	const now = Date.now();
 
-	if (!force && devicesCache && now - devicesCache.time < DEVICES_CACHE_MS) {
-		return devicesCache.devices;
+	if (devicesFetch) {
+		return devicesFetch;
 	};
 
-	const devices = mergeDevices([...readUPowerDevices(), ...readBlueZDevices(), ...readGSConnectDevices()]);
+	if (devicesCache && now - devicesFetchStarted < DBUS_REFRESH_MIN_MS) {
+		return Promise.resolve(devicesCache.devices);
+	};
 
-	devicesCache = {time: now, devices};
-	return devices;
+	devicesFetchStarted = now;
+	devicesFetch = (async () => {
+		try {
+			const devices = mergeDevices([
+				...(await readUPowerDevices()),
+				...(await readBlueZDevices()),
+				...(await readGSConnectDevices()),
+			]);
+
+			devicesCache = {time: Date.now(), devices};
+
+			if (devicesSignatureListener) {
+				devicesSignatureListener(devicesSignature(devices));
+			};
+
+			return devices;
+		} catch (error) {
+			warn('devices-read', `Could not read device batteries: ${error.message}`);
+			return cachedDevices();
+		} finally {
+			devicesFetch = null;
+		};
+	})();
+
+	return devicesFetch;
 };
 
 let deviceOrder = [];
@@ -465,13 +534,8 @@ function orderDevices(devices) {
 };
 
 export function batterySignature() {
-	return readDevices().map(device => [
-		device.name,
-		device.kind ?? '',
-		device.percentage,
-		device.powerSupply ? 1 : 0,
-		device.iconName ?? '',
-	].join(':')).join('|');
+	refreshDevices();
+	return devicesSignature(cachedDevices());
 };
 
 const BatteryRing = GObject.registerClass(
@@ -1085,7 +1149,22 @@ export function reconcile({body, widget, createLabel, theme, sizeForWidget, anim
 
 	state.params = {body, widget, createLabel, theme, sizeForWidget, animate};
 
-	const liveDevices = readDevices();
+	const liveDevices = cachedDevices();
+
+	if (devicesAreStale()) {
+		const currentSignature = devicesSignature(liveDevices);
+
+		refreshDevices().then(devices => {
+			if (devicesSignature(devices) === currentSignature || !state.params) {
+				return;
+			};
+
+			if (!devicesSignatureListener) {
+				reconcile(state.params);
+			};
+		}).catch(() => {});
+	};
+
 	const liveKeys = new Set(liveDevices.map(deviceKey));
 	const departing = [];
 

@@ -371,6 +371,7 @@ class WidgetController {
     }, this);
 
     this._watchBatteryChanges();
+    BatteryWidget.setBatterySignatureListener?.(signature => this._applyBatterySignature(signature));
 
     Main.layoutManager.connectObject(
       'monitors-changed', () => this._syncLayerGeometry(),
@@ -385,6 +386,7 @@ class WidgetController {
 
   destroy() {
     this._workspaceIntegration.destroy();
+    BatteryWidget.setBatterySignatureListener?.(null);
 
     for (const timeout of this._timeouts) {
       GLib.source_remove(timeout);
@@ -664,9 +666,17 @@ class WidgetController {
       return;
     };
 
-    const signature = BatteryWidget.batterySignature?.() ?? null;
+    const signature = BatteryWidget.batterySignature?.();
 
-    if (signature !== null && signature === this._batterySignature) {
+    if (signature == null) {
+      return;
+    };
+
+    this._applyBatterySignature(signature);
+  };
+
+  _applyBatterySignature(signature) {
+    if (signature === this._batterySignature) {
       return;
     };
 
