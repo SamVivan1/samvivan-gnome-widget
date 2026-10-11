@@ -515,19 +515,19 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
   _buildBambuOfflineGroup() {
     const group = new Adw.PreferencesGroup({
-      title: 'Offline robot',
+      title: 'Offline face',
       description: 'What to show when the bridge is reachable but the printer is offline.',
     });
 
     const funRow = new Adw.SwitchRow({
-      title: 'Animated robot',
-      subtitle: 'Show a cute animated robot instead of a plain “Printer offline” message',
+      title: 'Animated face',
+      subtitle: 'Show a cute mochi face that reacts to temperature, battery and CPU load instead of a plain “Printer offline” message',
     });
     this._settings.bind('bambu-offline-fun', funRow, 'active', Gio.SettingsBindFlags.DEFAULT);
     group.add(funRow);
 
     const alwaysRow = new Adw.SwitchRow({
-      title: 'Always show the robot',
+      title: 'Always show the face',
       subtitle: 'Show it even when the printer is online or the bridge is unreachable (good for testing)',
     });
     this._settings.bind('bambu-offline-always', alwaysRow, 'active', Gio.SettingsBindFlags.DEFAULT);
@@ -535,11 +535,11 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
     const accentRow = new Adw.SwitchRow({
       title: 'Use system accent colour',
-      subtitle: 'Turn off to pick a custom colour for the robot',
+      subtitle: 'Turn off to pick a custom colour for the face',
     });
     group.add(accentRow);
 
-    const colorRow = new Adw.ActionRow({title: 'Robot colour'});
+    const colorRow = new Adw.ActionRow({title: 'Face colour'});
     const colorButton = new Gtk.ColorButton({valign: Gtk.Align.CENTER, use_alpha: false});
 
     colorRow.add_suffix(colorButton);

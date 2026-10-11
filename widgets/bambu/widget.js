@@ -1,4 +1,5 @@
 import Clutter from 'gi://Clutter';
+import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import St from 'gi://St';
@@ -55,21 +56,6 @@ function hexToRgb(hex) {
 
 function hexToRgba(hex, alpha) {
 	return [...hexToRgb(hex), alpha];
-};
-
-function roundedRect(cr, x, y, width, height, radius) {
-	const r = Math.max(0, Math.min(radius, width / 2, height / 2));
-
-	cr.moveTo(x + r, y);
-	cr.lineTo(x + width - r, y);
-	cr.arc(x + width - r, y + r, r, -Math.PI / 2, 0);
-	cr.lineTo(x + width, y + height - r);
-	cr.arc(x + width - r, y + height - r, r, 0, Math.PI / 2);
-	cr.lineTo(x + r, y + height);
-	cr.arc(x + r, y + height - r, r, Math.PI / 2, Math.PI);
-	cr.lineTo(x, y + r);
-	cr.arc(x + r, y + r, r, Math.PI, Math.PI * 1.5);
-	cr.closePath();
 };
 
 function normalizeColor(color) {
@@ -153,13 +139,138 @@ const ProgressRing = GObject.registerClass(
 		};
 	});
 
-const ROBOT_MOODS = ['idle', 'idle', 'happy', 'look', 'sleep', 'wink'];
+const HOT_TEMP_C = 60;
+const LOW_BATTERY = 20;
+const HIGH_LOAD = 85;
+const HOT_COLOR = '#ff5b52';
 
-const RobotFace = GObject.registerClass(
-	class RobotFace extends St.DrawingArea {
+function luminance(hex) {
+	const [r, g, b] = hexToRgb(hex);
+
+	return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+
+function contrastInk(hex, fallback) {
+	return luminance(hex) > 0.62 ? (fallback || '#111111') : '#ffffff';
+};
+
+function readSysFile(path) {
+	try {
+		const [ok, bytes] = GLib.file_get_contents(path);
+
+		if (!ok || !bytes) {
+			return null;
+		};
+
+		return new TextDecoder().decode(bytes).trim();
+	} catch (error) {
+		return null;
+	};
+};
+
+function listSysDir(path) {
+	const dir = Gio.File.new_for_path(path);
+
+	if (!dir.query_exists(null)) {
+		return [];
+	};
+
+	const names = [];
+
+	try {
+		const iter = dir.enumerate_children('standard::name', Gio.FileQueryInfoFlags.NONE, null);
+		let info;
+
+		while ((info = iter.next_file(null)) !== null) {
+			names.push(info.get_name());
+		};
+	} catch (error) {
+		return [];
+	};
+
+	return names;
+};
+
+function readBattery() {
+	let percentage = null;
+	let charging = false;
+
+	for (const name of listSysDir('/sys/class/power_supply')) {
+		const base = `/sys/class/power_supply/${name}`;
+
+		if ((readSysFile(`${base}/type`) || '').toLowerCase() !== 'battery') {
+			continue;
+		};
+
+		const capacity = Number(readSysFile(`${base}/capacity`));
+		const status = (readSysFile(`${base}/status`) || '').toLowerCase();
+
+		if (Number.isFinite(capacity)) {
+			percentage = Math.max(0, Math.min(100, Math.round(capacity)));
+		};
+
+		charging = status === 'charging' || status === 'full';
+		break;
+	};
+
+	return {percentage, charging};
+};
+
+function readTemperature() {
+	let best = null;
+
+	for (const name of listSysDir('/sys/class/thermal')) {
+		if (!name.startsWith('thermal_zone')) {
+			continue;
+		};
+
+		const base = `/sys/class/thermal/${name}`;
+		const raw = Number(readSysFile(`${base}/temp`));
+
+		if (!Number.isFinite(raw)) {
+			continue;
+		};
+
+		const celsius = raw > 1000 ? raw / 1000 : raw;
+
+		if (celsius <= 0 || celsius > 150) {
+			continue;
+		};
+
+		const preferred = /x86_pkg_temp|cpu|pkg|core|soc|acpitz|k10temp|zenpower/.test((readSysFile(`${base}/type`) || '').toLowerCase());
+
+		if (best === null || (preferred && !best.preferred) || (preferred === best.preferred && celsius > best.temp)) {
+			best = {temp: celsius, preferred};
+		};
+	};
+
+	return best ? best.temp : null;
+};
+
+function readLoad() {
+	const line = readSysFile('/proc/loadavg');
+
+	if (!line) {
+		return null;
+	};
+
+	const load = Number(line.split(/\s+/)[0]);
+	const cores = Math.max(1, GLib.get_num_processors ? GLib.get_num_processors() : 1);
+
+	if (!Number.isFinite(load)) {
+		return null;
+	};
+
+	return Math.max(0, Math.min(100, Math.round((load / cores) * 100)));
+};
+
+// A dasai-mochi style face: two big eyes and a small mouth that reacts to the
+// laptop's own vitals (chip temperature, battery, CPU load).
+const MochiFace = GObject.registerClass(
+	class MochiFace extends St.DrawingArea {
 		_init(color, theme, animate) {
 			super._init({
-				style_class: 'widget-bambu-robot',
+				style_class: 'widget-bambu-mochi',
 				x_expand: true,
 				y_expand: true,
 				x_align: Clutter.ActorAlign.FILL,
@@ -170,24 +281,31 @@ const RobotFace = GObject.registerClass(
 			this._theme = theme;
 			this._animate = animate;
 			this._timerId = 0;
-			this._mood = 'idle';
-			this._moodUntil = 0;
+			this._frame = 0;
+			this._temp = null;
+			this._load = null;
+			this._battery = null;
+			this._charging = false;
+			this._mood = 'chill';
 			this._nextBlink = 0;
 			this._blinkUntil = 0;
+			this._lookUntil = 0;
+			this._smileUntil = 0;
 			this._lookX = 0;
 			this._lookY = 0;
 
-			if (animate) {
-				const now = this._now();
+			this._readStats();
+			this._mood = this._selectMood();
 
-				this._pickMood(now);
+			if (animate) {
+				this._scheduleBlink(this._now());
 				this._timerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 120, () => {
 					if (!this.get_parent()) {
 						this._timerId = 0;
 						return GLib.SOURCE_REMOVE;
 					};
 
-					this._advance(this._now());
+					this._advance();
 					this.queue_repaint();
 					return GLib.SOURCE_CONTINUE;
 				});
@@ -200,22 +318,69 @@ const RobotFace = GObject.registerClass(
 			return GLib.get_monotonic_time() / 1000000;
 		};
 
-		_pickMood(now) {
-			this._mood = ROBOT_MOODS[Math.floor(Math.random() * ROBOT_MOODS.length)];
-			this._moodUntil = now + 3 + Math.random() * 4;
-			this._nextBlink = now + 1.5 + Math.random() * 3;
-			this._lookX = Math.random() * 2 - 1;
-			this._lookY = Math.random() * 2 - 1;
+		_readStats() {
+			const battery = readBattery();
+
+			this._temp = readTemperature();
+			this._load = readLoad();
+			this._battery = battery.percentage;
+			this._charging = battery.charging;
 		};
 
-		_advance(now) {
-			if (now >= this._moodUntil) {
-				this._pickMood(now);
+		_selectMood() {
+			if (this._temp !== null && this._temp >= HOT_TEMP_C) {
+				return 'hot';
 			};
 
-			if (this._mood !== 'sleep' && now >= this._nextBlink) {
-				this._blinkUntil = now + 0.16;
-				this._nextBlink = now + 2 + Math.random() * 3.5;
+			if (this._battery !== null && this._battery <= LOW_BATTERY && !this._charging) {
+				return 'sleepy';
+			};
+
+			if (this._charging && this._battery !== null && this._battery < 100) {
+				return 'charging';
+			};
+
+			if (this._load !== null && this._load >= HIGH_LOAD) {
+				return 'busy';
+			};
+
+			return 'chill';
+		};
+
+		_scheduleBlink(now) {
+			this._nextBlink = now + 2 + Math.random() * 3.5;
+		};
+
+		_advance() {
+			const now = this._now();
+
+			this._frame++;
+
+			if (this._frame % 16 === 0) {
+				this._readStats();
+			};
+
+			this._mood = this._selectMood();
+
+			if (this._mood === 'chill') {
+				if (now >= this._nextBlink) {
+					this._blinkUntil = now + 0.14;
+					this._scheduleBlink(now);
+				};
+
+				if (now >= this._lookUntil) {
+					this._lookX = Math.random() * 2 - 1;
+					this._lookY = Math.random() * 2 - 1;
+					this._lookUntil = now + 1 + Math.random() * 2;
+				};
+
+				if (now >= this._smileUntil && Math.random() < 0.02) {
+					this._smileUntil = now + 1.2;
+				};
+			} else {
+				this._blinkUntil = 0;
+				this._lookX = 0;
+				this._lookY = 0;
 			};
 		};
 
@@ -226,27 +391,133 @@ const RobotFace = GObject.registerClass(
 			};
 		};
 
-		_drawEye(cr, cx, cy, radius, mode, color, ink) {
-			const lineWidth = radius * 0.42;
+		_eye(cr, cx, cy, radius, mode, rgb, ink, now) {
+			if (mode === 'closed') {
+				cr.newPath();
+				cr.save();
+				cr.translate(cx, cy);
+				cr.scale(1, 0.16);
+				cr.arc(0, 0, radius, 0, Math.PI * 2);
+				cr.restore();
+				cr.setSourceRGBA(...rgb, 1);
+				cr.fill();
+				return;
+			};
 
-			cr.newPath();
-
-			if (mode !== 'open') {
+			if (mode === 'happy') {
+				cr.newPath();
 				cr.setLineCap(1);
-				cr.setLineWidth(lineWidth);
-				cr.setSourceRGBA(...hexToRgba(ink, 0.9));
-				cr.arc(cx, cy, radius * 0.85, Math.PI * 0.15, Math.PI * 0.85);
+				cr.setLineWidth(radius * 0.46);
+				cr.arc(cx, cy + radius * 0.28, radius * 0.92, Math.PI * 1.12, Math.PI * 1.88);
+				cr.setSourceRGBA(...rgb, 1);
 				cr.stroke();
 				return;
 			};
 
+			cr.newPath();
 			cr.arc(cx, cy, radius, 0, Math.PI * 2);
-			cr.setSourceRGBA(...color, 1);
+			cr.setSourceRGBA(...rgb, 1);
 			cr.fill();
 
+			const dizzy = mode === 'dizzy';
+			const hx = dizzy ? Math.cos(now * 9) * radius * 0.42 : -radius * 0.34;
+			const hy = dizzy ? Math.sin(now * 8) * radius * 0.42 : -radius * 0.32;
+
 			cr.newPath();
-			cr.arc(cx + this._lookX * radius * 0.35, cy + this._lookY * radius * 0.35, radius * 0.4, 0, Math.PI * 2);
-			cr.setSourceRGBA(...hexToRgba(ink, 0.95));
+			cr.arc(cx + hx, cy + hy, radius * 0.32, 0, Math.PI * 2);
+			cr.setSourceRGBA(...hexToRgba(ink, 0.9));
+			cr.fill();
+		};
+
+		_mouth(cr, cx, cy, radius, mode, rgb) {
+			cr.setLineCap(1);
+
+			if (mode === 'open') {
+				cr.newPath();
+				cr.arc(cx, cy, radius * 0.8, 0, Math.PI * 2);
+				cr.setSourceRGBA(...rgb, 1);
+				cr.fill();
+				return;
+			};
+
+			if (mode === 'smile') {
+				cr.newPath();
+				cr.setLineWidth(Math.max(2, radius * 0.5));
+				cr.arc(cx, cy - radius * 0.3, radius, Math.PI * 0.2, Math.PI * 0.8);
+				cr.setSourceRGBA(...rgb, 1);
+				cr.stroke();
+				return;
+			};
+
+			if (mode === 'wave') {
+				cr.newPath();
+				cr.setLineWidth(Math.max(2, radius * 0.45));
+				cr.moveTo(cx - radius, cy);
+				cr.curveTo(cx - radius * 0.4, cy - radius, cx + radius * 0.4, cy + radius, cx + radius, cy);
+				cr.setSourceRGBA(...rgb, 1);
+				cr.stroke();
+				return;
+			};
+
+			cr.newPath();
+			cr.setLineWidth(Math.max(2, radius * 0.5));
+			cr.moveTo(cx - radius, cy);
+			cr.lineTo(cx + radius, cy);
+			cr.setSourceRGBA(...rgb, 1);
+			cr.stroke();
+		};
+
+		_sweat(cr, size, now, rgb) {
+			for (let i = 0; i < 2; i++) {
+				const phase = (now * 0.7 + i * 0.5) % 1;
+				const alpha = Math.sin(phase * Math.PI) * 0.85;
+				const dropX = (i === 0 ? 0.2 : 0.8) * size;
+				const dropY = (0.36 + phase * 0.28) * size;
+				const dropR = 0.035 * size;
+
+				cr.newPath();
+				cr.arc(dropX, dropY, dropR, 0, Math.PI * 2);
+				cr.setSourceRGBA(...rgb, alpha);
+				cr.fill();
+
+				cr.newPath();
+				cr.moveTo(dropX - dropR * 0.7, dropY - dropR * 0.3);
+				cr.lineTo(dropX, dropY - dropR * 2.1);
+				cr.lineTo(dropX + dropR * 0.7, dropY - dropR * 0.3);
+				cr.closePath();
+				cr.setSourceRGBA(...rgb, alpha);
+				cr.fill();
+			};
+		};
+
+		_steam(cr, size, now, rgb) {
+			cr.setLineCap(1);
+			cr.setLineWidth(Math.max(2, size * 0.015));
+
+			for (let i = 0; i < 2; i++) {
+				const x = (i === 0 ? 0.34 : 0.66) * size;
+				const alpha = Math.max(0, 0.35 + 0.25 * Math.sin(now * 4 + i));
+
+				cr.newPath();
+				cr.moveTo(x, 0.16 * size);
+				cr.curveTo(x - size * 0.05, 0.1 * size, x + size * 0.05, 0.06 * size, x, 0.0);
+				cr.setSourceRGBA(...rgb, alpha);
+				cr.stroke();
+			};
+		};
+
+		_sparkle(cr, x, y, r, alpha, rgb) {
+			cr.newPath();
+			cr.moveTo(x, y - r);
+			cr.lineTo(x + r * 0.25, y - r * 0.25);
+			cr.lineTo(x + r, y);
+			cr.lineTo(x + r * 0.25, y + r * 0.25);
+			cr.lineTo(x, y + r);
+			cr.lineTo(x - r * 0.25, y + r * 0.25);
+			cr.lineTo(x - r, y);
+			cr.lineTo(x - r * 0.25, y - r * 0.25);
+			cr.closePath();
+			cr.setSourceRGBA(...rgb, alpha);
 			cr.fill();
 		};
 
@@ -261,98 +532,73 @@ const RobotFace = GObject.registerClass(
 
 			const now = this._now();
 			const size = Math.min(width, height);
-			const color = hexToRgb(this._color);
-			const ink = this._theme?.text ?? '#ffffff';
 			const mood = this._mood;
-			const blinking = this._animate && mood !== 'sleep' && this._blinkUntil && now < this._blinkUntil;
-			const headX = 0.12 * size;
-			const headY = 0.27 * size;
-			const headW = 0.76 * size;
-			const headH = 0.55 * size;
-			const headR = 0.2 * size;
-			const lineWidth = Math.max(2, 0.028 * size);
-			const eyeR = 0.085 * size;
-			const eyeY = 0.51 * size;
+			const baseColor = mood === 'hot' ? HOT_COLOR : this._color;
+			const rgb = hexToRgb(baseColor);
+			const catchInk = contrastInk(baseColor, this._theme?.text);
+			const bob = mood === 'sleepy' && this._animate ? Math.sin(now * 2) * 0.012 * size : 0;
+			const blink = this._animate && now < this._blinkUntil;
 
 			cr.save();
-			cr.translate((width - size) / 2, (height - size) / 2);
-			cr.setLineCap(1);
+			cr.translate((width - size) / 2, (height - size) / 2 + bob);
 
-			cr.newPath();
-			cr.arc(0.12 * size, 0.55 * size, 0.05 * size, 0, Math.PI * 2);
-			cr.arc(0.88 * size, 0.55 * size, 0.05 * size, 0, Math.PI * 2);
-			cr.setSourceRGBA(...color, 1);
-			cr.fill();
+			const eyeR = 0.16 * size;
+			const eyeY = 0.44 * size + this._lookY * eyeR * 0.12 - (mood === 'hot' ? 0.015 * size : 0);
+			const leftX = 0.35 * size + this._lookX * eyeR * 0.16;
+			const rightX = 0.65 * size + this._lookX * eyeR * 0.16;
+			const mouthR = 0.07 * size;
+			const mouthY = 0.7 * size;
 
-			cr.newPath();
-			cr.moveTo(0.5 * size, headY + 0.01 * size);
-			cr.lineTo(0.5 * size, 0.13 * size);
-			cr.setLineWidth(lineWidth);
-			cr.setSourceRGBA(...color, 1);
-			cr.stroke();
-
-			const pulse = this._animate ? 1 + 0.18 * Math.sin(now * 5) : 1;
-
-			cr.newPath();
-			cr.arc(0.5 * size, 0.115 * size, 0.045 * size * pulse, 0, Math.PI * 2);
-			cr.setSourceRGBA(...color, 1);
-			cr.fill();
-
-			cr.newPath();
-			roundedRect(cr, headX, headY, headW, headH, headR);
-			cr.setSourceRGBA(...hexToRgba(this._color, 0.16));
-			cr.fill();
-
-			cr.newPath();
-			roundedRect(cr, headX, headY, headW, headH, headR);
-			cr.setLineWidth(lineWidth);
-			cr.setSourceRGBA(...color, 1);
-			cr.stroke();
-
-			if (mood === 'happy') {
-				cr.newPath();
-				cr.arc(0.27 * size, 0.64 * size, 0.045 * size, 0, Math.PI * 2);
-				cr.arc(0.73 * size, 0.64 * size, 0.045 * size, 0, Math.PI * 2);
-				cr.setSourceRGBA(...hexToRgba(this._color, 0.4));
-				cr.fill();
+			if (mood === 'hot') {
+				this._steam(cr, size, now, rgb);
 			};
 
-			const leftMode = mood === 'sleep' || blinking ? 'closed' : 'open';
-			const rightMode = mood === 'wink' || mood === 'sleep' || blinking ? 'closed' : 'open';
+			if (mood === 'charging' && this._animate) {
+				for (let i = 0; i < 3; i++) {
+					const phase = (now * 0.6 + i / 3) % 1;
+					const alpha = Math.sin(phase * Math.PI);
+					const sx = (0.18 + i * 0.32) * size;
+					const sy = (0.16 + (i % 2) * 0.1) * size;
 
-			this._drawEye(cr, 0.35 * size, eyeY, eyeR, leftMode, color, ink);
-			this._drawEye(cr, 0.65 * size, eyeY, eyeR, rightMode, color, ink);
-
-			cr.newPath();
-			cr.setLineWidth(Math.max(2, 0.022 * size));
-			cr.setSourceRGBA(...hexToRgba(ink, 0.9));
-
-			if (mood === 'happy') {
-				cr.arc(0.5 * size, 0.6 * size, 0.075 * size, Math.PI * 0.15, Math.PI * 0.85);
-				cr.stroke();
-			} else {
-				cr.moveTo(0.455 * size, 0.62 * size);
-				cr.lineTo(0.545 * size, 0.62 * size);
-				cr.stroke();
-			};
-
-			if (mood === 'sleep' && this._animate) {
-				for (let i = 0; i < 2; i++) {
-					const phase = (now * 0.45 + i * 0.5) % 1;
-					const alpha = Math.max(0, 1 - phase);
-					const zx = 0.72 * size + phase * 0.06 * size;
-					const zy = 0.24 * size - phase * 0.16 * size;
-					const zs = 0.06 * size * (0.7 + phase * 0.5);
-
-					cr.newPath();
-					cr.moveTo(zx, zy);
-					cr.lineTo(zx + zs, zy);
-					cr.lineTo(zx, zy + zs);
-					cr.lineTo(zx + zs, zy + zs);
-					cr.setLineWidth(Math.max(1.5, 0.014 * size));
-					cr.setSourceRGBA(...hexToRgba(this._color, alpha));
-					cr.stroke();
+					this._sparkle(cr, sx, sy, 0.05 * size, Math.max(0, alpha), rgb);
 				};
+			};
+
+			let eyeMode;
+
+			if (mood === 'sleepy') {
+				eyeMode = 'closed';
+			} else if (mood === 'charging') {
+				eyeMode = 'happy';
+			} else if (mood === 'busy') {
+				eyeMode = 'dizzy';
+			} else if (blink) {
+				eyeMode = 'closed';
+			} else {
+				eyeMode = 'open';
+			};
+
+			this._eye(cr, leftX, eyeY, eyeR, eyeMode, rgb, catchInk, now);
+			this._eye(cr, rightX, eyeY, eyeR, eyeMode, rgb, catchInk, now);
+
+			let mouthMode;
+
+			if (mood === 'hot') {
+				mouthMode = 'open';
+			} else if (mood === 'sleepy') {
+				mouthMode = 'wave';
+			} else if (mood === 'charging') {
+				mouthMode = 'smile';
+			} else if (mood === 'busy') {
+				mouthMode = 'open';
+			} else {
+				mouthMode = now < this._smileUntil ? 'smile' : 'flat';
+			};
+
+			this._mouth(cr, 0.5 * size, mouthY, mouthR, mouthMode, rgb);
+
+			if (mood === 'hot') {
+				this._sweat(cr, size, now, hexToRgb('#7ec8ff'));
 			};
 
 			cr.restore();
@@ -374,10 +620,10 @@ function addCenteredHint(body, createLabel, theme, text) {
 };
 
 function buildOfflineScene({body, createLabel, theme, animate, color, caption}) {
-	body.add_child(new RobotFace(color, theme, animate));
+	body.add_child(new MochiFace(color, theme, animate));
 
 	if (caption) {
-		const label = createLabel(caption, 'widget-bambu-robot-caption', `color: ${theme.muted};`);
+		const label = createLabel(caption, 'widget-bambu-mochi-caption', `color: ${theme.muted};`);
 
 		label.x_align = Clutter.ActorAlign.CENTER;
 		label.clutter_text.set_line_wrap(true);

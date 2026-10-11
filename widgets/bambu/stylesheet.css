@@ -75,7 +75,11 @@
   text-align: center;
 }
 
-.widget-bambu-robot-caption {
+.widget-bambu-mochi {
+  /* painted in vfunc_repaint */
+}
+
+.widget-bambu-mochi-caption {
   font-size: 14px;
   font-weight: 600;
   text-align: center;
