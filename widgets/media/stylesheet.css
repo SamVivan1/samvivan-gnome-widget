@@ -1,0 +1,58 @@
+.widget-media {
+	spacing: 14px;
+}
+
+.widget-media-main {
+	spacing: 16px;
+}
+
+.widget-media-art {
+	width: 108px;
+	height: 108px;
+	border-radius: 18px;
+	background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.06));
+	border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.widget-media-art-icon {
+	icon-size: 44px;
+	color: rgba(255, 255, 255, 0.72);
+}
+
+.widget-media-info {
+	spacing: 3px;
+}
+
+.widget-media-title {
+	font-weight: 700;
+	font-size: 19px;
+}
+
+.widget-media-artist {
+	font-size: 14px;
+}
+
+.widget-media-visualizer {
+	height: 26px;
+	margin-top: 6px;
+	margin-bottom: 2px;
+}
+
+.widget-media-progress {
+	height: 4px;
+	border-radius: 2px;
+	margin-bottom: 6px;
+}
+
+.widget-media-lyric {
+	font-size: 17px;
+	font-weight: 600;
+}
+
+.widget-media-lyric-next {
+	font-size: 13px;
+}
+
+.widget-media-hint {
+	font-size: 15px;
+}

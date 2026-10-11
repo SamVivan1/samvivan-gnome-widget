@@ -14,10 +14,12 @@ import * as BambuWidget from './widgets/bambu/widget.js';
 import * as BatteryWidget from './widgets/battery/widget.js';
 import * as CalendarWidget from './widgets/calendar/widget.js';
 import * as ClockWidget from './widgets/clock/widget.js';
+import * as MediaWidget from './widgets/media/widget.js';
 import * as PhotosWidget from './widgets/photos/widget.js';
 import * as WeatherWidget from './widgets/weather/widget.js';
 import { BambuData } from './lib/bambuData.js';
 import { CalendarData } from './lib/calendarData.js';
+import { MprisData } from './lib/mpris.js';
 import {
   clamp,
   snap as gridSnap,
@@ -51,6 +53,7 @@ const WIDGET_MODULES = [
   WeatherWidget,
   PhotosWidget,
   BatteryWidget,
+  MediaWidget,
   BambuWidget,
 ];
 const WIDGETS = new Map(WIDGET_MODULES.map(widgetModule => [widgetModule.type, widgetModule]));
@@ -333,6 +336,12 @@ class WidgetController {
     this._bambuData?.setEnabled(active);
   };
 
+  _syncMediaPolling() {
+    const active = this._widgets.some(widget => widget.type === 'media');
+
+    this._mprisData?.setEnabled(active);
+  };
+
   _applyCalendarSources() {
     if (!this._calendarData) {
       return;
@@ -388,9 +397,14 @@ class WidgetController {
     this._bambuRenderKey = null;
     this._bambuUnsubscribe = this._bambuData.subscribe(() => this._refreshBambuViews());
 
+    this._mprisData = new MprisData();
+    this._mprisRenderKey = null;
+    this._mprisUnsubscribe = this._mprisData.subscribe(() => this._refreshMediaViews());
+
     this._createLayer();
     this._rebuildWidgets();
     this._bambuData.start();
+    this._mprisData.start();
     this._refreshWeather(true);
     this._workspaceIntegration.enable(this._layer);
 
@@ -471,6 +485,11 @@ class WidgetController {
     this._bambuUnsubscribe = null;
     this._bambuData?.stop();
     this._bambuData = null;
+
+    this._mprisUnsubscribe?.();
+    this._mprisUnsubscribe = null;
+    this._mprisData?.stop();
+    this._mprisData = null;
 
     this._cancelActiveDrag();
 
@@ -773,6 +792,26 @@ class WidgetController {
     };
   };
 
+  _refreshMediaViews(force = false) {
+    if (this._editMode || this._dragging) {
+      return;
+    };
+
+    const key = this._mprisData?.renderKey?.() ?? null;
+
+    if (!force && key !== null && key === this._mprisRenderKey) {
+      return;
+    };
+
+    this._mprisRenderKey = key;
+
+    for (const view of this._views.values()) {
+      if (view.widget.type === 'media') {
+        this._fillWidgetBody(view.widget, view.body);
+      };
+    };
+  };
+
   _refreshBatteryViews() {
     if (this._editMode || this._dragging) {
       return;
@@ -1059,6 +1098,7 @@ class WidgetController {
     };
 
     this._syncBambuPolling();
+    this._syncMediaPolling();
   };
 
   _refreshWidgets() {
@@ -1449,6 +1489,7 @@ class WidgetController {
       weatherLocation: this._weatherLocation,
       calendar: this._calendarData,
       bambu: this._bambuData,
+      media: this._mprisData,
       createLabel: this._label.bind(this),
       sizeForWidget,
       settings: this._layoutSettings,

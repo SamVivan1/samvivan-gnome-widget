@@ -155,6 +155,17 @@
       <summary>Face high RAM usage threshold</summary>
       <description>Memory usage percentage at or above which the offline face looks overloaded (puffing, with a spinning loader and puffs of steam).</description>
     </key>
+    <key name="media-show-lyrics" type="b">
+      <default>true</default>
+      <summary>Show lyrics</summary>
+      <description>Fetch time-synced lyrics from LRCLIB and highlight the current line in the Now Playing widget.</description>
+    </key>
+    <key name="media-lyrics-offset-ms" type="i">
+      <range min="-5000" max="5000"/>
+      <default>0</default>
+      <summary>Lyrics offset</summary>
+      <description>Shift the lyric timing by this many milliseconds (negative = earlier, positive = later) to line it up with the audio.</description>
+    </key>
     <key name="dev-mode" type="b">
       <default>false</default>
       <summary>Developer mode</summary>

@@ -20,6 +20,7 @@ const WIDGET_LABELS = {
   photos: _('Photos'),
   battery: _('Battery'),
   bambu: _('Bambu Lab'),
+  media: _('Now Playing'),
 };
 
 const WIDGET_DEFAULT_SIZES = {
@@ -30,6 +31,7 @@ const WIDGET_DEFAULT_SIZES = {
   photos: 'medium',
   battery: 'medium',
   bambu: 'medium',
+  media: 'medium',
 };
 
 const WIDGET_DIMENSIONS = {
@@ -94,6 +96,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     window.add(this._buildPhotosPage());
     window.add(this._buildCalendarPage());
     window.add(this._buildBambuPage());
+    window.add(this._buildMediaPage());
     window.add(this._buildWidgetsPage());
     window.add(this._buildDeveloperPage());
   };
@@ -510,6 +513,47 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     page.add(group);
 
     page.add(this._buildBambuOfflineGroup());
+
+    return page;
+  };
+
+  _buildMediaPage() {
+    const page = new Adw.PreferencesPage({
+      title: _('Now Playing'),
+      icon_name: 'audio-x-generic-symbolic',
+    });
+
+    const group = new Adw.PreferencesGroup({
+      title: _('Lyrics'),
+      description: 'The Now Playing widget reads what other apps play over MPRIS. Time-synced lyrics are fetched from lrclib.net and cached under ~/.cache/desktop-widget/lyrics.',
+    });
+
+    const showRow = new Adw.SwitchRow({
+      title: _('Show lyrics'),
+      subtitle: _('Highlight the current line of the song while it plays'),
+    });
+    this._settings.bind('media-show-lyrics', showRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+    group.add(showRow);
+
+    const offsetRow = new Adw.SpinRow({
+      title: _('Lyrics offset (ms)'),
+      subtitle: _('Shift the timing to line the lyrics up with the audio'),
+      adjustment: new Gtk.Adjustment({lower: -5000, upper: 5000, step_increment: 100, page_increment: 500}),
+    });
+    offsetRow.set_value(this._settings.get_int('media-lyrics-offset-ms'));
+    offsetRow.connect('notify::value', () => {
+      this._settings.set_int('media-lyrics-offset-ms', Math.round(offsetRow.get_value()));
+    });
+    group.add(offsetRow);
+
+    const sync = () => {
+      offsetRow.set_sensitive(this._settings.get_boolean('media-show-lyrics'));
+    };
+
+    showRow.connect('notify::active', sync);
+    sync();
+
+    page.add(group);
 
     return page;
   };
