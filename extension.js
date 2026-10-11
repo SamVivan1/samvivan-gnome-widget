@@ -281,11 +281,11 @@ class WidgetController {
     connect('monitor-index', () => this._syncLayerGeometry());
     connect('hide-all', () => {
       this._syncMenu();
-      this._rebuildWidgets();
+      this._applyVisibility();
     });
     connect('lock-widgets', () => {
       this._syncMenu();
-      this._rebuildWidgets();
+      this._applyEditMode();
     });
     connect('edit-mode', () => {
       this._syncMenu();
@@ -314,7 +314,7 @@ class WidgetController {
 
   _onGlobalChanged() {
     this._applyGlobalSettings();
-    this._rebuildWidgets();
+    this._resolveLayout(null, false, true);
   };
 
   _applyOpacity() {
@@ -808,7 +808,61 @@ class WidgetController {
 
   setEditMode(enabled) {
     this._editMode = enabled;
-    this._rebuildWidgets();
+    this._applyEditMode();
+  };
+
+  _applyEditMode() {
+    const locked = this._layoutSettings.get_boolean('lock-widgets');
+    const draggable = this._editMode && !locked;
+
+    for (const view of this._views.values()) {
+      if (draggable) {
+        this._makeDraggable(view);
+      } else if (view.draggable) {
+        view.actor.disconnectObject(this);
+        view.draggable = false;
+      };
+
+      if (this._editMode) {
+        this._addEditControls(view);
+
+        if (view.removeButton) {
+          view.removeButton.visible = view.actor.visible;
+        };
+      } else {
+        this._removeEditControls(view);
+      };
+    };
+  };
+
+  _removeEditControls(view) {
+    view.removeButton?.destroy();
+    view.removeButton = null;
+    view.removeButtonWidth = 0;
+  };
+
+  _applyVisibility() {
+    const hideAll = this._layoutSettings.get_boolean('hide-all');
+
+    for (const widget of this._widgets) {
+      const shouldShow = !hideAll && !widget.hidden;
+      const view = this._views.get(widget.id);
+
+      if (shouldShow && !view) {
+        this._createWidget(widget);
+        continue;
+      };
+
+      if (!view) {
+        continue;
+      };
+
+      view.actor.visible = shouldShow;
+
+      if (view.removeButton) {
+        view.removeButton.visible = shouldShow && this._editMode;
+      };
+    };
   };
 
   addWidget(type) {
@@ -841,13 +895,29 @@ class WidgetController {
     this._widgets.push(widget);
 
     this._saveWidgets();
-    this._rebuildWidgets();
+
+    const hideAll = this._layoutSettings.get_boolean('hide-all');
+
+    if (!hideAll && !widget.hidden) {
+      this._createWidget(widget);
+    };
   };
 
   removeWidget(id) {
+    const view = this._views.get(id);
+
     this._widgets = this._widgets.filter(widget => widget.id !== id);
     this._saveWidgets();
-    this._rebuildWidgets();
+
+    if (!view) {
+      return;
+    };
+
+    this._cancelActiveDrag();
+    this._removeEditControls(view);
+    view.actor.disconnectObject(this);
+    view.actor.destroy();
+    this._views.delete(id);
   };
 
   _rebuildWidgets() {
@@ -1010,6 +1080,11 @@ class WidgetController {
   };
 
   _addEditControls(view) {
+    if (view.removeButton) {
+      this._syncEditControls(view.widget);
+      return;
+    };
+
     const removeButton = new St.Button({
       style_class: 'icon-button',
       icon_name: 'window-close-symbolic',
@@ -1121,6 +1196,12 @@ class WidgetController {
   };
 
   _makeDraggable(view) {
+    if (view.draggable) {
+      return;
+    };
+
+    view.draggable = true;
+
     const {actor, widget} = view;
     let drag = null;
 
