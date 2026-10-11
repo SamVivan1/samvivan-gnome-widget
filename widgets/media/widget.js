@@ -167,14 +167,15 @@ const MediaView = GObject.registerClass(
 			this._artKey = null;
 			this._playing = false;
 			this._line = -1;
+			this._lyricTransitioning = false;
 
 			const accent = theme?.accent || '#3584e4';
 
 			const main = new St.BoxLayout({
-				orientation: Clutter.Orientation.HORIZONTAL,
+				orientation: Clutter.Orientation.VERTICAL,
 				style_class: 'widget-media-main',
 				x_expand: true,
-				y_expand: true,
+				x_align: Clutter.ActorAlign.CENTER,
 			});
 
 			this._artWrap = new St.Bin({
@@ -193,37 +194,55 @@ const MediaView = GObject.registerClass(
 				orientation: Clutter.Orientation.VERTICAL,
 				style_class: 'widget-media-info',
 				x_expand: true,
-				y_align: Clutter.ActorAlign.CENTER,
+				x_align: Clutter.ActorAlign.CENTER,
 			});
 
 			this._title = createLabel('', 'widget-media-title', `color: ${theme.text};`);
 			this._artist = createLabel('', 'widget-media-artist', `color: ${theme.muted};`);
-			this._visualizer = new BarVisualizer(accent);
-			this._visualizer.setAnimate(this._animate);
-			this._progress = new LineProgress(accent, theme);
+			this._title.x_align = Clutter.ActorAlign.CENTER;
+			this._artist.x_align = Clutter.ActorAlign.CENTER;
 
 			info.add_child(this._title);
 			info.add_child(this._artist);
-			info.add_child(this._visualizer);
-			info.add_child(this._progress);
+			main.add_child(info);
 
-			this._lyricRow = new St.BoxLayout({
+			const lyricArea = new St.BoxLayout({
 				orientation: Clutter.Orientation.VERTICAL,
+				style_class: 'widget-media-lyric-area',
 				x_expand: true,
+				x_align: Clutter.ActorAlign.CENTER,
+				y_expand: true,
+				y_align: Clutter.ActorAlign.CENTER,
 			});
+
+			this._visualizer = new BarVisualizer(accent);
+			this._visualizer.setAnimate(this._animate);
+			this._visualizer.style_class = 'widget-media-visualizer-bg';
+			lyricArea.add_child(this._visualizer);
+
+			this._lyricOverlay = new St.BoxLayout({
+				orientation: Clutter.Orientation.VERTICAL,
+				style_class: 'widget-media-lyric-overlay',
+				x_expand: true,
+				y_align: Clutter.ActorAlign.CENTER,
+			});
+
 			this._lyric = createLabel('', 'widget-media-lyric', `color: ${theme.text};`);
 			this._lyricNext = createLabel('', 'widget-media-lyric-next', `color: ${theme.muted};`);
 			this._lyric.x_align = Clutter.ActorAlign.CENTER;
 			this._lyricNext.x_align = Clutter.ActorAlign.CENTER;
-			this._lyricRow.add_child(this._lyric);
-			this._lyricRow.add_child(this._lyricNext);
-			info.add_child(this._lyricRow);
+			this._lyric.style_class = 'widget-media-lyric-main';
+			this._lyricNext.style_class = 'widget-media-lyric-sub';
 
-			this._hint = createLabel('', 'widget-media-hint', `color: ${theme.muted};`);
-			this._hint.x_align = Clutter.ActorAlign.CENTER;
-			info.add_child(this._hint);
+			this._lyricOverlay.add_child(this._lyric);
+			this._lyricOverlay.add_child(this._lyricNext);
+			lyricArea.add_child(this._lyricOverlay);
 
-			main.add_child(info);
+			this._progress = new LineProgress(accent, theme);
+			this._progress.style_class = 'widget-media-progress';
+			lyricArea.add_child(this._progress);
+
+			main.add_child(lyricArea);
 			this.add_child(main);
 
 			this.update();
@@ -270,6 +289,41 @@ const MediaView = GObject.registerClass(
 			});
 		};
 
+		_crossfadeLyric(newText, isNext = false) {
+			if (this._lyricTransitioning) return;
+
+			const target = isNext ? this._lyricNext : this._lyric;
+			const other = isNext ? this._lyric : this._lyricNext;
+
+			if (target.text === newText) return;
+
+			this._lyricTransitioning = true;
+
+			const fadeOut = new Clutter.Animation({
+				duration: 200,
+				easing: Clutter.AnimationMode.EASE_OUT_QUAD,
+				target: target,
+				from_alpha: 255,
+				to_alpha: 0,
+			});
+
+			fadeOut.connect('completed', () => {
+				target.text = newText;
+				const fadeIn = new Clutter.Animation({
+					duration: 250,
+					easing: Clutter.AnimationMode.EASE_OUT_QUAD,
+					target: target,
+					from_alpha: 0,
+					to_alpha: 255,
+				});
+				fadeIn.connect('completed', () => {
+					this._lyricTransitioning = false;
+				});
+				fadeIn.start();
+			});
+			fadeOut.start();
+		};
+
 		update() {
 			const view = this._media?.view;
 
@@ -302,29 +356,31 @@ const MediaView = GObject.registerClass(
 
 		_updateLyrics(view) {
 			if (!this._showLyrics()) {
-				this._lyricRow.hide();
-				this._hint.hide();
+				this._lyricOverlay.hide();
+				this._progress.hide();
 				return;
 			};
+
+			this._lyricOverlay.show();
+			this._progress.show();
 
 			const lyrics = view.lyrics ?? {};
 
 			if (!view.available || !view.title) {
-				this._lyricRow.hide();
-				this._hint.hide();
+				this._crossfadeLyric('', false);
+				this._crossfadeLyric('', true);
 				return;
 			};
 
 			if (lyrics.status === 'loading') {
-				this._setLyrics('…', '');
-				this._hint.hide();
+				this._crossfadeLyric('…', false);
+				this._crossfadeLyric('', true);
 				return;
 			};
 
 			if (lyrics.status === 'instrumental') {
-				this._lyricRow.hide();
-				this._hint.text = 'Instrumental';
-				this._hint.show();
+				this._crossfadeLyric('♪ Instrumental', false);
+				this._crossfadeLyric('', true);
 				return;
 			};
 
@@ -336,32 +392,28 @@ const MediaView = GObject.registerClass(
 				const current = index >= 0 ? lines[index]?.text ?? '' : '';
 				const next = index + 1 < lines.length ? lines[index + 1]?.text ?? '' : '';
 
-				this._setLyrics(current, next);
-				this._hint.hide();
+				this._crossfadeLyric(current, false);
+				this._crossfadeLyric(next, true);
 				return;
 			};
 
 			if (lyrics.plainText) {
-				this._lyricRow.hide();
-				this._hint.text = 'No synced lyrics';
-				this._hint.show();
+				this._crossfadeLyric('No synced lyrics', false);
+				this._crossfadeLyric('', true);
 				return;
 			};
 
-			this._setLyrics('', '');
-			this._hint.text = 'No lyrics found';
-			this._hint.show();
+			this._crossfadeLyric('No lyrics found', false);
+			this._crossfadeLyric('', true);
 		};
 
 		_setLyrics(current, next) {
-			this._lyricRow.show();
-
 			if (current !== this._lyric.text) {
-				this._lyric.text = current;
+				this._crossfadeLyric(current, false);
 			};
-
-			this._lyricNext.text = next;
-			this._lyricNext.visible = next.length > 0;
+			if (next !== this._lyricNext.text) {
+				this._crossfadeLyric(next, true);
+			};
 		};
 
 		_updateArt(artUrl) {
