@@ -116,6 +116,11 @@
       <summary>Always show the offline face</summary>
       <description>Show the face even when the printer is online or the bridge is unreachable. Useful for testing or as a decoration.</description>
     </key>
+    <key name="bambu-face-online" type="b">
+      <default>false</default>
+      <summary>Show the face while printing</summary>
+      <description>Show the animated mochi face (instead of the job details) while the printer is online, so it can react to the print state: printing, paused, failed or finished.</description>
+    </key>
     <key name="bambu-offline-color" type="s">
       <default>''</default>
       <summary>Offline face colour</summary>
@@ -158,7 +163,7 @@
     <key name="bambu-dev-mood" type="s">
       <default>'auto'</default>
       <summary>Forced Bambu face mood</summary>
-      <description>Developer override for the offline face mood: auto, chill, hot, sleepy, charging, busy or overload. Only applied while developer mode is enabled.</description>
+      <description>Developer override for the offline face mood: auto, chill, hot, sleepy, charging, busy, overload, printing, paused, error or done. Only applied while developer mode is enabled.</description>
     </key>
     <key name="bambu-dev-cycle" type="b">
       <default>false</default>

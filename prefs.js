@@ -534,6 +534,13 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     this._settings.bind('bambu-offline-always', alwaysRow, 'active', Gio.SettingsBindFlags.DEFAULT);
     group.add(alwaysRow);
 
+    const faceOnlineRow = new Adw.SwitchRow({
+      title: _('Show the face while printing'),
+      subtitle: _('Replace the job details with the face so it can react to print events (printing, paused, failed, finished)'),
+    });
+    this._settings.bind('bambu-face-online', faceOnlineRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+    group.add(faceOnlineRow);
+
     const accentRow = new Adw.SwitchRow({
       title: _('Use system accent colour'),
       subtitle: _('Turn off to pick a custom colour for the face'),
@@ -602,6 +609,8 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
           colorButton.set_rgba(rgba);
         };
       };
+
+      faceOnlineRow.set_sensitive(this._settings.get_boolean('bambu-offline-fun'));
     };
 
     accentRow.connect('notify::active', () => {
@@ -766,10 +775,10 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     this._settings.bind('bambu-dev-cycle', cycleRow, 'active', Gio.SettingsBindFlags.DEFAULT);
     faceGroup.add(cycleRow);
 
-    const moods = ['auto', 'chill', 'hot', 'sleepy', 'charging', 'busy', 'overload'];
+    const moods = ['auto', 'chill', 'hot', 'sleepy', 'charging', 'busy', 'overload', 'printing', 'paused', 'error', 'done'];
     const moodRow = new Adw.ComboRow({
       title: _('Force mood'),
-      model: Gtk.StringList.new(['Auto (real sensors)', 'Chill', 'Hot', 'Sleepy', 'Charging', 'Busy', 'Overloaded']),
+      model: Gtk.StringList.new(['Auto (real sensors)', 'Chill', 'Hot', 'Sleepy', 'Charging', 'Busy', 'Overloaded', 'Printing', 'Paused', 'Error', 'Finished']),
     });
     moodRow.set_selected(Math.max(0, moods.indexOf(this._settings.get_string('bambu-dev-mood'))));
     moodRow.connect('notify::selected', () => {

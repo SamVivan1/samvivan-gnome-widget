@@ -106,13 +106,14 @@ Open preferences via: `gnome-extensions prefs desktop-widget@samvivan` or panel 
 - **Test connection** – checks the bridge `/health` endpoint and printer connectivity
 - **Animated face** – when the bridge is reachable but the printer is offline (or the bridge is unreachable), show a dasai-mochi face (two big eyes + a small mouth) instead of a plain message. The face also mirrors the laptop's own vitals: chip ≥ 60 °C → flushed/panting with sweat and steam, battery ≤ 20 % (unplugged) → sleepy, charging → sparkly and happy, high CPU load → dizzy
 - **Always show the face** – show it even when the printer is online or the bridge is unreachable (good for testing / decoration)
+- **Show the face while printing** – replace the job details with the face so it reacts to the printer's own events: printing → content/smiling with a gentle bob, paused → worried (sweat + worried mouth), failed → panicked (alarm rings, dizzy eyes, shake), finished → happy with sparkles
 - **Use system accent colour / Face colour** – colour the face with the GNOME accent or a custom colour
-- **Caption** – text shown under the face (leave empty to hide)
+- **Caption** – text shown under the face (leave empty to hide; while printing this is replaced by the live state and progress)
 
 ### Developer
 - **Enable developer mode** – reveals testing controls without needing real conditions (no need to stress the CPU, plug in the charger or drain the battery)
-- **Cycle all moods** – with developer mode on, the Bambu face rotates through every mood (chill → hot → sleepy → charging → busy) automatically
-- **Force mood** – pin a single mood (Auto / Chill / Hot / Sleepy / Charging / Busy) for inspection
+- **Cycle all moods** – with developer mode on, the Bambu face rotates through every mood (chill → hot → sleepy → charging → busy → overload → printing → paused → error → done) automatically
+- **Force mood** – pin a single mood (Auto / Chill / Hot / Sleepy / Charging / Busy / Overloaded / Printing / Paused / Error / Finished) for inspection
 - While the face is in developer mode, a status line under it shows the live `mood · temp · battery · load` values
 
 ### Widgets
@@ -171,10 +172,11 @@ See [`homelab/bambu-bridge/README.md`](homelab/bambu-bridge/README.md) for full 
 | `bambu-refresh` | `i` | `5` | Bambu poll interval (seconds) |
 | `bambu-offline-fun` | `b` | `true` | Mochi face when the printer is offline |
 | `bambu-offline-always` | `b` | `false` | Always show the face (even when online) |
+| `bambu-face-online` | `b` | `false` | Show the face while printing (reacts to print events) |
 | `bambu-offline-color` | `s` | `''` | Face colour hex (empty = system accent) |
 | `bambu-offline-caption` | `s` | `'Printer is napping…'` | Caption under the face (empty = hidden) |
 | `dev-mode` | `b` | `false` | Developer mode: reveal testing controls |
-| `bambu-dev-mood` | `s` | `'auto'` | Force the face mood (auto/chill/hot/sleepy/charging/busy) |
+| `bambu-dev-mood` | `s` | `'auto'` | Force the face mood (auto/chill/hot/sleepy/charging/busy/overload/printing/paused/error/done) |
 | `bambu-dev-cycle` | `b` | `false` | Cycle through every face mood automatically |
 
 ## Uninstall

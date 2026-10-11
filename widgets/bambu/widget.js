@@ -4,7 +4,13 @@ import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import St from 'gi://St';
 
-import { conditionsFor, dominantMood, normalizeThresholds } from '../../lib/mood.js';
+import {
+	PRINT_MOODS,
+	conditionsFor,
+	dominantMood,
+	normalizeThresholds,
+	printerMood,
+} from '../../lib/mood.js';
 
 export const type = 'bambu';
 export const label = 'Bambu Lab';
@@ -143,8 +149,10 @@ const ProgressRing = GObject.registerClass(
 
 const HOT_COLOR = '#ff5b52';
 const CRITICAL_COLOR = '#ff4d4d';
+const PAUSED_COLOR = '#c88800';
+const DONE_COLOR = '#3584e4';
 const CRITICAL_STRESS = 3;
-const DEV_MOODS = ['chill', 'hot', 'sleepy', 'charging', 'busy', 'overload'];
+const DEV_MOODS = ['chill', 'hot', 'sleepy', 'charging', 'busy', 'overload', ...PRINT_MOODS];
 const DEV_CYCLE_SECONDS = 3.5;
 const ACTIVE_TICK_MS = 120;
 const IDLE_TICK_MS = 500;
@@ -339,7 +347,7 @@ function readMemory() {
 // laptop's own vitals (chip temperature, battery, CPU load and RAM usage).
 const MochiFace = GObject.registerClass(
 	class MochiFace extends St.DrawingArea {
-		_init(color, theme, animate, dev, onStatus, thresholds) {
+		_init(color, theme, animate, dev, onStatus, thresholds, printer) {
 			super._init({
 				style_class: 'widget-bambu-mochi',
 				x_expand: true,
@@ -354,6 +362,7 @@ const MochiFace = GObject.registerClass(
 			this._dev = dev || null;
 			this._onStatus = onStatus || null;
 			this._thresholds = normalizeThresholds(thresholds);
+			this._printer = printer || null;
 			this._timerId = 0;
 			this._frame = 0;
 			this._temp = null;
@@ -418,13 +427,20 @@ const MochiFace = GObject.registerClass(
 		};
 
 		_conditions() {
-			return conditionsFor({
+			const active = conditionsFor({
 				temp: this._temp,
 				load: this._load,
 				ram: this._ram,
 				battery: this._battery,
 				charging: this._charging,
 			}, this._thresholds);
+			const printMood = this._printer ? printerMood(this._printer.state) : null;
+
+			if (printMood) {
+				active.push(printMood);
+			};
+
+			return active;
 		};
 
 		_dominant(active) {
@@ -877,12 +893,36 @@ const MochiFace = GObject.registerClass(
 			const h = height;
 			const mood = this._mood;
 			const active = this._active.length ? this._active : [mood];
-			const stress = active.filter(item => item !== 'charging').length;
+			const stress = active.filter(item => item !== 'charging' && !PRINT_MOODS.includes(item)).length;
 			const critical = stress >= CRITICAL_STRESS;
-			const baseColor = critical ? CRITICAL_COLOR : (active.includes('hot') ? HOT_COLOR : this._color);
+			let baseColor = this._color;
+
+			if (active.includes('hot')) {
+				baseColor = HOT_COLOR;
+			};
+
+			if (active.includes('done')) {
+				baseColor = DONE_COLOR;
+			};
+
+			if (active.includes('paused')) {
+				baseColor = PAUSED_COLOR;
+			};
+
+			if (critical || active.includes('error')) {
+				baseColor = CRITICAL_COLOR;
+			};
+
 			const rgb = hexToRgb(baseColor);
 			const catchInk = contrastInk(baseColor, this._theme?.text);
-			const bob = active.includes('sleepy') && this._animate ? Math.sin(now * 2) * 0.02 * h : 0;
+			let bob = 0;
+
+			if (this._animate && active.includes('sleepy')) {
+				bob = Math.sin(now * 2) * 0.02 * h;
+			} else if (this._animate && active.includes('printing')) {
+				bob = Math.sin(now * 3) * 0.008 * h;
+			};
+
 			const blink = this._animate && now < this._blinkUntil;
 
 			cr.save();
@@ -896,8 +936,8 @@ const MochiFace = GObject.registerClass(
 				cr.translate(-0.5 * w, -0.5 * h);
 			};
 
-			if (this._animate && stress >= 2) {
-				const amp = Math.min(0.018, (stress - 1) * 0.006) * w;
+			if (this._animate && (stress >= 2 || active.includes('error'))) {
+				const amp = Math.min(0.018, Math.max(stress - 1, 1) * 0.006) * w;
 
 				cr.translate(Math.sin(now * 42) * amp, Math.cos(now * 37) * amp * 0.6);
 			};
@@ -937,7 +977,18 @@ const MochiFace = GObject.registerClass(
 				this._ekg(cr, w, h, now, rgb);
 			};
 
-			if (critical && this._animate) {
+			if (active.includes('done') && this._animate) {
+				for (let i = 0; i < 4; i++) {
+					const phase = (now * 0.5 + i / 4) % 1;
+					const alpha = Math.sin(phase * Math.PI);
+					const sx = (0.15 + (i % 2) * 0.7) * w;
+					const sy = (0.16 + (i > 1 ? 0.28 : 0)) * h;
+
+					this._sparkle(cr, sx, sy, 0.055 * h, Math.max(0, alpha), rgb);
+				};
+			};
+
+			if ((critical || active.includes('error')) && this._animate) {
 				this._alarm(cr, w, h, now, rgb);
 			};
 
@@ -945,11 +996,11 @@ const MochiFace = GObject.registerClass(
 
 			if (mood === 'sleepy') {
 				eyeMode = 'closed';
-			} else if (mood === 'charging') {
+			} else if (mood === 'charging' || mood === 'done') {
 				eyeMode = 'happy';
-			} else if (mood === 'busy') {
+			} else if (mood === 'busy' || mood === 'error') {
 				eyeMode = 'dizzy';
-			} else if (mood === 'overload') {
+			} else if (mood === 'overload' || mood === 'paused') {
 				eyeMode = 'strain';
 			} else if (blink) {
 				eyeMode = 'closed';
@@ -964,13 +1015,11 @@ const MochiFace = GObject.registerClass(
 
 			if (mood === 'hot') {
 				mouthMode = 'open';
-			} else if (mood === 'sleepy') {
+			} else if (mood === 'sleepy' || mood === 'paused') {
 				mouthMode = 'wave';
-			} else if (mood === 'charging') {
+			} else if (mood === 'charging' || mood === 'printing' || mood === 'done') {
 				mouthMode = 'smile';
-			} else if (mood === 'busy') {
-				mouthMode = 'open';
-			} else if (mood === 'overload') {
+			} else if (mood === 'busy' || mood === 'overload' || mood === 'error') {
 				mouthMode = 'open';
 			} else {
 				mouthMode = now < this._smileUntil ? 'smile' : 'flat';
@@ -978,7 +1027,7 @@ const MochiFace = GObject.registerClass(
 
 			this._mouth(cr, 0.5 * w, mouthY, mouthR, mouthMode, rgb);
 
-			if (active.includes('hot')) {
+			if (active.includes('hot') || active.includes('paused')) {
 				this._sweat(cr, w, h, now, hexToRgb('#7ec8ff'));
 			};
 
@@ -986,7 +1035,7 @@ const MochiFace = GObject.registerClass(
 				this._zzz(cr, w, h, now, rgb);
 			};
 
-			if (active.includes('busy') && this._animate) {
+			if ((active.includes('busy') || active.includes('error')) && this._animate) {
 				this._dizzy(cr, w, h, now, rgb);
 			};
 
@@ -1012,22 +1061,22 @@ function addCenteredHint(body, createLabel, theme, text) {
 	body.add_child(new St.Widget({y_expand: true}));
 };
 
-function buildOfflineScene({body, createLabel, theme, animate, color, caption, dev, thresholds}) {
+function buildOfflineScene({body, createLabel, theme, animate, color, caption, dev, thresholds, printer}) {
 	let statusLabel = null;
+	let captionLabel = null;
 	const face = new MochiFace(color, theme, animate, dev, text => {
 		if (statusLabel) {
 			statusLabel.text = text;
 		};
-	}, thresholds);
+	}, thresholds, printer);
 
 	body.add_child(face);
 
 	if (caption) {
-		const label = createLabel(caption, 'widget-bambu-mochi-caption', `color: ${theme.muted};`);
-
-		label.x_align = Clutter.ActorAlign.CENTER;
-		label.clutter_text.set_line_wrap(true);
-		body.add_child(label);
+		captionLabel = createLabel(caption, 'widget-bambu-mochi-caption', `color: ${theme.muted};`);
+		captionLabel.x_align = Clutter.ActorAlign.CENTER;
+		captionLabel.clutter_text.set_line_wrap(true);
+		body.add_child(captionLabel);
 	};
 
 	if (dev) {
@@ -1037,6 +1086,8 @@ function buildOfflineScene({body, createLabel, theme, animate, color, caption, d
 		body.add_child(statusLabel);
 		statusLabel.text = face.devStatus();
 	};
+
+	return {face, captionLabel};
 };
 
 function buildRing(progress, color, theme, size, createLabel) {
@@ -1195,24 +1246,104 @@ function buildJobView({body, widget, createLabel, theme, sizeForWidget, status})
 	body.add_child(mainRow);
 };
 
-export function render({body, widget, createLabel, theme, sizeForWidget, bambu, settings, animate}) {
-	if (!bambu) {
-		addCenteredHint(body, createLabel, theme, 'Bambu Lab is unavailable');
-		return;
+function faceCaption(bambu, custom) {
+	if (bambu?.status?.connected !== true) {
+		return custom;
 	};
 
+	const job = bambu.status.job ?? {};
+	const state = String(job.state || 'IDLE').toUpperCase();
+	const label = STATE_LABELS[state] || 'Printing';
+	const progress = clampProgress(job.progress);
+
+	return progress === null ? label : `${label} · ${Math.round(progress)}%`;
+};
+
+function sceneKind(bambu, settings) {
 	const fun = settings?.get_boolean('bambu-offline-fun') ?? false;
 	const always = settings?.get_boolean('bambu-offline-always') ?? false;
-	const devMode = settings?.get_boolean('dev-mode') ?? false;
+	const faceOnline = settings?.get_boolean('bambu-face-online') ?? false;
 
-	const showScene = () => buildOfflineScene({
+	if (!bambu) {
+		return 'hint';
+	};
+
+	if (always && fun) {
+		return 'face';
+	};
+
+	if (bambu.state === 'error') {
+		return fun ? 'face' : 'hint';
+	};
+
+	if (bambu.state === 'unavailable' || bambu.state === 'idle') {
+		return 'hint';
+	};
+
+	if (!bambu.status) {
+		return 'hint';
+	};
+
+	if (bambu.status.connected !== true) {
+		return fun ? 'face' : 'hint';
+	};
+
+	return (fun && faceOnline) ? 'face' : 'job';
+};
+
+function hintText(bambu) {
+	if (!bambu) {
+		return 'Bambu Lab is unavailable';
+	};
+
+	if (bambu.state === 'unavailable') {
+		return 'Configure the Bambu bridge endpoint and token in Settings';
+	};
+
+	if (bambu.state === 'error') {
+		return bambu.error || 'Bambu bridge unreachable';
+	};
+
+	if (bambu.state === 'idle') {
+		return bambu.error || 'Connecting to the Bambu bridge…';
+	};
+
+	if (!bambu.status) {
+		return 'Waiting for the Bambu bridge…';
+	};
+
+	return 'Printer offline';
+};
+
+function faceToken(settings, animate) {
+	return JSON.stringify({
+		color: settings.get_string('bambu-offline-color'),
+		caption: settings.get_string('bambu-offline-caption'),
+		dev: settings.get_boolean('dev-mode'),
+		mood: settings.get_string('bambu-dev-mood'),
+		cycle: settings.get_boolean('bambu-dev-cycle'),
+		hot: settings.get_int('bambu-hot-temp'),
+		battery: settings.get_int('bambu-low-battery'),
+		load: settings.get_int('bambu-high-load'),
+		ram: settings.get_int('bambu-high-ram'),
+		fun: settings.get_boolean('bambu-offline-fun'),
+		always: settings.get_boolean('bambu-offline-always'),
+		faceOnline: settings.get_boolean('bambu-face-online'),
+		animate: animate !== false,
+	});
+};
+
+function buildFaceScene(params, printer) {
+	const {body, createLabel, theme, bambu, settings, animate} = params;
+
+	const {face, captionLabel} = buildOfflineScene({
 		body,
 		createLabel,
 		theme,
 		animate: animate !== false,
 		color: settings.get_string('bambu-offline-color') || theme.accent,
-		caption: settings.get_string('bambu-offline-caption').trim(),
-		dev: devMode
+		caption: faceCaption(bambu, settings.get_string('bambu-offline-caption').trim()),
+		dev: (settings?.get_boolean('dev-mode') ?? false)
 			? {
 				mood: settings.get_string('bambu-dev-mood') || 'auto',
 				cycle: settings.get_boolean('bambu-dev-cycle'),
@@ -1224,49 +1355,66 @@ export function render({body, widget, createLabel, theme, sizeForWidget, bambu, 
 			load: settings.get_int('bambu-high-load'),
 			ram: settings.get_int('bambu-high-ram'),
 		},
+		printer,
 	});
 
-	if (always && fun) {
-		showScene();
+	body._bambuScene = 'face';
+	body._bambuFace = face;
+	body._bambuCaption = captionLabel;
+	body._bambuToken = faceToken(settings, animate);
+};
+
+export function render(params) {
+	const {body, widget, createLabel, theme, sizeForWidget, bambu, settings} = params;
+	const kind = sceneKind(bambu, settings);
+
+	if (kind === 'hint') {
+		addCenteredHint(body, createLabel, theme, hintText(bambu));
+		body._bambuScene = 'hint';
+		body._bambuFace = null;
+		body._bambuCaption = null;
+		body._bambuToken = null;
 		return;
 	};
 
-	if (bambu.state === 'unavailable') {
-		addCenteredHint(body, createLabel, theme, 'Configure the Bambu bridge endpoint and token in Settings');
+	const printer = widget._bambuFaceRef ??= {state: null};
+
+	printer.state = bambu?.status?.job?.state ?? null;
+
+	if (kind === 'face') {
+		buildFaceScene(params, printer);
 		return;
 	};
 
-	if (bambu.state === 'error') {
-		if (fun) {
-			showScene();
-			return;
+	buildJobView({body, widget, createLabel, theme, sizeForWidget, status: bambu.status});
+	body._bambuScene = 'job';
+	body._bambuFace = null;
+	body._bambuCaption = null;
+	body._bambuToken = null;
+};
+
+export function reconcile(params) {
+	const {body, bambu, settings, widget, animate} = params;
+	const keepFace = sceneKind(bambu, settings) === 'face' &&
+		body._bambuScene === 'face' &&
+		body._bambuFace &&
+		body._bambuToken === faceToken(settings, animate);
+
+	if (keepFace) {
+		const printer = widget._bambuFaceRef ??= {state: null};
+
+		printer.state = bambu?.status?.job?.state ?? null;
+
+		if (body._bambuCaption) {
+			body._bambuCaption.text = faceCaption(
+				bambu,
+				settings.get_string('bambu-offline-caption').trim()
+			);
 		};
 
-		addCenteredHint(body, createLabel, theme, bambu.error || 'Bambu bridge unreachable');
 		return;
 	};
 
-	if (bambu.state === 'idle') {
-		addCenteredHint(body, createLabel, theme, bambu.error || 'Connecting to the Bambu bridge…');
-		return;
-	};
-
-	const status = bambu.status;
-
-	if (!status) {
-		addCenteredHint(body, createLabel, theme, 'Waiting for the Bambu bridge…');
-		return;
-	};
-
-	if (status.connected !== true) {
-		if (fun) {
-			showScene();
-			return;
-		};
-
-		addCenteredHint(body, createLabel, theme, 'Printer offline');
-		return;
-	};
-
-	buildJobView({body, widget, createLabel, theme, sizeForWidget, status});
+	body.destroy_all_children();
+	render(params);
 };

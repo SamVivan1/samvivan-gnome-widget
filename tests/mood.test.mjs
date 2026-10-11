@@ -3,9 +3,11 @@ import test from 'node:test';
 
 import {
 	DEFAULT_THRESHOLDS,
+	PRINT_MOODS,
 	conditionsFor,
 	dominantMood,
 	normalizeThresholds,
+	printerMood,
 } from '../lib/mood.js';
 
 test('chill when nothing is elevated', () => {
@@ -44,4 +46,24 @@ test('normalizeThresholds fills defaults', () => {
 	assert.deepEqual(normalizeThresholds(), {hot: 60, battery: 20, load: 85, ram: 90});
 	assert.deepEqual(normalizeThresholds({hot: 45}), {hot: 45, battery: 20, load: 85, ram: 90});
 	assert.deepEqual(normalizeThresholds(null), {hot: 60, battery: 20, load: 85, ram: 90});
+});
+
+test('printerMood maps job states and ignores the rest', () => {
+	assert.equal(printerMood('RUNNING'), 'printing');
+	assert.equal(printerMood('runNING'), 'printing');
+	assert.equal(printerMood('PAUSE'), 'paused');
+	assert.equal(printerMood('FAILED'), 'error');
+	assert.equal(printerMood('FINISH'), 'done');
+	assert.equal(printerMood('IDLE'), null);
+	assert.equal(printerMood('PREPARE'), null);
+	assert.equal(printerMood(''), null);
+	assert.equal(printerMood(null), null);
+	assert.equal(printerMood(undefined), null);
+});
+
+test('print moods dominate vitals but keep error on top', () => {
+	assert.equal(dominantMood(['busy', 'printing']), 'printing');
+	assert.equal(dominantMood(['hot', 'paused']), 'paused');
+	assert.equal(dominantMood(['printing', 'error']), 'error');
+	assert.deepEqual(PRINT_MOODS, ['printing', 'paused', 'error', 'done']);
 });
