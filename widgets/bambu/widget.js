@@ -145,6 +145,7 @@ const HIGH_LOAD = 85;
 const HIGH_RAM = 90;
 const HOT_COLOR = '#ff5b52';
 const DEV_MOODS = ['chill', 'hot', 'sleepy', 'charging', 'busy', 'overload'];
+const MOOD_PRIORITY = ['hot', 'overload', 'sleepy', 'charging', 'busy'];
 const DEV_CYCLE_SECONDS = 3.5;
 
 function luminance(hex) {
@@ -365,6 +366,7 @@ const MochiFace = GObject.registerClass(
 			this._battery = null;
 			this._charging = false;
 			this._mood = 'chill';
+			this._active = [];
 			this._nextBlink = 0;
 			this._blinkUntil = 0;
 			this._lookUntil = 0;
@@ -418,36 +420,55 @@ const MochiFace = GObject.registerClass(
 			const battery = this._battery === null ? '--' : `${this._battery}%`;
 			const load = this._load === null ? '--' : `load ${this._load}%`;
 			const ram = this._ram === null ? '--' : `ram ${this._ram}%`;
+			const combo = this._active.length ? this._active.join('+') : 'chill';
 
-			return `${this._mood} · ${temp} · ${battery} · ${load} · ${ram}`;
+			return `${combo} · ${temp} · ${battery} · ${load} · ${ram}`;
 		};
 
 		_notifyStatus() {
 			this._onStatus?.(this.devStatus());
 		};
 
-		_selectMood() {
+		_conditions() {
+			const active = [];
+
 			if (this._temp !== null && this._temp >= this._thresholds.hot) {
-				return 'hot';
+				active.push('hot');
 			};
 
 			if (this._ram !== null && this._ram >= this._thresholds.ram) {
-				return 'overload';
+				active.push('overload');
 			};
 
 			if (this._battery !== null && this._battery <= this._thresholds.battery && !this._charging) {
-				return 'sleepy';
+				active.push('sleepy');
 			};
 
 			if (this._charging && this._battery !== null && this._battery < 100) {
-				return 'charging';
+				active.push('charging');
 			};
 
 			if (this._load !== null && this._load >= this._thresholds.load) {
-				return 'busy';
+				active.push('busy');
+			};
+
+			return active;
+		};
+
+		_dominant(active) {
+			for (const mood of MOOD_PRIORITY) {
+				if (active.includes(mood)) {
+					return mood;
+				};
 			};
 
 			return 'chill';
+		};
+
+		_selectMood() {
+			this._active = this._conditions();
+
+			return this._dominant(this._active);
 		};
 
 		_resolveMood(now) {
@@ -458,10 +479,12 @@ const MochiFace = GObject.registerClass(
 						this._devSwitchAt = now + DEV_CYCLE_SECONDS;
 					};
 
-					return DEV_MOODS[Math.max(0, this._devIndex)];
+					this._active = [DEV_MOODS[Math.max(0, this._devIndex)]];
+					return this._active[0];
 				};
 
 				if (this._dev.mood && this._dev.mood !== 'auto' && DEV_MOODS.includes(this._dev.mood)) {
+					this._active = [this._dev.mood];
 					return this._dev.mood;
 				};
 			};
@@ -744,16 +767,18 @@ const MochiFace = GObject.registerClass(
 			const w = width;
 			const h = height;
 			const mood = this._mood;
-			const baseColor = mood === 'hot' ? HOT_COLOR : this._color;
+			const active = this._active.length ? this._active : [mood];
+			const stress = active.filter(item => item !== 'charging').length;
+			const baseColor = active.includes('hot') ? HOT_COLOR : this._color;
 			const rgb = hexToRgb(baseColor);
 			const catchInk = contrastInk(baseColor, this._theme?.text);
-			const bob = mood === 'sleepy' && this._animate ? Math.sin(now * 2) * 0.02 * h : 0;
+			const bob = active.includes('sleepy') && this._animate ? Math.sin(now * 2) * 0.02 * h : 0;
 			const blink = this._animate && now < this._blinkUntil;
 
 			cr.save();
 			cr.translate(0, bob);
 
-			if (mood === 'overload' && this._animate) {
+			if (active.includes('overload') && this._animate) {
 				const pulse = 1 + Math.sin(now * 3.2) * 0.035;
 
 				cr.translate(0.5 * w, 0.5 * h);
@@ -761,19 +786,25 @@ const MochiFace = GObject.registerClass(
 				cr.translate(-0.5 * w, -0.5 * h);
 			};
 
+			if (this._animate && stress >= 2) {
+				const amp = Math.min(0.018, (stress - 1) * 0.006) * w;
+
+				cr.translate(Math.sin(now * 42) * amp, Math.cos(now * 37) * amp * 0.6);
+			};
+
 			const eyeH = Math.min(0.42 * h, 0.92 * w);
 			const eyeW = eyeH * 0.58;
-			const eyeY = 0.45 * h + this._lookY * eyeH * 0.07 - (mood === 'hot' ? 0.02 * h : 0);
+			const eyeY = 0.45 * h + this._lookY * eyeH * 0.07 - (active.includes('hot') ? 0.02 * h : 0);
 			const leftX = 0.32 * w + this._lookX * eyeW * 0.22;
 			const rightX = 0.68 * w + this._lookX * eyeW * 0.22;
 			const mouthR = Math.min(0.09 * h, 0.11 * w);
 			const mouthY = 0.75 * h;
 
-			if (mood === 'hot') {
+			if (active.includes('hot')) {
 				this._steam(cr, w, h, now, rgb);
 			};
 
-			if (mood === 'charging' && this._animate) {
+			if (active.includes('charging') && this._animate) {
 				for (let i = 0; i < 3; i++) {
 					const phase = (now * 0.6 + i / 3) % 1;
 					const alpha = Math.sin(phase * Math.PI);
@@ -784,7 +815,7 @@ const MochiFace = GObject.registerClass(
 				};
 			};
 
-			if (mood === 'overload' && this._animate) {
+			if (active.includes('overload') && this._animate) {
 				this._loader(cr, w, h, now, rgb);
 			};
 
@@ -825,19 +856,19 @@ const MochiFace = GObject.registerClass(
 
 			this._mouth(cr, 0.5 * w, mouthY, mouthR, mouthMode, rgb);
 
-			if (mood === 'hot') {
+			if (active.includes('hot')) {
 				this._sweat(cr, w, h, now, hexToRgb('#7ec8ff'));
 			};
 
-			if (mood === 'sleepy' && this._animate) {
+			if (active.includes('sleepy') && this._animate) {
 				this._zzz(cr, w, h, now, rgb);
 			};
 
-			if (mood === 'busy' && this._animate) {
+			if (active.includes('busy') && this._animate) {
 				this._dizzy(cr, w, h, now, rgb);
 			};
 
-			if (mood === 'overload' && this._animate) {
+			if (active.includes('overload') && this._animate) {
 				this._puffs(cr, w, h, now, rgb);
 			};
 
