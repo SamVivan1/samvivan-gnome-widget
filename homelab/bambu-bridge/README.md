@@ -33,7 +33,7 @@ Test without a printer first:
 ```bash
 BAMBU_MOCK=1 docker compose up -d --build
 curl -s -H "Authorization: Bearer $(grep API_TOKEN .env | cut -d= -f2)" \
-  http://localhost:8080/status | jq
+  http://localhost:8083/status | jq
 ```
 
 ## Endpoints
@@ -89,7 +89,7 @@ tunnel: bambu-bridge
 credentials-file: /home/you/.cloudflared/<tunnel-id>.json
 ingress:
   - hostname: bambu.example.com
-    service: http://localhost:8080
+    service: http://localhost:8083
   - service: http_status:404
 ```
 
@@ -113,5 +113,5 @@ Then in the widget preferences set the endpoint to
 python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
 set -a; . ./.env; set +a
-uvicorn app:app --host 0.0.0.0 --port "${PORT:-8080}"
+uvicorn app:app --host 0.0.0.0 --port "${PORT:-8083}"
 ```

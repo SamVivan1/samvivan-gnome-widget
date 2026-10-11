@@ -7,8 +7,22 @@ services:
     env_file:
       - .env
     ports:
-      - "8080:8080"
-    # The container reaches the printer over the LAN with its default
+      - "8083:8083"
+    networks:
+      - bambu-net
+    # The container reaches the printer over the LAN through NAT on this
     # bridge network. Uncomment only if your printer must be reached
-    # through the host network namespace.
+    # through the host network namespace (this disables ``ports``).
     # network_mode: host
+
+networks:
+  bambu-net:
+    driver: bridge
+    # Pinned to a /24 deliberately OUTSIDE Docker's default auto pool
+    # (172.17.0.0/16 - 172.31.0.0/16 and the 192.168.0.0/16 /20s). The host's
+    # default pool is already fully allocated by other stacks, so Compose
+    # fails with "could not find an available, non-overlapping IPv4 address
+    # pool"; a fixed subnet sidesteps that.
+    ipam:
+      config:
+        - subnet: 172.16.0.0/24
