@@ -204,12 +204,12 @@ class WidgetController {
     this._settingsSignals = [];
     this._editMode = false;
     this._dragActor = null;
+    this._dragging = false;
     this._lastAppLaunchAt = 0;
     this._lastLayoutJson = null;
     this._syncingMenu = false;
     this._indicator = null;
     this._editItem = null;
-    this._lockItem = null;
     this._hideItem = null;
     this._layoutSettings = extension.getSettings();
     this._workspaceIntegration = new WorkspaceIntegration(() => this._monitorIndex());
@@ -283,10 +283,6 @@ class WidgetController {
       this._syncMenu();
       this._applyVisibility();
     });
-    connect('lock-widgets', () => {
-      this._syncMenu();
-      this._applyEditMode();
-    });
     connect('edit-mode', () => {
       this._syncMenu();
       this.setEditMode(settings.get_boolean('edit-mode'));
@@ -329,7 +325,6 @@ class WidgetController {
     this._syncingMenu = true;
 
     this._editItem?.setToggleState(this._layoutSettings.get_boolean('edit-mode'));
-    this._lockItem?.setToggleState(this._layoutSettings.get_boolean('lock-widgets'));
     this._hideItem?.setToggleState(this._layoutSettings.get_boolean('hide-all'));
 
     this._syncingMenu = false;
@@ -653,6 +648,10 @@ class WidgetController {
   };
 
   _refreshBatteryViews() {
+    if (this._editMode || this._dragging) {
+      return;
+    };
+
     let hasBattery = false;
 
     for (const view of this._views.values()) {
@@ -676,7 +675,7 @@ class WidgetController {
   };
 
   _applyBatterySignature(signature) {
-    if (signature === this._batterySignature) {
+    if (this._editMode || this._dragging || signature === this._batterySignature) {
       return;
     };
 
@@ -744,7 +743,6 @@ class WidgetController {
     this._indicator?.destroy();
     this._indicator = null;
     this._editItem = null;
-    this._lockItem = null;
     this._hideItem = null;
   };
 
@@ -764,16 +762,6 @@ class WidgetController {
       this._layoutSettings.set_boolean('edit-mode', state);
     }, this);
     this._indicator.menu.addMenuItem(this._editItem);
-
-    this._lockItem = new PopupMenu.PopupSwitchMenuItem('Lock Widgets', this._layoutSettings.get_boolean('lock-widgets'));
-    this._lockItem.connectObject('toggled', (_item, state) => {
-      if (this._syncingMenu) {
-        return;
-      };
-
-      this._layoutSettings.set_boolean('lock-widgets', state);
-    }, this);
-    this._indicator.menu.addMenuItem(this._lockItem);
 
     this._hideItem = new PopupMenu.PopupSwitchMenuItem('Hide All Widgets', this._layoutSettings.get_boolean('hide-all'));
     this._hideItem.connectObject('toggled', (_item, state) => {
@@ -807,29 +795,32 @@ class WidgetController {
   };
 
   setEditMode(enabled) {
+    this._cancelActiveDrag();
     this._editMode = enabled;
     this._applyEditMode();
+
+    if (!enabled) {
+      this._refreshWidgets();
+    };
   };
 
   _applyEditMode() {
-    const locked = this._layoutSettings.get_boolean('lock-widgets');
-    const draggable = this._editMode && !locked;
-
     for (const view of this._views.values()) {
-      if (draggable) {
-        this._makeDraggable(view);
-      } else if (view.draggable) {
-        view.actor.disconnectObject(this);
-        view.draggable = false;
-      };
+      view.actor.set_style(this._styleForWidget(view.widget));
 
       if (this._editMode) {
+        this._makeDraggable(view);
         this._addEditControls(view);
 
         if (view.removeButton) {
           view.removeButton.visible = view.actor.visible;
         };
       } else {
+        if (view.draggable) {
+          view.actor.disconnectObject(this);
+          view.draggable = false;
+        };
+
         this._removeEditControls(view);
       };
     };
@@ -1026,10 +1017,7 @@ class WidgetController {
     this._views.set(widget.id, view);
 
     if (this._editMode) {
-      if (!this._layoutSettings.get_boolean('lock-widgets')) {
-        this._makeDraggable(view);
-      };
-
+      this._makeDraggable(view);
       this._addEditControls(view);
     };
 
@@ -1211,6 +1199,7 @@ class WidgetController {
       };
 
       drag = null;
+      this._dragging = false;
       this._clampWidget(widget);
       this._resolveLayout(widget, true, false);
       this._animateWidget(widget, true);
@@ -1250,7 +1239,7 @@ class WidgetController {
         return Clutter.EVENT_PROPAGATE;
       };
 
-      if (!this._editMode || this._layoutSettings.get_boolean('lock-widgets')) {
+      if (!this._editMode) {
         return Clutter.EVENT_PROPAGATE;
       };
 
@@ -1267,6 +1256,7 @@ class WidgetController {
       raiseActor(actor);
       this._syncEditControls(widget);
 
+      this._dragging = true;
       this._dragActor = actor;
       global.stage.connectObject('captured-event', (_stage, capturedEvent) => {
         if (!drag) {
@@ -1295,6 +1285,8 @@ class WidgetController {
   };
 
   _cancelActiveDrag() {
+    this._dragging = false;
+
     if (!this._dragActor) {
       return;
     };

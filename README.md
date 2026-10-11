@@ -76,10 +76,9 @@ GNOME Shell on Wayland does not support `Alt+F2 → r`. **Log out and back in** 
 
 1. Log out/in after install
 2. Panel menu (top bar → Desktop Widget) → `Add <Widget>` to add widgets
-3. Enable `Edit Widgets` to drag and resize
-4. `Lock Widgets` to prevent accidental moves/resizes
-5. `Hide All Widgets` to temporarily hide everything without losing layout
-6. `Reset Default Widgets` to restore defaults
+3. Enable `Edit Widgets` to drag and resize. Widgets can be added or removed from the Widgets page in Preferences too.
+4. `Hide All Widgets` to temporarily hide everything without losing layout
+5. `Reset Default Widgets` to restore defaults
 
 ## Preferences
 
@@ -120,7 +119,6 @@ Open preferences via: `gnome-extensions prefs desktop-widget@samvivan` or panel 
 | `grid-size` | `i` | `20` | Snap grid size (px) |
 | `widget-gap` | `i` | `14` | Edge spacing (px) |
 | `snap-to-grid` | `b` | `true` | Snap while dragging |
-| `lock-widgets` | `b` | `false` | Disable drag/resize |
 | `hide-all` | `b` | `false` | Temporarily hide all |
 | `edit-mode` | `b` | `false` | Show edit controls |
 | `widget-opacity` | `i` | `100` | Opacity 10–100% |

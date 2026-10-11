@@ -19,6 +19,21 @@ const WIDGET_LABELS = {
   battery: 'Battery',
 };
 
+const WIDGET_DEFAULT_SIZES = {
+  clock: 'small',
+  calendar: 'small',
+  agenda: 'medium',
+  weather: 'small',
+  photos: 'medium',
+  battery: 'medium',
+};
+
+const WIDGET_DIMENSIONS = {
+  small: [220, 220],
+  medium: [454, 220],
+  large: [454, 454],
+};
+
 function widgetLabel(type) {
   return WIDGET_LABELS[type] ?? type;
 };
@@ -130,13 +145,6 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     });
     this._settings.bind('edit-mode', editRow, 'active', Gio.SettingsBindFlags.DEFAULT);
     behavior.add(editRow);
-
-    const lockRow = new Adw.SwitchRow({
-      title: 'Lock widgets',
-      subtitle: 'Prevent moving and resizing widgets',
-    });
-    this._settings.bind('lock-widgets', lockRow, 'active', Gio.SettingsBindFlags.DEFAULT);
-    behavior.add(lockRow);
 
     const hideRow = new Adw.SwitchRow({
       title: 'Hide all widgets',
@@ -456,46 +464,103 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
       icon_name: 'view-grid-symbolic',
     });
 
-    const group = new Adw.PreferencesGroup({
+    const listGroup = new Adw.PreferencesGroup({
       title: 'Individual widgets',
-      description: 'Show or hide each widget and fine-tune its position and size. Add widgets from the panel menu.',
+      description: 'Add, remove, show or hide each widget and fine-tune its position and size.',
     });
+    page.add(listGroup);
 
-    const widgets = this._layout.widgets;
+    const addGroup = new Adw.PreferencesGroup({
+      title: 'Add widget',
+      description: 'Adds a new widget to the layout below.',
+    });
+    page.add(addGroup);
 
-    if (widgets.length === 0) {
-      group.add(new Adw.ActionRow({
-        title: 'No widgets configured',
-        subtitle: 'Use the panel menu → Desktop Widgets → Add Widget, or press Reset below.',
-      }));
-    } else {
-      widgets.forEach((widget, index) => {
-        group.add(this._buildWidgetRow(widget, index));
-      });
+    let rows = [];
+
+    const persist = () => {
+      this._settings.set_string(LAYOUT_KEY, JSON.stringify(this._layout));
     };
 
-    const resetRow = new Adw.ButtonRow({title: 'Reset to default layout'});
-    resetRow.add_css_class('destructive-action');
-    resetRow.connect('activated', () => {
-      this._settings.set_string(LAYOUT_KEY, '');
-      this._layout = {widgets: []};
-      this._window?.close();
-    });
-    group.add(resetRow);
+    const render = () => {
+      for (const row of rows) {
+        listGroup.remove(row);
+      };
 
-    page.add(group);
+      rows = [];
+
+      const widgets = this._layout.widgets;
+
+      if (widgets.length === 0) {
+        const empty = new Adw.ActionRow({
+          title: 'No widgets configured',
+          subtitle: 'Add one from the "Add widget" section below.',
+        });
+        listGroup.add(empty);
+        rows.push(empty);
+      } else {
+        for (const widget of widgets) {
+          const row = this._buildWidgetRow(widget, persist, () => {
+            this._layout.widgets = this._layout.widgets.filter(item => item !== widget);
+            persist();
+            render();
+          });
+          listGroup.add(row);
+          rows.push(row);
+        };
+      };
+
+      const resetRow = new Adw.ButtonRow({title: 'Reset to default layout'});
+      resetRow.add_css_class('destructive-action');
+      resetRow.connect('activated', () => {
+        this._settings.set_string(LAYOUT_KEY, '');
+        this._layout = {widgets: []};
+        render();
+      });
+      listGroup.add(resetRow);
+      rows.push(resetRow);
+    };
+
+    for (const [type, label] of Object.entries(WIDGET_LABELS)) {
+      const row = new Adw.ButtonRow({title: `Add ${label}`});
+      row.connect('activated', () => {
+        this._layout.widgets.push(this._newWidget(type));
+        persist();
+        render();
+      });
+      addGroup.add(row);
+    };
+
+    render();
 
     return page;
   };
 
-  _buildWidgetRow(widget) {
+  _newWidget(type) {
+    const size = WIDGET_DEFAULT_SIZES[type] ?? 'small';
+    const [width, height] = WIDGET_DIMENSIONS[size] ?? WIDGET_DIMENSIONS.small;
+    const count = this._layout.widgets.length;
+
+    return {
+      id: `${type}-${Date.now()}`,
+      type,
+      size,
+      x: 32 + (count % 4) * 240,
+      y: 96 + Math.floor(count / 4) * 250,
+      width,
+      height,
+      data: {},
+    };
+  };
+
+  _buildWidgetRow(widget, persist, onRemove) {
     const row = new Adw.ExpanderRow({
       title: widgetLabel(widget.type),
       subtitle: this._subtitleFor(widget),
     });
 
-    const persist = () => {
-      this._settings.set_string(LAYOUT_KEY, JSON.stringify(this._layout));
+    const save = () => {
+      persist();
       row.set_subtitle(this._subtitleFor(widget));
     };
 
@@ -503,7 +568,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     visibleRow.set_active(widget.hidden !== true);
     visibleRow.connect('notify::active', () => {
       widget.hidden = !visibleRow.get_active();
-      persist();
+      save();
     });
     row.add_row(visibleRow);
 
@@ -515,7 +580,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
       spin.set_value(Math.round(widget[key] ?? 0));
       spin.connect('notify::value', () => {
         widget[key] = Math.round(spin.get_value());
-        persist();
+        save();
       });
       row.add_row(spin);
     };
@@ -524,6 +589,11 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     addSpin('Y position', 'y', -10000, 10000);
     addSpin('Width', 'width', 80, 10000);
     addSpin('Height', 'height', 80, 10000);
+
+    const removeRow = new Adw.ButtonRow({title: 'Remove widget'});
+    removeRow.add_css_class('destructive-action');
+    removeRow.connect('activated', () => onRemove());
+    row.add_row(removeRow);
 
     return row;
   };
