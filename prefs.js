@@ -95,6 +95,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     window.add(this._buildCalendarPage());
     window.add(this._buildBambuPage());
     window.add(this._buildWidgetsPage());
+    window.add(this._buildDeveloperPage());
   };
 
   _buildGeneralPage(window) {
@@ -705,6 +706,73 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     };
 
     return `Position: ${Math.round(widget.x ?? 0)}, ${Math.round(widget.y ?? 0)} · ${Math.round(widget.width ?? 0)}×${Math.round(widget.height ?? 0)}`;
+  };
+
+  _buildDeveloperPage() {
+    const page = new Adw.PreferencesPage({
+      name: 'developer',
+      title: 'Developer',
+      icon_name: 'applications-engineering-symbolic',
+    });
+
+    const master = new Adw.PreferencesGroup({
+      title: 'Developer mode',
+      description: 'Reveal extra controls for testing widgets without real-world conditions.',
+    });
+
+    const devRow = new Adw.SwitchRow({
+      title: 'Enable developer mode',
+      subtitle: 'Show testing controls such as forcing the Bambu face mood',
+    });
+    this._settings.bind('dev-mode', devRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+    master.add(devRow);
+    page.add(master);
+
+    const faceGroup = new Adw.PreferencesGroup({
+      title: 'Bambu face',
+      description: 'Preview every mood without stressing the CPU or draining the battery. Turn on “Always show the face” on the Bambu Lab page to see it while the printer is online.',
+    });
+
+    const cycleRow = new Adw.SwitchRow({
+      title: 'Cycle all moods',
+      subtitle: 'Rotate through chill, hot, sleepy, charging and busy automatically',
+    });
+    this._settings.bind('bambu-dev-cycle', cycleRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+    faceGroup.add(cycleRow);
+
+    const moods = ['auto', 'chill', 'hot', 'sleepy', 'charging', 'busy'];
+    const moodRow = new Adw.ComboRow({
+      title: 'Force mood',
+      model: Gtk.StringList.new(['Auto (real sensors)', 'Chill', 'Hot', 'Sleepy', 'Charging', 'Busy']),
+    });
+    moodRow.set_selected(Math.max(0, moods.indexOf(this._settings.get_string('bambu-dev-mood'))));
+    moodRow.connect('notify::selected', () => {
+      this._settings.set_string('bambu-dev-mood', moods[moodRow.get_selected()]);
+    });
+    faceGroup.add(moodRow);
+    page.add(faceGroup);
+
+    const syncState = () => {
+      const enabled = this._settings.get_boolean('dev-mode');
+      const cycling = this._settings.get_boolean('bambu-dev-cycle');
+
+      faceGroup.set_sensitive(enabled);
+      cycleRow.set_sensitive(enabled);
+      moodRow.set_sensitive(enabled && !cycling);
+    };
+
+    devRow.connect('notify::active', syncState);
+    cycleRow.connect('notify::active', () => {
+      if (this._settings.get_boolean('bambu-dev-cycle')) {
+        this._settings.set_string('bambu-dev-mood', 'auto');
+        moodRow.set_selected(0);
+      };
+
+      syncState();
+    });
+    syncState();
+
+    return page;
   };
 
   _buildWidgetsPage() {

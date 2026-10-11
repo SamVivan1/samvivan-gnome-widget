@@ -108,23 +108,38 @@
     </key>
     <key name="bambu-offline-fun" type="b">
       <default>true</default>
-      <summary>Animated robot when printer offline</summary>
-      <description>Show a cute animated robot face instead of a plain "Printer offline" hint when the bridge is reachable but the printer is not.</description>
+      <summary>Animated face when printer offline</summary>
+      <description>Show a cute animated mochi face (that reacts to the laptop's temperature, battery and CPU load) instead of a plain "Printer offline" hint when the bridge is reachable but the printer is not.</description>
     </key>
     <key name="bambu-offline-always" type="b">
       <default>false</default>
-      <summary>Always show the offline robot</summary>
-      <description>Show the robot even when the printer is online or the bridge is unreachable. Useful for testing or as a decoration.</description>
+      <summary>Always show the offline face</summary>
+      <description>Show the face even when the printer is online or the bridge is unreachable. Useful for testing or as a decoration.</description>
     </key>
     <key name="bambu-offline-color" type="s">
       <default>''</default>
-      <summary>Offline robot colour</summary>
-      <description>Hex colour (for example #3584e4) for the offline robot, or empty to follow the system accent colour.</description>
+      <summary>Offline face colour</summary>
+      <description>Hex colour (for example #3584e4) for the offline face, or empty to follow the system accent colour.</description>
     </key>
     <key name="bambu-offline-caption" type="s">
       <default>'Printer is napping…'</default>
-      <summary>Offline robot caption</summary>
-      <description>Caption shown under the offline robot. Leave empty to hide it.</description>
+      <summary>Offline face caption</summary>
+      <description>Caption shown under the offline face. Leave empty to hide it.</description>
+    </key>
+    <key name="dev-mode" type="b">
+      <default>false</default>
+      <summary>Developer mode</summary>
+      <description>Reveal extra testing controls, such as forcing the Bambu face mood, to verify widget behaviour without real-world conditions.</description>
+    </key>
+    <key name="bambu-dev-mood" type="s">
+      <default>'auto'</default>
+      <summary>Forced Bambu face mood</summary>
+      <description>Developer override for the offline face mood: auto, chill, hot, sleepy, charging or busy. Only applied while developer mode is enabled.</description>
+    </key>
+    <key name="bambu-dev-cycle" type="b">
+      <default>false</default>
+      <summary>Cycle Bambu face moods</summary>
+      <description>While developer mode is enabled, rotate through every face mood automatically to preview all animations at once.</description>
     </key>
   </schema>
   </schemalist>

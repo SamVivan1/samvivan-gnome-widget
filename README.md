@@ -109,6 +109,12 @@ Open preferences via: `gnome-extensions prefs desktop-widget@samvivan` or panel 
 - **Use system accent colour / Face colour** – colour the face with the GNOME accent or a custom colour
 - **Caption** – text shown under the face (leave empty to hide)
 
+### Developer
+- **Enable developer mode** – reveals testing controls without needing real conditions (no need to stress the CPU, plug in the charger or drain the battery)
+- **Cycle all moods** – with developer mode on, the Bambu face rotates through every mood (chill → hot → sleepy → charging → busy) automatically
+- **Force mood** – pin a single mood (Auto / Chill / Hot / Sleepy / Charging / Busy) for inspection
+- While the face is in developer mode, a status line under it shows the live `mood · temp · battery · load` values
+
 ### Widgets
 - Per-widget visibility, X/Y, Width/Height
 - Reset to default layout
@@ -167,6 +173,9 @@ See [`homelab/bambu-bridge/README.md`](homelab/bambu-bridge/README.md) for full 
 | `bambu-offline-always` | `b` | `false` | Always show the face (even when online) |
 | `bambu-offline-color` | `s` | `''` | Face colour hex (empty = system accent) |
 | `bambu-offline-caption` | `s` | `'Printer is napping…'` | Caption under the face (empty = hidden) |
+| `dev-mode` | `b` | `false` | Developer mode: reveal testing controls |
+| `bambu-dev-mood` | `s` | `'auto'` | Force the face mood (auto/chill/hot/sleepy/charging/busy) |
+| `bambu-dev-cycle` | `b` | `false` | Cycle through every face mood automatically |
 
 ## Uninstall
 

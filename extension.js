@@ -302,6 +302,9 @@ class WidgetController {
     connect('bambu-offline-always', () => this._refreshBambuViews(true));
     connect('bambu-offline-color', () => this._refreshBambuViews(true));
     connect('bambu-offline-caption', () => this._refreshBambuViews(true));
+    connect('dev-mode', () => this._refreshBambuViews(true));
+    connect('bambu-dev-mood', () => this._refreshBambuViews(true));
+    connect('bambu-dev-cycle', () => this._refreshBambuViews(true));
   };
 
   _reconfigureBambu() {

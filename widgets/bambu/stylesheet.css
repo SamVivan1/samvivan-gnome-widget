@@ -85,3 +85,8 @@
   text-align: center;
   padding-top: 6px;
 }
+
+.widget-bambu-dev-status {
+  font-size: 12px;
+  font-feature-settings: "tnum";
+}

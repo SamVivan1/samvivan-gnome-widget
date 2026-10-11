@@ -143,6 +143,8 @@ const HOT_TEMP_C = 60;
 const LOW_BATTERY = 20;
 const HIGH_LOAD = 85;
 const HOT_COLOR = '#ff5b52';
+const DEV_MOODS = ['chill', 'hot', 'sleepy', 'charging', 'busy'];
+const DEV_CYCLE_SECONDS = 3.5;
 
 function luminance(hex) {
 	const [r, g, b] = hexToRgb(hex);
@@ -268,7 +270,7 @@ function readLoad() {
 // laptop's own vitals (chip temperature, battery, CPU load).
 const MochiFace = GObject.registerClass(
 	class MochiFace extends St.DrawingArea {
-		_init(color, theme, animate) {
+		_init(color, theme, animate, dev, onStatus) {
 			super._init({
 				style_class: 'widget-bambu-mochi',
 				x_expand: true,
@@ -280,6 +282,8 @@ const MochiFace = GObject.registerClass(
 			this._color = color;
 			this._theme = theme;
 			this._animate = animate;
+			this._dev = dev || null;
+			this._onStatus = onStatus || null;
 			this._timerId = 0;
 			this._frame = 0;
 			this._temp = null;
@@ -293,9 +297,12 @@ const MochiFace = GObject.registerClass(
 			this._smileUntil = 0;
 			this._lookX = 0;
 			this._lookY = 0;
+			this._devIndex = -1;
+			this._devSwitchAt = 0;
 
 			this._readStats();
-			this._mood = this._selectMood();
+			this._mood = this._resolveMood(this._now());
+			this._notifyStatus();
 
 			if (animate) {
 				this._scheduleBlink(this._now());
@@ -327,6 +334,22 @@ const MochiFace = GObject.registerClass(
 			this._charging = battery.charging;
 		};
 
+		devStatus() {
+			if (!this._dev) {
+				return '';
+			};
+
+			const temp = this._temp === null ? '--' : `${Math.round(this._temp)}°C`;
+			const battery = this._battery === null ? '--' : `${this._battery}%`;
+			const load = this._load === null ? '--' : `load ${this._load}%`;
+
+			return `${this._mood} · ${temp} · ${battery} · ${load}`;
+		};
+
+		_notifyStatus() {
+			this._onStatus?.(this.devStatus());
+		};
+
 		_selectMood() {
 			if (this._temp !== null && this._temp >= HOT_TEMP_C) {
 				return 'hot';
@@ -347,6 +370,25 @@ const MochiFace = GObject.registerClass(
 			return 'chill';
 		};
 
+		_resolveMood(now) {
+			if (this._dev) {
+				if (this._dev.cycle) {
+					if (now >= this._devSwitchAt) {
+						this._devIndex = (this._devIndex + 1) % DEV_MOODS.length;
+						this._devSwitchAt = now + DEV_CYCLE_SECONDS;
+					};
+
+					return DEV_MOODS[Math.max(0, this._devIndex)];
+				};
+
+				if (this._dev.mood && this._dev.mood !== 'auto' && DEV_MOODS.includes(this._dev.mood)) {
+					return this._dev.mood;
+				};
+			};
+
+			return this._selectMood();
+		};
+
 		_scheduleBlink(now) {
 			this._nextBlink = now + 2 + Math.random() * 3.5;
 		};
@@ -358,9 +400,10 @@ const MochiFace = GObject.registerClass(
 
 			if (this._frame % 16 === 0) {
 				this._readStats();
+				this._notifyStatus();
 			};
 
-			this._mood = this._selectMood();
+			this._mood = this._resolveMood(now);
 
 			if (this._mood === 'chill') {
 				if (now >= this._nextBlink) {
@@ -619,8 +662,15 @@ function addCenteredHint(body, createLabel, theme, text) {
 	body.add_child(new St.Widget({y_expand: true}));
 };
 
-function buildOfflineScene({body, createLabel, theme, animate, color, caption}) {
-	body.add_child(new MochiFace(color, theme, animate));
+function buildOfflineScene({body, createLabel, theme, animate, color, caption, dev}) {
+	let statusLabel = null;
+	const face = new MochiFace(color, theme, animate, dev, text => {
+		if (statusLabel) {
+			statusLabel.text = text;
+		};
+	});
+
+	body.add_child(face);
 
 	if (caption) {
 		const label = createLabel(caption, 'widget-bambu-mochi-caption', `color: ${theme.muted};`);
@@ -628,6 +678,14 @@ function buildOfflineScene({body, createLabel, theme, animate, color, caption}) 
 		label.x_align = Clutter.ActorAlign.CENTER;
 		label.clutter_text.set_line_wrap(true);
 		body.add_child(label);
+	};
+
+	if (dev) {
+		statusLabel = createLabel('', 'widget-bambu-dev-status', `color: ${theme.muted};`);
+		statusLabel.x_align = Clutter.ActorAlign.CENTER;
+		statusLabel.clutter_text.set_line_wrap(true);
+		body.add_child(statusLabel);
+		statusLabel.text = face.devStatus();
 	};
 };
 
@@ -795,6 +853,7 @@ export function render({body, widget, createLabel, theme, sizeForWidget, bambu, 
 
 	const fun = settings?.get_boolean('bambu-offline-fun') ?? false;
 	const always = settings?.get_boolean('bambu-offline-always') ?? false;
+	const devMode = settings?.get_boolean('dev-mode') ?? false;
 
 	const showScene = () => buildOfflineScene({
 		body,
@@ -803,6 +862,12 @@ export function render({body, widget, createLabel, theme, sizeForWidget, bambu, 
 		animate: animate !== false,
 		color: settings.get_string('bambu-offline-color') || theme.accent,
 		caption: settings.get_string('bambu-offline-caption').trim(),
+		dev: devMode
+			? {
+				mood: settings.get_string('bambu-dev-mood') || 'auto',
+				cycle: settings.get_boolean('bambu-dev-cycle'),
+			}
+			: null,
 	});
 
 	if (always && fun) {
