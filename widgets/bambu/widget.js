@@ -156,6 +156,21 @@ function contrastInk(hex, fallback) {
 	return luminance(hex) > 0.62 ? (fallback || '#111111') : '#ffffff';
 };
 
+function roundedRect(cr, x, y, width, height, radius) {
+	const r = Math.max(0, Math.min(radius, width / 2, height / 2));
+
+	cr.moveTo(x + r, y);
+	cr.lineTo(x + width - r, y);
+	cr.arc(x + width - r, y + r, r, -Math.PI / 2, 0);
+	cr.lineTo(x + width, y + height - r);
+	cr.arc(x + width - r, y + height - r, r, 0, Math.PI / 2);
+	cr.lineTo(x + r, y + height);
+	cr.arc(x + r, y + height - r, r, Math.PI / 2, Math.PI);
+	cr.lineTo(x, y + r);
+	cr.arc(x + r, y + r, r, Math.PI, Math.PI * 1.5);
+	cr.closePath();
+};
+
 function readSysFile(path) {
 	try {
 		const [ok, bytes] = GLib.file_get_contents(path);
@@ -434,14 +449,10 @@ const MochiFace = GObject.registerClass(
 			};
 		};
 
-		_eye(cr, cx, cy, radius, mode, rgb, ink, now) {
+		_eye(cr, cx, cy, eyeW, eyeH, mode, rgb, ink, now) {
 			if (mode === 'closed') {
 				cr.newPath();
-				cr.save();
-				cr.translate(cx, cy);
-				cr.scale(1, 0.16);
-				cr.arc(0, 0, radius, 0, Math.PI * 2);
-				cr.restore();
+				roundedRect(cr, cx - eyeW * 0.62, cy - eyeW * 0.18, eyeW * 1.24, eyeW * 0.36, eyeW * 0.18);
 				cr.setSourceRGBA(...rgb, 1);
 				cr.fill();
 				return;
@@ -450,24 +461,24 @@ const MochiFace = GObject.registerClass(
 			if (mode === 'happy') {
 				cr.newPath();
 				cr.setLineCap(1);
-				cr.setLineWidth(radius * 0.46);
-				cr.arc(cx, cy + radius * 0.28, radius * 0.92, Math.PI * 1.12, Math.PI * 1.88);
+				cr.setLineWidth(eyeW * 0.55);
+				cr.arc(cx, cy + eyeH * 0.22, eyeW, Math.PI * 1.12, Math.PI * 1.88);
 				cr.setSourceRGBA(...rgb, 1);
 				cr.stroke();
 				return;
 			};
 
 			cr.newPath();
-			cr.arc(cx, cy, radius, 0, Math.PI * 2);
+			roundedRect(cr, cx - eyeW / 2, cy - eyeH / 2, eyeW, eyeH, eyeW / 2);
 			cr.setSourceRGBA(...rgb, 1);
 			cr.fill();
 
 			const dizzy = mode === 'dizzy';
-			const hx = dizzy ? Math.cos(now * 9) * radius * 0.42 : -radius * 0.34;
-			const hy = dizzy ? Math.sin(now * 8) * radius * 0.42 : -radius * 0.32;
+			const hx = dizzy ? Math.cos(now * 9) * eyeW * 0.28 : -eyeW * 0.16;
+			const hy = dizzy ? Math.sin(now * 8) * eyeH * 0.26 : -eyeH * 0.24;
 
 			cr.newPath();
-			cr.arc(cx + hx, cy + hy, radius * 0.32, 0, Math.PI * 2);
+			cr.arc(cx + hx, cy + hy, Math.min(eyeW, eyeH) * 0.26, 0, Math.PI * 2);
 			cr.setSourceRGBA(...hexToRgba(ink, 0.9));
 			cr.fill();
 		};
@@ -510,13 +521,13 @@ const MochiFace = GObject.registerClass(
 			cr.stroke();
 		};
 
-		_sweat(cr, size, now, rgb) {
+		_sweat(cr, w, h, now, rgb) {
 			for (let i = 0; i < 2; i++) {
 				const phase = (now * 0.7 + i * 0.5) % 1;
 				const alpha = Math.sin(phase * Math.PI) * 0.85;
-				const dropX = (i === 0 ? 0.2 : 0.8) * size;
-				const dropY = (0.36 + phase * 0.28) * size;
-				const dropR = 0.035 * size;
+				const dropX = (i === 0 ? 0.18 : 0.82) * w;
+				const dropY = (0.34 + phase * 0.3) * h;
+				const dropR = 0.035 * h;
 
 				cr.newPath();
 				cr.arc(dropX, dropY, dropR, 0, Math.PI * 2);
@@ -533,17 +544,17 @@ const MochiFace = GObject.registerClass(
 			};
 		};
 
-		_steam(cr, size, now, rgb) {
+		_steam(cr, w, h, now, rgb) {
 			cr.setLineCap(1);
-			cr.setLineWidth(Math.max(2, size * 0.015));
+			cr.setLineWidth(Math.max(2, 0.015 * h));
 
 			for (let i = 0; i < 2; i++) {
-				const x = (i === 0 ? 0.34 : 0.66) * size;
+				const x = (i === 0 ? 0.32 : 0.68) * w;
 				const alpha = Math.max(0, 0.35 + 0.25 * Math.sin(now * 4 + i));
 
 				cr.newPath();
-				cr.moveTo(x, 0.16 * size);
-				cr.curveTo(x - size * 0.05, 0.1 * size, x + size * 0.05, 0.06 * size, x, 0.0);
+				cr.moveTo(x, 0.16 * h);
+				cr.curveTo(x - 0.05 * h, 0.1 * h, x + 0.05 * h, 0.06 * h, x, 0.0);
 				cr.setSourceRGBA(...rgb, alpha);
 				cr.stroke();
 			};
@@ -564,6 +575,40 @@ const MochiFace = GObject.registerClass(
 			cr.fill();
 		};
 
+		_zzz(cr, w, h, now, rgb) {
+			cr.setLineCap(1);
+
+			for (let i = 0; i < 3; i++) {
+				const phase = (now * 0.35 + i / 3) % 1;
+				const alpha = Math.min(1, Math.max(0, Math.sin(phase * Math.PI) * 1.5));
+				const x = (0.64 + phase * 0.18) * w;
+				const y = (0.34 - phase * 0.3) * h;
+				const s = (0.045 + phase * 0.035) * h;
+
+				cr.newPath();
+				cr.moveTo(x, y);
+				cr.lineTo(x + s, y);
+				cr.lineTo(x, y + s);
+				cr.lineTo(x + s, y + s);
+				cr.setLineWidth(Math.max(1.5, 0.012 * h));
+				cr.setSourceRGBA(...rgb, alpha);
+				cr.stroke();
+			};
+		};
+
+		_dizzy(cr, w, h, now, rgb) {
+			const cx = 0.5 * w;
+			const cy = 0.2 * h;
+
+			for (let i = 0; i < 3; i++) {
+				const angle = now * 3 + i * (Math.PI * 2 / 3);
+				const x = cx + Math.cos(angle) * 0.13 * w;
+				const y = cy + Math.sin(angle) * 0.05 * h;
+
+				this._sparkle(cr, x, y, 0.035 * h, 0.9, rgb);
+			};
+		};
+
 		vfunc_repaint() {
 			const cr = this.get_context();
 			const [width, height] = this.get_surface_size();
@@ -574,36 +619,38 @@ const MochiFace = GObject.registerClass(
 			};
 
 			const now = this._now();
-			const size = Math.min(width, height);
+			const w = width;
+			const h = height;
 			const mood = this._mood;
 			const baseColor = mood === 'hot' ? HOT_COLOR : this._color;
 			const rgb = hexToRgb(baseColor);
 			const catchInk = contrastInk(baseColor, this._theme?.text);
-			const bob = mood === 'sleepy' && this._animate ? Math.sin(now * 2) * 0.012 * size : 0;
+			const bob = mood === 'sleepy' && this._animate ? Math.sin(now * 2) * 0.02 * h : 0;
 			const blink = this._animate && now < this._blinkUntil;
 
 			cr.save();
-			cr.translate((width - size) / 2, (height - size) / 2 + bob);
+			cr.translate(0, bob);
 
-			const eyeR = 0.16 * size;
-			const eyeY = 0.44 * size + this._lookY * eyeR * 0.12 - (mood === 'hot' ? 0.015 * size : 0);
-			const leftX = 0.35 * size + this._lookX * eyeR * 0.16;
-			const rightX = 0.65 * size + this._lookX * eyeR * 0.16;
-			const mouthR = 0.07 * size;
-			const mouthY = 0.7 * size;
+			const eyeH = Math.min(0.42 * h, 0.92 * w);
+			const eyeW = eyeH * 0.58;
+			const eyeY = 0.45 * h + this._lookY * eyeH * 0.07 - (mood === 'hot' ? 0.02 * h : 0);
+			const leftX = 0.32 * w + this._lookX * eyeW * 0.22;
+			const rightX = 0.68 * w + this._lookX * eyeW * 0.22;
+			const mouthR = Math.min(0.09 * h, 0.11 * w);
+			const mouthY = 0.75 * h;
 
 			if (mood === 'hot') {
-				this._steam(cr, size, now, rgb);
+				this._steam(cr, w, h, now, rgb);
 			};
 
 			if (mood === 'charging' && this._animate) {
 				for (let i = 0; i < 3; i++) {
 					const phase = (now * 0.6 + i / 3) % 1;
 					const alpha = Math.sin(phase * Math.PI);
-					const sx = (0.18 + i * 0.32) * size;
-					const sy = (0.16 + (i % 2) * 0.1) * size;
+					const sx = (0.2 + i * 0.3) * w;
+					const sy = (0.18 + (i % 2) * 0.12) * h;
 
-					this._sparkle(cr, sx, sy, 0.05 * size, Math.max(0, alpha), rgb);
+					this._sparkle(cr, sx, sy, 0.05 * h, Math.max(0, alpha), rgb);
 				};
 			};
 
@@ -621,8 +668,8 @@ const MochiFace = GObject.registerClass(
 				eyeMode = 'open';
 			};
 
-			this._eye(cr, leftX, eyeY, eyeR, eyeMode, rgb, catchInk, now);
-			this._eye(cr, rightX, eyeY, eyeR, eyeMode, rgb, catchInk, now);
+			this._eye(cr, leftX, eyeY, eyeW, eyeH, eyeMode, rgb, catchInk, now);
+			this._eye(cr, rightX, eyeY, eyeW, eyeH, eyeMode, rgb, catchInk, now);
 
 			let mouthMode;
 
@@ -638,10 +685,18 @@ const MochiFace = GObject.registerClass(
 				mouthMode = now < this._smileUntil ? 'smile' : 'flat';
 			};
 
-			this._mouth(cr, 0.5 * size, mouthY, mouthR, mouthMode, rgb);
+			this._mouth(cr, 0.5 * w, mouthY, mouthR, mouthMode, rgb);
 
 			if (mood === 'hot') {
-				this._sweat(cr, size, now, hexToRgb('#7ec8ff'));
+				this._sweat(cr, w, h, now, hexToRgb('#7ec8ff'));
+			};
+
+			if (mood === 'sleepy' && this._animate) {
+				this._zzz(cr, w, h, now, rgb);
+			};
+
+			if (mood === 'busy' && this._animate) {
+				this._dizzy(cr, w, h, now, rgb);
 			};
 
 			cr.restore();
