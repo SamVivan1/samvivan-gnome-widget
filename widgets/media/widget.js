@@ -331,7 +331,6 @@ const MediaView = GObject.registerClass(
 				this._title.text = 'Music';
 				this._artist.text = 'No media player detected';
 				this._setLyrics('', '');
-				this._hint.hide();
 				this._progress.hide();
 				return;
 			};
