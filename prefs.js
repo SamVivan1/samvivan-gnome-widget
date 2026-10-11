@@ -12,15 +12,19 @@ import * as Immich from './widgets/photos/immich.js';
 const LAYOUT_KEY = 'layout-json';
 const EXTENSION_PATH = GLib.path_get_dirname(GLib.filename_from_uri(import.meta.url)[0]);
 
-const WIDGET_LABELS = {
-  clock: _('Clock'),
-  calendar: _('Calendar'),
-  agenda: _('Agenda'),
-  weather: _('Weather'),
-  photos: _('Photos'),
-  battery: _('Battery'),
-  bambu: _('Bambu Lab'),
-  media: _('Now Playing'),
+// Built on demand: the shell only assigns the preferences' stateObj after
+// importing this module, so gettext must not run while it is being evaluated.
+function widgetLabels() {
+  return {
+    clock: _('Clock'),
+    calendar: _('Calendar'),
+    agenda: _('Agenda'),
+    weather: _('Weather'),
+    photos: _('Photos'),
+    battery: _('Battery'),
+    bambu: _('Bambu Lab'),
+    media: _('Now Playing'),
+  };
 };
 
 const WIDGET_DEFAULT_SIZES = {
@@ -41,7 +45,7 @@ const WIDGET_DIMENSIONS = {
 };
 
 function widgetLabel(type) {
-  return WIDGET_LABELS[type] ?? type;
+  return widgetLabels()[type] ?? type;
 };
 
 function rgbaToHex(rgba) {
@@ -925,7 +929,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
       rows.push(resetRow);
     };
 
-    for (const [type, label] of Object.entries(WIDGET_LABELS)) {
+    for (const [type, label] of Object.entries(widgetLabels())) {
       const row = new Adw.ButtonRow({title: `Add ${label}`});
       row.connect('activated', () => {
         this._layout.widgets.push(this._newWidget(type));
