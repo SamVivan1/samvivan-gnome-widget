@@ -2,6 +2,7 @@ import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
+import Soup from 'gi://Soup';
 import St from 'gi://St';
 
 import { activeLyricIndex } from '../../lib/lyrics.js';
@@ -148,6 +149,49 @@ const LineProgress = GObject.registerClass(
 		};
 	});
 
+const LyricStack = GObject.registerClass(
+	class LyricStack extends St.Widget {
+		_init(minHeight) {
+			super._init({
+				style_class: 'widget-media-lyric-area',
+				x_expand: true,
+				x_align: Clutter.ActorAlign.CENTER,
+				y_expand: false,
+				y_align: Clutter.ActorAlign.CENTER,
+				layout_manager: new Clutter.FixedLayout(),
+			});
+
+			this._minHeight = minHeight;
+		};
+
+		vfunc_get_preferred_height(forWidth) {
+			return [this._minHeight, this._minHeight];
+		};
+
+		vfunc_allocate(box) {
+			const width = box.x2 - box.x1;
+			const [, height] = this.get_preferred_height(width);
+
+			const childBox = new Clutter.ActorBox({
+				x1: box.x1,
+				y1: box.y1,
+				x2: box.x1 + width,
+				y2: box.y1 + height,
+			});
+
+			this.set_allocation(childBox);
+
+			for (const child of this.get_children()) {
+				if (child.is_finalized?.()) {
+					continue;
+				};
+
+				child.allocate(childBox);
+			};
+		};
+	}
+);
+
 const MediaView = GObject.registerClass(
 	class MediaView extends St.BoxLayout {
 		_init({createLabel, theme, settings, media, animate}) {
@@ -165,6 +209,8 @@ const MediaView = GObject.registerClass(
 			this._animate = animate !== false;
 			this._timerId = 0;
 			this._artKey = null;
+			this._artSeq = 0;
+			this._artSession = null;
 			this._playing = false;
 			this._line = -1;
 			this._lyricTransitioning = false;
@@ -206,14 +252,7 @@ const MediaView = GObject.registerClass(
 			info.add_child(this._artist);
 			main.add_child(info);
 
-			const lyricArea = new St.BoxLayout({
-				orientation: Clutter.Orientation.VERTICAL,
-				style_class: 'widget-media-lyric-area',
-				x_expand: true,
-				x_align: Clutter.ActorAlign.CENTER,
-				y_expand: true,
-				y_align: Clutter.ActorAlign.CENTER,
-			});
+			const lyricArea = new LyricStack(84);
 
 			this._visualizer = new BarVisualizer(accent);
 			this._visualizer.setAnimate(this._animate);
@@ -224,6 +263,7 @@ const MediaView = GObject.registerClass(
 				orientation: Clutter.Orientation.VERTICAL,
 				style_class: 'widget-media-lyric-overlay',
 				x_expand: true,
+				y_expand: true,
 				y_align: Clutter.ActorAlign.CENTER,
 			});
 
@@ -282,46 +322,59 @@ const MediaView = GObject.registerClass(
 					return GLib.SOURCE_REMOVE;
 				};
 
-				this.update();
-				this._visualizer?.queue_repaint();
-				this._scheduleTick();
+				try {
+					this.update();
+					this._visualizer?.queue_repaint();
+					this._scheduleTick();
+				} catch (error) {
+					this._scheduleTick();
+				};
+
 				return GLib.SOURCE_REMOVE;
 			});
 		};
 
 		_crossfadeLyric(newText, isNext = false) {
-			if (this._lyricTransitioning) return;
+			if (this._lyricTransitioning) {
+				return;
+			};
 
 			const target = isNext ? this._lyricNext : this._lyric;
-			const other = isNext ? this._lyric : this._lyricNext;
 
-			if (target.text === newText) return;
+			if (target.text === newText) {
+				return;
+			};
+
+			if (!this._animate) {
+				target.text = newText;
+				return;
+			};
 
 			this._lyricTransitioning = true;
 
-			const fadeOut = new Clutter.Animation({
-				duration: 200,
-				easing: Clutter.AnimationMode.EASE_OUT_QUAD,
-				target: target,
-				from_alpha: 255,
-				to_alpha: 0,
-			});
 
-			fadeOut.connect('completed', () => {
-				target.text = newText;
-				const fadeIn = new Clutter.Animation({
-					duration: 250,
-					easing: Clutter.AnimationMode.EASE_OUT_QUAD,
-					target: target,
-					from_alpha: 0,
-					to_alpha: 255,
-				});
-				fadeIn.connect('completed', () => {
-					this._lyricTransitioning = false;
-				});
-				fadeIn.start();
+			target.ease({
+				opacity: 0,
+				duration: 160,
+				mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+				onComplete: () => {
+					if (!target || target.is_finalized?.()) {
+						this._lyricTransitioning = false;
+						return;
+					};
+
+					target.text = newText;
+
+					target.ease({
+						opacity: 255,
+						duration: 220,
+						mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+						onComplete: () => {
+							this._lyricTransitioning = false;
+						},
+					});
+				},
 			});
-			fadeOut.start();
 		};
 
 		update() {
@@ -391,19 +444,35 @@ const MediaView = GObject.registerClass(
 				const current = index >= 0 ? lines[index]?.text ?? '' : '';
 				const next = index + 1 < lines.length ? lines[index + 1]?.text ?? '' : '';
 
+				this._lyric.style_class = 'widget-media-lyric-main';
 				this._crossfadeLyric(current, false);
 				this._crossfadeLyric(next, true);
+				this._lyricNext.visible = next.length > 0;
 				return;
 			};
 
-			if (lyrics.plainText) {
-				this._crossfadeLyric('No synced lyrics', false);
-				this._crossfadeLyric('', true);
+			const plain = String(lyrics.plainText ?? '').trim();
+
+			if (plain) {
+				this._setPlainLyrics(plain);
 				return;
 			};
 
 			this._crossfadeLyric('No lyrics found', false);
 			this._crossfadeLyric('', true);
+		};
+
+		_setPlainLyrics(plain) {
+			const text = plain.split('\n').map(line => line.trim()).filter(line => line.length > 0).join('\n');
+
+			if (text === this._lyric.text) {
+				return;
+			};
+
+			this._crossfadeLyric(text, false);
+
+			this._lyric.style_class = 'widget-media-lyric-main widget-media-lyric-plain';
+			this._lyricNext.visible = false;
 		};
 
 		_setLyrics(current, next) {
@@ -424,24 +493,109 @@ const MediaView = GObject.registerClass(
 
 			this._artKey = key;
 
-			let gicon = null;
+			if (!key) {
+				this._clearArt();
+				return;
+			};
+
+			if (key.startsWith('file://')) {
+				this._setArt(GLib.filename_from_uri(key)[0]);
+				return;
+			};
+
+			if (key.startsWith('/')) {
+				this._setArt(key);
+				return;
+			};
+
+			if (key.startsWith('http://') || key.startsWith('https://')) {
+				this._loadRemoteArt(key);
+				return;
+			};
+
+			this._clearArt();
+		};
+
+		_setArt(path) {
+			if (!GLib.file_test(path, GLib.FileTest.EXISTS)) {
+				this._clearArt();
+				return;
+			};
+
+			const uri = GLib.filename_to_uri(path, null)[0];
+
+			this._artIcon.visible = false;
+			this._artWrap.style = `background-image: url("${uri}");`;
+		};
+
+		_clearArt() {
+			this._artIcon.visible = true;
+			this._artWrap.style = '';
+			this._artIcon.icon_name = 'audio-x-generic-symbolic';
+			this._artIcon.gicon = null;
+		};
+
+		_artCachePath(uri) {
+			const dir = GLib.build_filenamev([GLib.get_user_cache_dir(), 'desktop-widget', 'art']);
+			const name = GLib.compute_checksum_for_string(GLib.ChecksumType.SHA256, uri, -1);
+
+			return GLib.build_filenamev([dir, name]);
+		};
+
+		_loadRemoteArt(uri) {
+			const seq = ++this._artSeq;
+			const path = this._artCachePath(uri);
+
+
+			if (GLib.file_test(path, GLib.FileTest.EXISTS)) {
+				this._setArt(path);
+				return;
+			};
+
+			this._artSession = this._artSession ?? new Soup.Session({timeout: 20});
+
+			let message;
 
 			try {
-				if (key.startsWith('file://')) {
-					gicon = Gio.icon_new_for_string(GLib.filename_from_uri(key)[0]);
-				} else if (key.startsWith('/')) {
-					gicon = Gio.icon_new_for_string(key);
-				};
+				message = Soup.Message.new('GET', uri);
 			} catch {
-				gicon = null;
+				return;
 			};
 
-			if (gicon) {
-				this._artIcon.gicon = gicon;
-			} else {
-				this._artIcon.gicon = null;
-				this._artIcon.icon_name = 'audio-x-generic-symbolic';
+			if (!message) {
+				return;
 			};
+
+			this._artSession.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (session, result) => {
+
+				if (seq !== this._artSeq || !message || message.is_finalized?.()) {
+					return;
+				};
+
+				if (message.get_status() !== Soup.Status.OK) {
+					return;
+				};
+
+				let bytes;
+
+				try {
+					bytes = session.send_and_read_finish(result);
+				} catch (error) {
+					return;
+				};
+
+
+				try {
+					GLib.mkdir_with_parents(GLib.path_get_dirname(path), 0o755);
+
+					if (!GLib.file_set_contents(path, bytes.get_data())) {
+						return;
+					};
+
+					this._setArt(path);
+				} catch (error) {
+				};
+			});
 		};
 	});
 
