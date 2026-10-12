@@ -423,8 +423,13 @@ const MediaView = GObject.registerClass(
 
 			const lyrics = view.lyrics ?? {};
 
-			if (!view.available || !view.title) {
-				this._lyricView.setMessage('');
+			if (!view.available) {
+				this._lyricView.setMessage('No media player detected');
+				return;
+			};
+
+			if (!view.title) {
+				this._lyricView.setMessage('Nothing playing');
 				return;
 			};
 
