@@ -39,6 +39,7 @@ const BarVisualizer = GObject.registerClass(
 			super._init({
 				style_class: 'widget-media-visualizer',
 				x_expand: true,
+				y_expand: true,
 			});
 
 			this._rgb = hexToRgb(color);
@@ -149,49 +150,6 @@ const LineProgress = GObject.registerClass(
 		};
 	});
 
-const LyricStack = GObject.registerClass(
-	class LyricStack extends St.Widget {
-		_init(minHeight) {
-			super._init({
-				style_class: 'widget-media-lyric-area',
-				x_expand: true,
-				x_align: Clutter.ActorAlign.CENTER,
-				y_expand: false,
-				y_align: Clutter.ActorAlign.CENTER,
-				layout_manager: new Clutter.FixedLayout(),
-			});
-
-			this._minHeight = minHeight;
-		};
-
-		vfunc_get_preferred_height(forWidth) {
-			return [this._minHeight, this._minHeight];
-		};
-
-		vfunc_allocate(box) {
-			const width = box.x2 - box.x1;
-			const [, height] = this.get_preferred_height(width);
-
-			const childBox = new Clutter.ActorBox({
-				x1: box.x1,
-				y1: box.y1,
-				x2: box.x1 + width,
-				y2: box.y1 + height,
-			});
-
-			this.set_allocation(childBox);
-
-			for (const child of this.get_children()) {
-				if (child.is_finalized?.()) {
-					continue;
-				};
-
-				child.allocate(childBox);
-			};
-		};
-	}
-);
-
 const MediaView = GObject.registerClass(
 	class MediaView extends St.BoxLayout {
 		_init({createLabel, theme, settings, media, animate}) {
@@ -213,15 +171,14 @@ const MediaView = GObject.registerClass(
 			this._artSession = null;
 			this._playing = false;
 			this._line = -1;
-			this._lyricTransitioning = false;
 
 			const accent = theme?.accent || '#3584e4';
 
 			const main = new St.BoxLayout({
-				orientation: Clutter.Orientation.VERTICAL,
+				orientation: Clutter.Orientation.HORIZONTAL,
 				style_class: 'widget-media-main',
 				x_expand: true,
-				x_align: Clutter.ActorAlign.CENTER,
+				y_expand: true,
 			});
 
 			this._artWrap = new St.Bin({
@@ -240,49 +197,53 @@ const MediaView = GObject.registerClass(
 				orientation: Clutter.Orientation.VERTICAL,
 				style_class: 'widget-media-info',
 				x_expand: true,
-				x_align: Clutter.ActorAlign.CENTER,
+				y_align: Clutter.ActorAlign.CENTER,
 			});
 
 			this._title = createLabel('', 'widget-media-title', `color: ${theme.text};`);
 			this._artist = createLabel('', 'widget-media-artist', `color: ${theme.muted};`);
-			this._title.x_align = Clutter.ActorAlign.CENTER;
-			this._artist.x_align = Clutter.ActorAlign.CENTER;
 
 			info.add_child(this._title);
 			info.add_child(this._artist);
-			main.add_child(info);
 
-			const lyricArea = new LyricStack(84);
+			this._lyricArea = new St.Widget({
+				style_class: 'widget-media-lyric-area',
+				x_expand: true,
+				layout_manager: new Clutter.BinLayout(),
+			});
 
 			this._visualizer = new BarVisualizer(accent);
 			this._visualizer.setAnimate(this._animate);
-			this._visualizer.style_class = 'widget-media-visualizer-bg';
-			lyricArea.add_child(this._visualizer);
+			this._visualizer.add_style_class_name('widget-media-visualizer-bg');
 
 			this._lyricOverlay = new St.BoxLayout({
 				orientation: Clutter.Orientation.VERTICAL,
 				style_class: 'widget-media-lyric-overlay',
 				x_expand: true,
-				y_expand: true,
+				x_align: Clutter.ActorAlign.FILL,
 				y_align: Clutter.ActorAlign.CENTER,
 			});
 
-			this._lyric = createLabel('', 'widget-media-lyric', `color: ${theme.text};`);
-			this._lyricNext = createLabel('', 'widget-media-lyric-next', `color: ${theme.muted};`);
+			this._lyric = createLabel('', 'widget-media-lyric-main', `color: ${theme.text};`);
+			this._lyricNext = createLabel('', 'widget-media-lyric-sub', `color: ${theme.muted};`);
+			this._lyric.x_expand = true;
+			this._lyricNext.x_expand = true;
 			this._lyric.x_align = Clutter.ActorAlign.CENTER;
 			this._lyricNext.x_align = Clutter.ActorAlign.CENTER;
-			this._lyric.style_class = 'widget-media-lyric-main';
-			this._lyricNext.style_class = 'widget-media-lyric-sub';
+			this._lyric.clutter_text.line_wrap = true;
+			this._lyricNext.clutter_text.line_wrap = true;
 
 			this._lyricOverlay.add_child(this._lyric);
 			this._lyricOverlay.add_child(this._lyricNext);
-			lyricArea.add_child(this._lyricOverlay);
+
+			this._lyricArea.add_child(this._visualizer);
+			this._lyricArea.add_child(this._lyricOverlay);
+			info.add_child(this._lyricArea);
 
 			this._progress = new LineProgress(accent, theme);
-			this._progress.style_class = 'widget-media-progress';
-			lyricArea.add_child(this._progress);
+			info.add_child(this._progress);
 
-			main.add_child(lyricArea);
+			main.add_child(info);
 			this.add_child(main);
 
 			this.update();
@@ -335,45 +296,24 @@ const MediaView = GObject.registerClass(
 		};
 
 		_crossfadeLyric(newText, isNext = false) {
-			if (this._lyricTransitioning) {
-				return;
-			};
-
 			const target = isNext ? this._lyricNext : this._lyric;
 
 			if (target.text === newText) {
 				return;
 			};
 
-			if (!this._animate) {
-				target.text = newText;
+			target.text = newText;
+
+			if (!this._animate || !target.mapped) {
+				target.opacity = 255;
 				return;
 			};
 
-			this._lyricTransitioning = true;
-
-
+			target.opacity = 0;
 			target.ease({
-				opacity: 0,
-				duration: 160,
+				opacity: 255,
+				duration: 180,
 				mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-				onComplete: () => {
-					if (!target || target.is_finalized?.()) {
-						this._lyricTransitioning = false;
-						return;
-					};
-
-					target.text = newText;
-
-					target.ease({
-						opacity: 255,
-						duration: 220,
-						mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-						onComplete: () => {
-							this._lyricTransitioning = false;
-						},
-					});
-				},
 			});
 		};
 
@@ -442,46 +382,40 @@ const MediaView = GObject.registerClass(
 				const position = view.positionUs / 1000000 + this._offsetSeconds();
 				const index = activeLyricIndex(lines, Math.max(0, position));
 				const current = index >= 0 ? lines[index]?.text ?? '' : '';
-				const next = index + 1 < lines.length ? lines[index + 1]?.text ?? '' : '';
+				const next = index >= 0 && index + 1 < lines.length ? lines[index + 1]?.text ?? '' : '';
 
 				this._lyric.style_class = 'widget-media-lyric-main';
 				this._crossfadeLyric(current, false);
 				this._crossfadeLyric(next, true);
-				this._lyricNext.visible = next.length > 0;
 				return;
 			};
 
-			const plain = String(lyrics.plainText ?? '').trim();
+			const plain = lyrics.plainText ?? '';
 
 			if (plain) {
 				this._setPlainLyrics(plain);
 				return;
 			};
 
+			this._lyric.style_class = 'widget-media-lyric-main';
 			this._crossfadeLyric('No lyrics found', false);
 			this._crossfadeLyric('', true);
 		};
 
-		_setPlainLyrics(plain) {
-			const text = plain.split('\n').map(line => line.trim()).filter(line => line.length > 0).join('\n');
-
-			if (text === this._lyric.text) {
-				return;
-			};
-
-			this._crossfadeLyric(text, false);
+		_setPlainLyrics(text) {
+			const clean = text.split('\n').map(line => line.trim()).filter(Boolean).slice(0, 10).join('\n');
 
 			this._lyric.style_class = 'widget-media-lyric-main widget-media-lyric-plain';
-			this._lyricNext.visible = false;
+			this._lyricNext.style_class = 'widget-media-lyric-sub';
+			this._crossfadeLyric(clean, false);
+			this._crossfadeLyric('', true);
 		};
 
 		_setLyrics(current, next) {
-			if (current !== this._lyric.text) {
-				this._crossfadeLyric(current, false);
-			};
-			if (next !== this._lyricNext.text) {
-				this._crossfadeLyric(next, true);
-			};
+			this._lyric.style_class = 'widget-media-lyric-main';
+			this._lyricNext.style_class = 'widget-media-lyric-sub';
+			this._crossfadeLyric(current, false);
+			this._crossfadeLyric(next, true);
 		};
 
 		_updateArt(artUrl) {
@@ -522,10 +456,11 @@ const MediaView = GObject.registerClass(
 				return;
 			};
 
-			const uri = GLib.filename_to_uri(path, null)[0];
+			const uri = GLib.filename_to_uri(path, null);
 
 			this._artIcon.visible = false;
-			this._artWrap.style = `background-image: url("${uri}");`;
+			this._artIcon.gicon = null;
+			this._artWrap.style = `background-image: url(${JSON.stringify(uri)});`;
 		};
 
 		_clearArt() {
@@ -545,7 +480,6 @@ const MediaView = GObject.registerClass(
 		_loadRemoteArt(uri) {
 			const seq = ++this._artSeq;
 			const path = this._artCachePath(uri);
-
 
 			if (GLib.file_test(path, GLib.FileTest.EXISTS)) {
 				this._setArt(path);
@@ -567,7 +501,6 @@ const MediaView = GObject.registerClass(
 			};
 
 			this._artSession.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (session, result) => {
-
 				if (seq !== this._artSeq || !message || message.is_finalized?.()) {
 					return;
 				};
@@ -580,10 +513,9 @@ const MediaView = GObject.registerClass(
 
 				try {
 					bytes = session.send_and_read_finish(result);
-				} catch (error) {
+				} catch {
 					return;
 				};
-
 
 				try {
 					GLib.mkdir_with_parents(GLib.path_get_dirname(path), 0o755);
@@ -593,7 +525,8 @@ const MediaView = GObject.registerClass(
 					};
 
 					this._setArt(path);
-				} catch (error) {
+				} catch {
+					// ignore cache write failures, the fallback icon stays
 				};
 			});
 		};
