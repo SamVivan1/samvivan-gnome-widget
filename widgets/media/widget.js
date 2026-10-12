@@ -25,14 +25,13 @@ const LineProgress = GObject.registerClass(
 			super._init({
 				style_class: 'widget-media-progress',
 				x_expand: true,
-				layout_manager: new Clutter.BinLayout(),
+				layout_manager: new Clutter.BoxLayout({
+					orientation: Clutter.Orientation.HORIZONTAL,
+				}),
 			});
 
 			this._fill = new St.Widget({
 				style_class: 'widget-media-progress-fill',
-				x_align: Clutter.ActorAlign.START,
-				y_align: Clutter.ActorAlign.FILL,
-				x_expand: false,
 				y_expand: true,
 			});
 
@@ -52,6 +51,10 @@ const LineProgress = GObject.registerClass(
 		};
 
 		_sync() {
+			if (this.width <= 0) {
+				return;
+			};
+
 			this._fill.set_width(Math.max(0, Math.round(this.width * this._ratio)));
 		};
 	});
