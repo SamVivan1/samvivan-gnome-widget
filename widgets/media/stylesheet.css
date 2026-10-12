@@ -49,7 +49,12 @@
 	height: 3px;
 	border-radius: 1.5px;
 	margin-top: 2px;
-	opacity: 0.6;
+	background-color: rgba(255, 255, 255, 0.18);
+}
+
+.widget-media-progress-fill {
+	background-color: #ffffff;
+	border-radius: 1.5px;
 }
 
 .widget-media-lyrics {

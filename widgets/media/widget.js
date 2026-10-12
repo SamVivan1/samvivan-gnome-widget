@@ -19,73 +19,40 @@ const ACTIVE_TICK_MS = 100;
 const IDLE_TICK_MS = 500;
 const LYRIC_SCROLL_MS = 380;
 
-function hexToRgb(hex) {
-	const match = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim());
-
-	if (!match) {
-		return [0.21, 0.52, 0.89];
-	};
-
-	const value = parseInt(match[1], 16);
-
-	return [
-		((value >> 16) & 0xff) / 255,
-		((value >> 8) & 0xff) / 255,
-		(value & 0xff) / 255,
-	];
-};
-
 const LineProgress = GObject.registerClass(
-	class LineProgress extends St.DrawingArea {
-		_init(color) {
+	class LineProgress extends St.Widget {
+		_init() {
 			super._init({
 				style_class: 'widget-media-progress',
 				x_expand: true,
+				layout_manager: new Clutter.BinLayout(),
 			});
 
-			this._rgb = hexToRgb(color);
+			this._fill = new St.Widget({
+				style_class: 'widget-media-progress-fill',
+				x_align: Clutter.ActorAlign.START,
+				y_align: Clutter.ActorAlign.FILL,
+				x_expand: false,
+				y_expand: true,
+			});
+
+			this.add_child(this._fill);
 			this._ratio = 0;
+
+			this.connect('notify::allocation', () => this._sync());
 		};
 
 		setRatio(ratio) {
 			const value = Number.isFinite(ratio) ? Math.max(0, Math.min(1, ratio)) : 0;
 
-			if (Math.abs(value - this._ratio) > 0.001) {
+			if (Math.abs(value - this._ratio) > 0.0005) {
 				this._ratio = value;
-				this.queue_repaint();
+				this._sync();
 			};
 		};
 
-		vfunc_repaint() {
-			const cr = this.get_context();
-			const [width, height] = this.get_surface_size();
-
-			if (width <= 0 || height <= 0) {
-				cr.$dispose();
-				return;
-			};
-
-			const radius = height / 2;
-
-			cr.setSourceRGBA(1, 1, 1, 0.16);
-			cr.newPath();
-			cr.arc(radius, radius, radius, 0, Math.PI * 2);
-			cr.arc(width - radius, radius, radius, 0, Math.PI * 2);
-			cr.rectangle(radius, 0, width - 2 * radius, height);
-			cr.fill();
-
-			if (this._ratio > 0) {
-				const filled = Math.max(height, width * this._ratio);
-
-				cr.setSourceRGBA(this._rgb[0], this._rgb[1], this._rgb[2], 1);
-				cr.newPath();
-				cr.arc(radius, radius, radius, 0, Math.PI * 2);
-				cr.arc(Math.max(radius, filled - radius), radius, radius, 0, Math.PI * 2);
-				cr.rectangle(radius, 0, Math.max(0, filled - 2 * radius), height);
-				cr.fill();
-			};
-
-			cr.$dispose();
+		_sync() {
+			this._fill.set_width(Math.max(0, Math.round(this.width * this._ratio)));
 		};
 	});
 
@@ -305,8 +272,6 @@ const MediaView = GObject.registerClass(
 			this._artSession = null;
 			this._playing = false;
 
-			const accent = theme?.accent || '#3584e4';
-
 			const main = new St.BoxLayout({
 				orientation: Clutter.Orientation.HORIZONTAL,
 				style_class: 'widget-media-main',
@@ -340,7 +305,7 @@ const MediaView = GObject.registerClass(
 			left.add_child(this._title);
 			left.add_child(this._artist);
 
-			this._progress = new LineProgress(accent);
+			this._progress = new LineProgress();
 			left.add_child(this._progress);
 
 			this._lyricView = new LyricView();
