@@ -3,80 +3,46 @@
 }
 
 .widget-media-main {
-	spacing: 16px;
+	spacing: 18px;
+}
+
+.widget-media-left {
+	width: 132px;
+	spacing: 6px;
 }
 
 .widget-media-art {
-	width: 148px;
-	height: 148px;
-	border-radius: 18px;
+	width: 124px;
+	height: 124px;
+	border-radius: 16px;
+	background-color: rgba(255, 255, 255, 0.10);
 	background-size: cover;
 	background-position: center center;
 	background-repeat: no-repeat;
-	background-gradient-direction: vertical;
-	background-gradient-start: rgba(255, 255, 255, 0.16);
-	background-gradient-end: rgba(255, 255, 255, 0.06);
-	border: 1px solid rgba(255, 255, 255, 0.14);
+	border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .widget-media-art:hover {
-	border-color: rgba(255, 255, 255, 0.26);
+	border-color: rgba(255, 255, 255, 0.24);
 }
 
 .widget-media-art-icon {
-	icon-size: 56px;
-	color: rgba(255, 255, 255, 0.72);
-}
-
-.widget-media-info {
-	spacing: 6px;
-	min-width: 0;
+	icon-size: 48px;
+	color: rgba(255, 255, 255, 0.6);
 }
 
 .widget-media-title {
+	font-size: 15px;
 	font-weight: 700;
-	font-size: 17px;
+	text-align: center;
 	ellipsize: end;
 }
 
 .widget-media-artist {
-	font-size: 13px;
+	font-size: 12px;
+	opacity: 0.8;
+	text-align: center;
 	ellipsize: end;
-	opacity: 0.85;
-}
-
-.widget-media-lyric-area {
-	min-height: 54px;
-	width: 100%;
-}
-
-.widget-media-visualizer-bg {
-	opacity: 0.28;
-}
-
-.widget-media-lyric-overlay {
-	padding: 2px 4px;
-}
-
-.widget-media-lyric-main {
-	font-size: 15px;
-	font-weight: 600;
-	line-height: 1.3;
-	text-align: center;
-}
-
-.widget-media-lyric-plain {
-	font-size: 12px;
-	font-weight: 400;
-	line-height: 1.35;
-	opacity: 0.85;
-}
-
-.widget-media-lyric-sub {
-	font-size: 12px;
-	line-height: 1.25;
-	text-align: center;
-	opacity: 0.6;
 }
 
 .widget-media-progress {
@@ -84,4 +50,40 @@
 	border-radius: 1.5px;
 	margin-top: 2px;
 	opacity: 0.6;
+}
+
+.widget-media-lyrics {
+	padding: 2px 0;
+}
+
+.widget-media-lyric-inner {
+	padding: 0 8px;
+}
+
+.widget-media-lyric-line {
+	font-size: 15px;
+	font-weight: 600;
+	line-height: 1.35;
+	text-align: center;
+	color: rgba(255, 255, 255, 0.5);
+	padding: 7px 0;
+}
+
+.widget-media-lyric-line-active {
+	color: rgba(255, 255, 255, 1);
+}
+
+.widget-media-lyric-plain {
+	font-size: 12px;
+	font-weight: 400;
+	line-height: 1.4;
+	text-align: center;
+	color: rgba(255, 255, 255, 0.8);
+}
+
+.widget-media-lyric-message {
+	font-size: 14px;
+	font-weight: 500;
+	text-align: center;
+	color: rgba(255, 255, 255, 0.55);
 }
