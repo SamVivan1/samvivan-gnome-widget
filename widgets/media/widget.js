@@ -2,6 +2,7 @@ import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
+import Pango from 'gi://Pango';
 import Soup from 'gi://Soup';
 import St from 'gi://St';
 
@@ -111,13 +112,13 @@ const LyricView = GObject.registerClass(
 
 			this._labels = [];
 			this._offsets = null;
-			this._measureWidth = -1;
 			this._active = -1;
 			this._signature = null;
 			this._mode = 'empty';
 			this._animate = true;
 
-			this.connect('notify::height', () => this._reflow());
+			this.connect('notify::allocation', () => this._reflow());
+			this._inner.connect('notify::allocation', () => this._reflow());
 		};
 
 		setAnimate(animate) {
@@ -130,7 +131,6 @@ const LyricView = GObject.registerClass(
 			this._inner.destroy_all_children();
 			this._labels = [];
 			this._offsets = null;
-			this._measureWidth = -1;
 			this._active = -1;
 		};
 
@@ -139,10 +139,12 @@ const LyricView = GObject.registerClass(
 				text,
 				style_class: styleClass,
 				x_expand: true,
-				x_align: Clutter.ActorAlign.CENTER,
+				x_align: Clutter.ActorAlign.FILL,
 			});
 
 			label.clutter_text.line_wrap = true;
+			label.clutter_text.line_wrap_mode = Pango.WrapMode.WORD_CHAR;
+			label.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
 
 			return label;
 		};
@@ -204,21 +206,28 @@ const LyricView = GObject.registerClass(
 		};
 
 		_ensureOffsets() {
-			const width = this._measureWidth > 0 ? this._measureWidth : 300;
-
 			if (this._offsets) {
 				return;
 			};
 
+			const last = this._labels[this._labels.length - 1];
+			const lastBox = last ? last.get_allocation_box() : null;
+			const allocated = lastBox && lastBox.y2 - lastBox.y1 > 0;
+
+			if (allocated) {
+				this._offsets = this._labels.map(label => label.get_allocation_box().y1);
+				return;
+			};
+
+			const width = this._inner.width > 0 ? this._inner.width : (this.width > 0 ? this.width : 300);
 			let acc = 0;
 
 			this._offsets = this._labels.map(label => {
 				const offset = acc;
+
 				acc += label.get_preferred_height(width)[1];
 				return offset;
 			});
-
-			this._total = acc;
 		};
 
 		_apply(index, animate) {
@@ -228,12 +237,15 @@ const LyricView = GObject.registerClass(
 				return;
 			};
 
-			this._measureWidth = this.width || this._measureWidth;
 			this._offsets = null;
 			this._ensureOffsets();
 
+			const label = this._labels[index];
+			const box = label ? label.get_allocation_box() : null;
+			const height = box && box.y2 - box.y1 > 0
+				? box.y2 - box.y1
+				: (label?.get_preferred_height(this._inner.width || this.width || 300)[1] ?? 0);
 			const start = this._offsets[index] ?? 0;
-			const height = this._labels[index]?.get_preferred_height(this._measureWidth)[1] ?? 0;
 			const target = Math.round(viewHeight / 2 - (start + height / 2));
 
 			this._inner.remove_all_transitions();
