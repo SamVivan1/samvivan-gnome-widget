@@ -16,11 +16,14 @@ import {
 	FALLBACK_WIDGET_HEIGHT,
 	SLOT_SPACING,
 	HORIZONTAL_GAP,
+	TEXT_SLOT_LIMIT,
 	deviceKey,
 	fitName,
 	mergeDevices,
 	bestLayout,
 	computeLayout,
+	layoutMetrics,
+	percentTextRatio,
 } from '../../lib/batteryDevices.js';
 
 export const type = 'battery';
@@ -1094,29 +1097,33 @@ export function reconcile({body, widget, createLabel, theme, sizeForWidget, anim
 	};
 
 	const [width, height] = sizeForWidget ? sizeForWidget(widget) : [FALLBACK_WIDGET_WIDTH, FALLBACK_WIDGET_HEIGHT];
-	const availWidth = Math.max(MIN_GAUGE_SIZE, width - WIDGET_PADDING - LAYOUT_MARGIN * 2);
-	const availHeight = Math.max(MIN_GAUGE_SIZE, height - WIDGET_PADDING - LAYOUT_MARGIN * 2);
-	const textRatio = targets.reduce((max, device) => Math.max(max, horizontalTextRatio(device)), 0);
+	const metrics = layoutMetrics(count);
+	const availWidth = Math.max(MIN_GAUGE_SIZE, width - metrics.padding - metrics.margin * 2);
+	const availHeight = Math.max(MIN_GAUGE_SIZE, height - metrics.padding - metrics.margin * 2);
+	const textRatio = count > TEXT_SLOT_LIMIT
+		? percentTextRatio()
+		: targets.reduce((max, device) => Math.max(max, horizontalTextRatio(device)), 0);
 	const layout = computeLayout(count, availWidth, availHeight, textRatio);
 	const {cols, rows: rowCount, size, horizontal} = layout;
+	const gap = layout.gap ?? metrics.gap;
 
-	const cellWidth = (availWidth - (cols - 1) * SLOT_GAP) / cols;
-	const cellHeight = (availHeight - (rowCount - 1) * SLOT_GAP) / rowCount;
-	const pitchX = cellWidth + SLOT_GAP;
-	const pitchY = cellHeight + SLOT_GAP;
-	const trayWidth = width - WIDGET_PADDING;
-	const trayHeight = height - WIDGET_PADDING;
+	const cellWidth = (availWidth - (cols - 1) * gap) / cols;
+	const cellHeight = (availHeight - (rowCount - 1) * gap) / rowCount;
+	const pitchX = cellWidth + gap;
+	const pitchY = cellHeight + gap;
+	const trayWidth = width - metrics.padding;
+	const trayHeight = height - metrics.padding;
 
 	const cellCenter = index => {
 		const row = Math.floor(index / cols);
 		const column = index % cols;
 		const rowSlots = Math.min(cols, count - row * cols);
-		const rowBlockWidth = rowSlots * cellWidth + Math.max(0, rowSlots - 1) * SLOT_GAP;
-		const rowStartX = LAYOUT_MARGIN + (availWidth - rowBlockWidth) / 2;
+		const rowBlockWidth = rowSlots * cellWidth + Math.max(0, rowSlots - 1) * gap;
+		const rowStartX = metrics.margin + (availWidth - rowBlockWidth) / 2;
 
 		return [
 			rowStartX + column * pitchX + cellWidth / 2,
-			LAYOUT_MARGIN + row * pitchY + cellHeight / 2,
+			metrics.margin + row * pitchY + cellHeight / 2,
 		];
 	};
 

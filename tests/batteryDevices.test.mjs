@@ -76,3 +76,31 @@ test('fitName truncates with an ellipsis', async () => {
 	assert.equal(fitName('MX Master 3S', 6), 'MX Ma…');
 	assert.equal(fitName('AB', 1), 'A');
 });
+
+test('layoutMetrics tightens gaps and margins past four devices', async () => {
+	const {layoutMetrics} = await import('../lib/batteryDevices.js');
+
+	assert.deepEqual(layoutMetrics(6), {gap: 8, padding: 16, margin: 10});
+	assert.deepEqual(layoutMetrics(3), {gap: 12, padding: 30, margin: 18});
+});
+
+test('computeLayout pins exactly four columns past four devices', async () => {
+	const {computeLayout} = await import('../lib/batteryDevices.js');
+	const availWidth = 454 - 16 - 10 * 2;
+	const availHeight = 220 - 16 - 10 * 2;
+
+	for (const count of [5, 6, 7, 8]) {
+		const layout = computeLayout(count, availWidth, availHeight, 0.8);
+
+		assert.equal(layout.cols, 4, `count=${count} should use 4 columns`);
+		assert.equal(layout.rows, 2, `count=${count} should use 2 rows`);
+		assert.equal(layout.gap, 8, `count=${count} should use the compact gap`);
+	};
+});
+
+test('percentTextRatio covers a three-digit percentage', async () => {
+	const {percentTextRatio} = await import('../lib/batteryDevices.js');
+
+	assert.ok(percentTextRatio() >= 4 * 0.64 * 0.27);
+	assert.ok(percentTextRatio() < 1);
+});
