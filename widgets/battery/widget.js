@@ -17,6 +17,7 @@ import {
 	SLOT_SPACING,
 	HORIZONTAL_GAP,
 	deviceKey,
+	fitName,
 	mergeDevices,
 	bestLayout,
 	computeLayout,

@@ -68,3 +68,11 @@ test('computeLayout keeps a single row for up to four devices', () => {
 		assert.equal(layout.rows, 1, `count=${count} should stay on 1 row`);
 	};
 });
+
+test('fitName truncates with an ellipsis', async () => {
+	const {fitName} = await import('../lib/batteryDevices.js');
+
+	assert.equal(fitName('MX Master 3S', 100), 'MX Master 3S');
+	assert.equal(fitName('MX Master 3S', 6), 'MX Ma…');
+	assert.equal(fitName('AB', 1), 'A');
+});
