@@ -117,7 +117,7 @@ Open preferences via: `gnome-extensions prefs desktop-widget@samvivan` or panel 
 - **Caption** – text shown under the face (leave empty to hide; while printing this is replaced by the live state and progress)
 
 ### Music
-- **Show lyrics** – fetch time-synced lyrics from [lrclib.net](https://lrclib.net) and highlight the current line. Lyrics are cached under `~/.cache/desktop-widget/lyrics/`, so each song is downloaded only once
+- **Show lyrics** – fetch time-synced lyrics from [lrclib.net](https://lrclib.net) and highlight the current line. Each lookup sends the track title, artist, album, and duration to lrclib.net. Lyrics are cached under `~/.cache/desktop-widget/lyrics/`, so each song is downloaded only once
 - **Lyrics offset (ms)** – shift the lyric timing (−5000–5000 ms) to line it up with the audio
 - The widget follows whatever app is currently playing over MPRIS (Spotify, Rhythmbox, Firefox, mpv, …), showing title, artist, album art, a progress bar and a decorative bar visualizer. It has no playback controls by design — use your media-control extension or the app itself
 

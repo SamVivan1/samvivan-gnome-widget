@@ -8,6 +8,7 @@ import Soup from 'gi://Soup';
 import { ExtensionPreferences, gettext as _ } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
 import * as Immich from './widgets/photos/immich.js';
+import { fetchSameOrigin } from './lib/http.js';
 
 const LAYOUT_KEY = 'layout-json';
 const EXTENSION_PATH = GLib.path_get_dirname(GLib.filename_from_uri(import.meta.url)[0]);
@@ -270,6 +271,14 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     urlRow.connect('notify::text', () => {
       this._settings.set_string('immich-server-url', urlRow.get_text().trim());
     });
+
+    const applyImmichHttpHint = () => {
+      urlRow.subtitle = urlRow.get_text().trim().toLowerCase().startsWith('http://')
+        ? _('Unencrypted http:// — anyone on the network path can read your API key. Prefer https://')
+        : '';
+    };
+    urlRow.connect('notify::text', applyImmichHttpHint);
+    applyImmichHttpHint();
     immichGroup.add(urlRow);
 
     const keyRow = new Adw.PasswordEntryRow({title: _('API key')});
@@ -508,6 +517,14 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     urlRow.connect('notify::text', () => {
       this._settings.set_string('bambu-endpoint-url', urlRow.get_text().trim());
     });
+
+    const applyHttpHint = () => {
+      urlRow.subtitle = urlRow.get_text().trim().toLowerCase().startsWith('http://')
+        ? _('Unencrypted http:// — anyone on the network path can read your bridge token. Prefer https://')
+        : '';
+    };
+    urlRow.connect('notify::text', applyHttpHint);
+    applyHttpHint();
     group.add(urlRow);
 
     const tokenRow = new Adw.PasswordEntryRow({title: _('Bearer token')});
@@ -559,7 +576,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
     const group = new Adw.PreferencesGroup({
       title: _('Lyrics'),
-      description: _('The Music widget reads what other apps play over MPRIS. Time-synced lyrics are fetched from lrclib.net and cached under ~/.cache/desktop-widget/lyrics.'),
+      description: _('The Music widget reads what other apps play over MPRIS. Time-synced lyrics are fetched from lrclib.net — each lookup sends the track title, artist, album, and duration — and cached under ~/.cache/desktop-widget/lyrics.'),
     });
 
     const showRow = new Adw.SwitchRow({
@@ -749,17 +766,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     button.set_sensitive(false);
 
     const session = new Soup.Session({timeout: 12, user_agent: 'desktop-widget'});
-    const message = Soup.Message.new('GET', `${endpoint}/health`);
-
-    if (!message) {
-      row.subtitle = _('Invalid bridge URL');
-      button.set_sensitive(true);
-      this._toast(_('Invalid bridge URL'));
-      return;
-    };
-
-    message.request_headers.append('Authorization', `Bearer ${token}`);
-    message.request_headers.append('accept', 'application/json');
+    const cancellable = new Gio.Cancellable();
 
     let settled = false;
     const finish = () => {
@@ -769,7 +776,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
     const timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 15, () => {
       if (!settled) {
-        session.abort();
+        cancellable.cancel();
         row.subtitle = _('Connection timed out after 15s');
         this._toast(_('Connection timed out'));
         finish();
@@ -778,7 +785,10 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
       return GLib.SOURCE_REMOVE;
     });
 
-    session.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (source, result) => {
+    fetchSameOrigin(session, 'GET', `${endpoint}/health`, {
+      headers: {'Authorization': `Bearer ${token}`, 'accept': 'application/json'},
+      cancellable,
+    }).then(({bytes, status}) => {
       if (settled) {
         return;
       };
@@ -786,9 +796,6 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
       GLib.source_remove(timeoutId);
 
       try {
-        const bytes = source.send_and_read_finish(result);
-        const status = message.get_status();
-
         if (status !== Soup.Status.OK) {
           row.subtitle = status === Soup.Status.BAD_GATEWAY
             ? _('HTTP 502 — the tunnel is up but the bridge is not running')
@@ -810,6 +817,23 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
       } finally {
         finish();
       };
+    }).catch(error => {
+      if (settled) {
+        return;
+      };
+
+      GLib.source_remove(timeoutId);
+
+      if (String(error.message ?? '').startsWith('invalid URL')) {
+        row.subtitle = _('Invalid bridge URL');
+        this._toast(_('Invalid bridge URL'));
+        finish();
+        return;
+      };
+
+      row.subtitle = _('Connection failed: %s').format(error.message);
+      this._toast(_('Connection failed — see Bambu Lab page'));
+      finish();
     });
   };
 

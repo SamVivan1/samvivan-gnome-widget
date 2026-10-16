@@ -17,707 +17,711 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: extension.js:160
+#: extension.js:161
 msgid "Printer connected"
 msgstr ""
 
-#: extension.js:162
+#: extension.js:163
 msgid "Printer disconnected"
 msgstr ""
 
-#: extension.js:167
+#: extension.js:168
 msgid "Print resumed"
 msgstr ""
 
-#: extension.js:167
+#: extension.js:168
 msgid "Print started"
 msgstr ""
 
-#: extension.js:170
+#: extension.js:171
 msgid "Print paused"
 msgstr ""
 
-#: extension.js:172
+#: extension.js:173
 msgid "Print finished"
 msgstr ""
 
-#: extension.js:174
+#: extension.js:175
 msgid "Print failed"
 msgstr ""
 
-#: extension.js:182
+#: extension.js:183
 msgid "Unknown file"
 msgstr ""
 
-#: extension.js:186
+#: extension.js:187
 msgid "The printer is online."
 msgstr ""
 
-#: extension.js:188
+#: extension.js:189
 msgid "The printer went offline — check the bridge and LAN mode."
 msgstr ""
 
-#: extension.js:986
+#: extension.js:995
 msgid "Desktop Widgets"
 msgstr ""
 
-#: extension.js:992
+#: extension.js:1001
 msgid "Edit Widgets"
 msgstr ""
 
-#: extension.js:1002
+#: extension.js:1011
 msgid "Hide All Widgets"
 msgstr ""
 
-#: extension.js:1015 prefs.js:956
+#: extension.js:1024 prefs.js:980
 msgid "Add %s"
 msgstr ""
 
-#: extension.js:1022
+#: extension.js:1031
 msgid "Reset Default Widgets"
 msgstr ""
 
-#: extension.js:1031 prefs.js:205
+#: extension.js:1040 prefs.js:206
 msgid "Donate"
 msgstr ""
 
-#: extension.js:1332 prefs.js:1030
+#: extension.js:1341 prefs.js:1054
 msgid "Remove widget"
 msgstr ""
 
-#: prefs.js:20 widgets/clock/widget.js:8
+#: prefs.js:21 widgets/clock/widget.js:8
 msgid "Clock"
 msgstr ""
 
-#: prefs.js:21 prefs.js:386 widgets/calendar/widget.js:6
+#: prefs.js:22 prefs.js:395 widgets/calendar/widget.js:6
 msgid "Calendar"
 msgstr ""
 
-#: prefs.js:22 widgets/agenda/widget.js:6
+#: prefs.js:23 widgets/agenda/widget.js:6
 msgid "Agenda"
 msgstr ""
 
-#: prefs.js:23 widgets/weather/widget.js:11
+#: prefs.js:24 widgets/weather/widget.js:11
 msgid "Weather"
 msgstr ""
 
-#: prefs.js:24 prefs.js:227 widgets/photos/widget.js:12
+#: prefs.js:25 prefs.js:228 widgets/photos/widget.js:12
 msgid "Photos"
 msgstr ""
 
-#: prefs.js:25 widgets/battery/widget.js:11 widgets/battery/widget.js:59
+#: prefs.js:26 widgets/battery/widget.js:11 widgets/battery/widget.js:59
 msgid "Battery"
 msgstr ""
 
-#: prefs.js:26 prefs.js:497 widgets/bambu/widget.js:17 widgets/bambu/widget.js:1213
+#: prefs.js:27 prefs.js:506 widgets/bambu/widget.js:17 widgets/bambu/widget.js:1213
 msgid "Bambu Lab"
 msgstr ""
 
-#: prefs.js:27 prefs.js:556 widgets/media/widget.js:14 widgets/media/widget.js:375
+#: prefs.js:28 prefs.js:573 widgets/media/widget.js:15 widgets/media/widget.js:377
 msgid "Music"
 msgstr ""
 
-#: prefs.js:73
+#: prefs.js:74
 msgid "Primary monitor"
 msgstr ""
 
-#: prefs.js:82
+#: prefs.js:83
 msgid "Monitor %s"
 msgstr ""
 
-#: prefs.js:86
+#: prefs.js:87
 msgid "%s (%s×%s)"
 msgstr ""
 
-#: prefs.js:112
+#: prefs.js:113
 msgid "General"
 msgstr ""
 
-#: prefs.js:117
+#: prefs.js:118
 msgid "Placement"
 msgstr ""
 
-#: prefs.js:118
+#: prefs.js:119
 msgid "Where the widgets live and how they are positioned."
 msgstr ""
 
-#: prefs.js:124
+#: prefs.js:125
 msgid "Monitor"
 msgstr ""
 
-#: prefs.js:136
+#: prefs.js:137
 msgid "Grid size"
 msgstr ""
 
-#: prefs.js:137
+#: prefs.js:138
 msgid "Snap grid in pixels used while dragging widgets"
 msgstr ""
 
-#: prefs.js:144
+#: prefs.js:145
 msgid "Widget gap"
 msgstr ""
 
-#: prefs.js:145
+#: prefs.js:146
 msgid "Spacing in pixels between widgets and the screen edges"
 msgstr ""
 
-#: prefs.js:152
+#: prefs.js:153
 msgid "Snap to grid"
 msgstr ""
 
-#: prefs.js:153
+#: prefs.js:154
 msgid "Snap widget positions to the grid while dragging"
 msgstr ""
 
-#: prefs.js:160
+#: prefs.js:161
 msgid "Behavior"
 msgstr ""
 
-#: prefs.js:163
+#: prefs.js:164
 msgid "Edit mode"
 msgstr ""
 
-#: prefs.js:164
+#: prefs.js:165
 msgid "Show drag handles and remove buttons on the widgets"
 msgstr ""
 
-#: prefs.js:170
+#: prefs.js:171
 msgid "Hide all widgets"
 msgstr ""
 
-#: prefs.js:171
+#: prefs.js:172
 msgid "Temporarily hide every widget without deleting the layout"
 msgstr ""
 
-#: prefs.js:177
+#: prefs.js:178
 msgid "Widget opacity (%)"
 msgstr ""
 
-#: prefs.js:186
+#: prefs.js:187
 msgid "Top panel"
 msgstr ""
 
-#: prefs.js:187
+#: prefs.js:188
 msgid "Control the Desktop Widget button in the top panel."
 msgstr ""
 
-#: prefs.js:191
+#: prefs.js:192
 msgid "Show panel icon"
 msgstr ""
 
-#: prefs.js:192
+#: prefs.js:193
 msgid "Show the Desktop Widget button in the top panel"
 msgstr ""
 
-#: prefs.js:200
+#: prefs.js:201
 msgid "Support"
 msgstr ""
 
-#: prefs.js:201
+#: prefs.js:202
 msgid "If Desktop Widget is useful, consider supporting its development."
 msgstr ""
 
-#: prefs.js:206
+#: prefs.js:207
 msgid "Support development with a small donation via Ko-fi"
 msgstr ""
 
-#: prefs.js:236
+#: prefs.js:237
 msgid "Display"
 msgstr ""
 
-#: prefs.js:237
+#: prefs.js:238
 msgid "Where the Photos widget gets its images and how often it changes."
 msgstr ""
 
-#: prefs.js:241
+#: prefs.js:242
 msgid "Photo source"
 msgstr ""
 
-#: prefs.js:242
+#: prefs.js:243
 msgid "Immich is used first; local photos are a fallback when unavailable"
 msgstr ""
 
-#: prefs.js:243
+#: prefs.js:244
 msgid "Immich + local (fallback)"
 msgstr ""
 
-#: prefs.js:243
+#: prefs.js:244
 msgid "Immich only"
 msgstr ""
 
-#: prefs.js:243
+#: prefs.js:244
 msgid "Local only"
 msgstr ""
 
-#: prefs.js:252
+#: prefs.js:253
 msgid "Change interval (minutes)"
 msgstr ""
 
-#: prefs.js:264
+#: prefs.js:265
 msgid "Immich"
 msgstr ""
 
-#: prefs.js:265
+#: prefs.js:266
 msgid "Pull random photos from your Immich server. Create an API key under Account Settings → API Keys."
 msgstr ""
 
-#: prefs.js:268
+#: prefs.js:269
 msgid "Server URL"
 msgstr ""
 
-#: prefs.js:275
+#: prefs.js:277
+msgid "Unencrypted http:// — anyone on the network path can read your API key. Prefer https://"
+msgstr ""
+
+#: prefs.js:284
 msgid "API key"
 msgstr ""
 
-#: prefs.js:283
+#: prefs.js:292
 msgid "Show"
 msgstr ""
 
-#: prefs.js:284
+#: prefs.js:293
 msgid "All photos"
 msgstr ""
 
-#: prefs.js:284
+#: prefs.js:293
 msgid "Favorites only"
 msgstr ""
 
-#: prefs.js:284
+#: prefs.js:293
 msgid "Specific album"
 msgstr ""
 
-#: prefs.js:289
+#: prefs.js:298
 msgid "Album"
 msgstr ""
 
-#: prefs.js:290 prefs.js:337
+#: prefs.js:299 prefs.js:346
 msgid "Loading albums…"
 msgstr ""
 
-#: prefs.js:295
+#: prefs.js:304
 msgid "Image quality"
 msgstr ""
 
-#: prefs.js:296
+#: prefs.js:305
 msgid "Preview (recommended)"
 msgstr ""
 
-#: prefs.js:296
+#: prefs.js:305
 msgid "Thumbnail (lightest)"
 msgstr ""
 
-#: prefs.js:296
+#: prefs.js:305
 msgid "Full size"
 msgstr ""
 
-#: prefs.js:310
+#: prefs.js:319
 msgid "No albums found"
 msgstr ""
 
-#: prefs.js:346
+#: prefs.js:355
 msgid "Album list unavailable"
 msgstr ""
 
-#: prefs.js:391
+#: prefs.js:400
 msgid "Calendars"
 msgstr ""
 
-#: prefs.js:392
+#: prefs.js:401
 msgid "Which calendars the Calendar and Agenda widgets read from Evolution. Deselecting every calendar shows all of them."
 msgstr ""
 
-#: prefs.js:395
+#: prefs.js:404
 msgid "Loading calendars…"
 msgstr ""
 
-#: prefs.js:409 prefs.js:453
+#: prefs.js:418 prefs.js:462
 msgid "Calendar support unavailable"
 msgstr ""
 
-#: prefs.js:410 prefs.js:454
+#: prefs.js:419 prefs.js:463
 msgid "Install python3-gi and Evolution Data Server introspection"
 msgstr ""
 
-#: prefs.js:421 prefs.js:432 prefs.js:442
+#: prefs.js:430 prefs.js:441 prefs.js:451
 msgid "Could not read calendars"
 msgstr ""
 
-#: prefs.js:461
+#: prefs.js:470
 msgid "No calendars found"
 msgstr ""
 
-#: prefs.js:462
+#: prefs.js:471
 msgid "Add a calendar in GNOME Calendar or Evolution"
 msgstr ""
 
-#: prefs.js:484
+#: prefs.js:493
 msgid "Public holidays"
 msgstr ""
 
-#: prefs.js:502
+#: prefs.js:511
 msgid "Bridge connection"
 msgstr ""
 
-#: prefs.js:503
+#: prefs.js:512
 msgid "Point the widget at the self-hosted Bambu bridge (see homelab/bambu-bridge). Run it next to the printer and expose it through a Cloudflare Tunnel."
 msgstr ""
 
-#: prefs.js:506
+#: prefs.js:515
 msgid "Bridge URL"
 msgstr ""
 
-#: prefs.js:513
-msgid "Bearer token"
-msgstr ""
-
-#: prefs.js:521
-msgid "Refresh interval (seconds)"
-msgstr ""
-
-#: prefs.js:522
-msgid "How often the widget polls the bridge (3-300)"
-msgstr ""
-
-#: prefs.js:529
-msgid "Print notifications"
+#: prefs.js:523
+msgid "Unencrypted http:// — anyone on the network path can read your bridge token. Prefer https://"
 msgstr ""
 
 #: prefs.js:530
+msgid "Bearer token"
+msgstr ""
+
+#: prefs.js:538
+msgid "Refresh interval (seconds)"
+msgstr ""
+
+#: prefs.js:539
+msgid "How often the widget polls the bridge (3-300)"
+msgstr ""
+
+#: prefs.js:546
+msgid "Print notifications"
+msgstr ""
+
+#: prefs.js:547
 msgid "Tell me when the printer connects or disconnects, and when a print starts, pauses, finishes or fails"
 msgstr ""
 
-#: prefs.js:536
+#: prefs.js:553
 msgid "Connection status"
 msgstr ""
 
-#: prefs.js:537
+#: prefs.js:554
 msgid "Not tested yet"
 msgstr ""
 
-#: prefs.js:540
+#: prefs.js:557
 msgid "Test connection"
 msgstr ""
 
-#: prefs.js:561
+#: prefs.js:578
 msgid "Lyrics"
 msgstr ""
 
-#: prefs.js:562
-msgid "The Music widget reads what other apps play over MPRIS. Time-synced lyrics are fetched from lrclib.net and cached under ~/.cache/desktop-widget/lyrics."
+#: prefs.js:579
+msgid "The Music widget reads what other apps play over MPRIS. Time-synced lyrics are fetched from lrclib.net — each lookup sends the track title, artist, album, and duration — and cached under ~/.cache/desktop-widget/lyrics."
 msgstr ""
 
-#: prefs.js:566
+#: prefs.js:583
 msgid "Show lyrics"
 msgstr ""
 
-#: prefs.js:567
+#: prefs.js:584
 msgid "Highlight the current line of the song while it plays"
 msgstr ""
 
-#: prefs.js:573
+#: prefs.js:590
 msgid "Lyrics offset (ms)"
 msgstr ""
 
-#: prefs.js:574
+#: prefs.js:591
 msgid "Shift the timing to line the lyrics up with the audio"
 msgstr ""
 
-#: prefs.js:597
+#: prefs.js:614
 msgid "Offline face"
 msgstr ""
 
-#: prefs.js:598
+#: prefs.js:615
 msgid "What to show when the bridge is reachable but the printer is offline."
 msgstr ""
 
-#: prefs.js:602
+#: prefs.js:619
 msgid "Animated face"
 msgstr ""
 
-#: prefs.js:603
+#: prefs.js:620
 msgid "Show a cute mochi face that reacts to temperature, battery and CPU load instead of a plain “Printer offline” message"
 msgstr ""
 
-#: prefs.js:609
+#: prefs.js:626
 msgid "Always show the face"
 msgstr ""
 
-#: prefs.js:610
+#: prefs.js:627
 msgid "Show it even when the printer is online or the bridge is unreachable (good for testing)"
 msgstr ""
 
-#: prefs.js:616
+#: prefs.js:633
 msgid "Show the face while printing"
 msgstr ""
 
-#: prefs.js:617
+#: prefs.js:634
 msgid "Replace the job details with the face so it can react to print events (printing, paused, failed, finished)"
 msgstr ""
 
-#: prefs.js:623
+#: prefs.js:640
 msgid "Use system accent colour"
 msgstr ""
 
-#: prefs.js:624
+#: prefs.js:641
 msgid "Turn off to pick a custom colour for the face"
 msgstr ""
 
-#: prefs.js:628
+#: prefs.js:645
 msgid "Face colour"
 msgstr ""
 
-#: prefs.js:634
+#: prefs.js:651
 msgid "Caption (leave empty to hide)"
 msgstr ""
 
-#: prefs.js:658
+#: prefs.js:675
 msgid "Hot above"
 msgstr ""
 
-#: prefs.js:658
+#: prefs.js:675
 msgid "Temperature (°C) at or above which the face looks hot"
 msgstr ""
 
-#: prefs.js:659
+#: prefs.js:676
 msgid "Sleepy below"
 msgstr ""
 
-#: prefs.js:659
+#: prefs.js:676
 msgid "Battery (%) at or below which the face looks sleepy while unplugged"
 msgstr ""
 
-#: prefs.js:660
+#: prefs.js:677
 msgid "Busy above"
 msgstr ""
 
-#: prefs.js:660
+#: prefs.js:677
 msgid "CPU load (%) at or above which the face looks busy"
 msgstr ""
 
-#: prefs.js:661
+#: prefs.js:678
 msgid "Overloaded above"
 msgstr ""
 
-#: prefs.js:661
+#: prefs.js:678
 msgid "RAM usage (%) at or above which the face looks overloaded"
 msgstr ""
 
-#: prefs.js:743 prefs.js:744
+#: prefs.js:760 prefs.js:761
 msgid "Set the bridge URL and token first"
 msgstr ""
 
-#: prefs.js:748
+#: prefs.js:765
 msgid "Testing %s…"
 msgstr ""
 
-#: prefs.js:755 prefs.js:757
-msgid "Invalid bridge URL"
-msgstr ""
-
-#: prefs.js:773
+#: prefs.js:780
 msgid "Connection timed out after 15s"
 msgstr ""
 
-#: prefs.js:774
+#: prefs.js:781
 msgid "Connection timed out"
 msgstr ""
 
-#: prefs.js:794
+#: prefs.js:801
 msgid "HTTP 502 — the tunnel is up but the bridge is not running"
 msgstr ""
 
-#: prefs.js:796
+#: prefs.js:803
 msgid "HTTP 401 — token does not match API_TOKEN"
 msgstr ""
 
-#: prefs.js:797
+#: prefs.js:804
 msgid "Bridge replied with HTTP %s"
 msgstr ""
 
-#: prefs.js:803
+#: prefs.js:810
 msgid "Bridge reachable, printer connected"
 msgstr ""
 
-#: prefs.js:804
+#: prefs.js:811
 msgid "Bridge reachable, printer not connected (mock: %s)"
 msgstr ""
 
-#: prefs.js:808
+#: prefs.js:815 prefs.js:834
 msgid "Connection failed: %s"
 msgstr ""
 
-#: prefs.js:809
+#: prefs.js:816 prefs.js:835
 msgid "Connection failed — see Bambu Lab page"
 msgstr ""
 
-#: prefs.js:818
+#: prefs.js:828 prefs.js:829
+msgid "Invalid bridge URL"
+msgstr ""
+
+#: prefs.js:842
 msgid "Hidden"
 msgstr ""
 
-#: prefs.js:821
+#: prefs.js:845
 msgid "Position: %s, %s · %s×%s"
 msgstr ""
 
-#: prefs.js:827
+#: prefs.js:851
 msgid "Developer"
 msgstr ""
 
-#: prefs.js:832
+#: prefs.js:856
 msgid "Developer mode"
 msgstr ""
 
-#: prefs.js:833
+#: prefs.js:857
 msgid "Reveal extra controls for testing widgets without real-world conditions."
 msgstr ""
 
-#: prefs.js:837
+#: prefs.js:861
 msgid "Enable developer mode"
 msgstr ""
 
-#: prefs.js:838
+#: prefs.js:862
 msgid "Show testing controls such as forcing the Bambu face mood"
 msgstr ""
 
-#: prefs.js:845
+#: prefs.js:869
 msgid "Bambu face"
 msgstr ""
 
-#: prefs.js:846
+#: prefs.js:870
 msgid "Preview every mood without stressing the CPU or draining the battery. Turn on “Always show the face” on the Bambu Lab page to see it while the printer is online."
 msgstr ""
 
-#: prefs.js:850
+#: prefs.js:874
 msgid "Cycle all moods"
 msgstr ""
 
-#: prefs.js:851
+#: prefs.js:875
 msgid "Rotate through chill, hot, sleepy, charging, busy and overload automatically"
 msgstr ""
 
-#: prefs.js:858
+#: prefs.js:882
 msgid "Force mood"
 msgstr ""
 
-#: prefs.js:859
+#: prefs.js:883
 msgid "Auto (real sensors)"
 msgstr ""
 
-#: prefs.js:859
+#: prefs.js:883
 msgid "Chill"
 msgstr ""
 
-#: prefs.js:859
+#: prefs.js:883
 msgid "Hot"
 msgstr ""
 
-#: prefs.js:859
+#: prefs.js:883
 msgid "Sleepy"
 msgstr ""
 
-#: prefs.js:859
+#: prefs.js:883
 msgid "Charging"
 msgstr ""
 
-#: prefs.js:859
+#: prefs.js:883
 msgid "Busy"
 msgstr ""
 
-#: prefs.js:859
+#: prefs.js:883
 msgid "Overloaded"
 msgstr ""
 
-#: prefs.js:859 widgets/bambu/widget.js:25 widgets/bambu/widget.js:1260
+#: prefs.js:883 widgets/bambu/widget.js:25 widgets/bambu/widget.js:1260
 msgid "Printing"
 msgstr ""
 
-#: prefs.js:859 widgets/bambu/widget.js:26
+#: prefs.js:883 widgets/bambu/widget.js:26
 msgid "Paused"
 msgstr ""
 
-#: prefs.js:859
+#: prefs.js:883
 msgid "Error"
 msgstr ""
 
-#: prefs.js:859 widgets/bambu/widget.js:27
+#: prefs.js:883 widgets/bambu/widget.js:27
 msgid "Finished"
 msgstr ""
 
-#: prefs.js:894
+#: prefs.js:918
 msgid "Widgets"
 msgstr ""
 
-#: prefs.js:899
+#: prefs.js:923
 msgid "Individual widgets"
 msgstr ""
 
-#: prefs.js:900
+#: prefs.js:924
 msgid "Add, remove, show or hide each widget and fine-tune its position and size."
 msgstr ""
 
-#: prefs.js:905
+#: prefs.js:929
 msgid "Add widget"
 msgstr ""
 
-#: prefs.js:906
+#: prefs.js:930
 msgid "Adds a new widget to the layout below."
 msgstr ""
 
-#: prefs.js:927
+#: prefs.js:951
 msgid "No widgets configured"
 msgstr ""
 
-#: prefs.js:928
+#: prefs.js:952
 msgid "Add one from the \"Add widget\" section below."
 msgstr ""
 
-#: prefs.js:944
+#: prefs.js:968
 msgid "Reset to default layout"
 msgstr ""
 
-#: prefs.js:998
+#: prefs.js:1022
 msgid "Visible"
 msgstr ""
 
-#: prefs.js:1025
+#: prefs.js:1049
 msgid "X position"
 msgstr ""
 
-#: prefs.js:1026
+#: prefs.js:1050
 msgid "Y position"
 msgstr ""
 
-#: prefs.js:1027
+#: prefs.js:1051
 msgid "Width"
 msgstr ""
 
-#: prefs.js:1028
+#: prefs.js:1052
 msgid "Height"
 msgstr ""
 
-#: lib/bambuData.js:178
+#: lib/bambuData.js:179
 msgid "Set the endpoint URL and token in preferences"
 msgstr ""
 
-#: lib/bambuData.js:187
+#: lib/bambuData.js:203
 msgid "invalid endpoint URL: %s"
 msgstr ""
 
-#: lib/bambuData.js:192
-msgid "invalid endpoint URL"
-msgstr ""
-
-#: lib/bambuData.js:219
+#: lib/bambuData.js:207
 msgid "request failed: %s"
 msgstr ""
 
-#: lib/bambuData.js:226
+#: lib/bambuData.js:213
 msgid "server responded with status %s"
 msgstr ""
 
-#: lib/bambuData.js:235
+#: lib/bambuData.js:222
 msgid "could not parse response: %s"
 msgstr ""
 
-#: lib/bambuData.js:240
+#: lib/bambuData.js:227
 msgid "bridge reported an error"
 msgstr ""
 
@@ -945,27 +949,27 @@ msgstr ""
 msgid "F"
 msgstr ""
 
-#: widgets/media/widget.js:376 widgets/media/widget.js:377 widgets/media/widget.js:408
+#: widgets/media/widget.js:378 widgets/media/widget.js:379 widgets/media/widget.js:410
 msgid "No media player detected"
 msgstr ""
 
-#: widgets/media/widget.js:384
+#: widgets/media/widget.js:386
 msgid "Unknown track"
 msgstr ""
 
-#: widgets/media/widget.js:384 widgets/media/widget.js:413
+#: widgets/media/widget.js:386 widgets/media/widget.js:415
 msgid "Nothing playing"
 msgstr ""
 
-#: widgets/media/widget.js:385
+#: widgets/media/widget.js:387
 msgid "Unknown artist"
 msgstr ""
 
-#: widgets/media/widget.js:423
+#: widgets/media/widget.js:425
 msgid "♪ Instrumental"
 msgstr ""
 
-#: widgets/media/widget.js:449
+#: widgets/media/widget.js:451
 msgid "No lyrics found"
 msgstr ""
 

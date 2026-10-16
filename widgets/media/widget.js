@@ -7,6 +7,7 @@ import Pango from 'gi://Pango';
 import Soup from 'gi://Soup';
 import St from 'gi://St';
 
+import { fetchSameOrigin } from '../../lib/http.js';
 import { activeLyricIndex } from '../../lib/lyrics.js';
 import { warn } from '../../logger.js';
 
@@ -19,6 +20,7 @@ export const defaultInLayout = false;
 const ACTIVE_TICK_MS = 100;
 const IDLE_TICK_MS = 500;
 const LYRIC_SCROLL_MS = 380;
+const ART_CACHE_MAX_FILES = 100;
 
 const LineProgress = GObject.registerClass(
 	class LineProgress extends St.Widget {
@@ -521,32 +523,12 @@ const MediaView = GObject.registerClass(
 
 			this._artSession = this._artSession ?? new Soup.Session({timeout: 20});
 
-			let message;
-
-			try {
-				message = Soup.Message.new('GET', uri);
-			} catch {
-				return;
-			};
-
-			if (!message) {
-				return;
-			};
-
-			this._artSession.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (session, result) => {
-				if (seq !== this._artSeq || !message || message.is_finalized?.()) {
+			fetchSameOrigin(this._artSession, 'GET', uri, {maxBytes: 5 * 1024 * 1024}).then(({bytes, status, contentType}) => {
+				if (seq !== this._artSeq) {
 					return;
 				};
 
-				if (message.get_status() !== Soup.Status.OK) {
-					return;
-				};
-
-				let bytes;
-
-				try {
-					bytes = session.send_and_read_finish(result);
-				} catch {
+				if (status !== Soup.Status.OK || !contentType.startsWith('image/')) {
 					return;
 				};
 
@@ -557,11 +539,46 @@ const MediaView = GObject.registerClass(
 						return;
 					};
 
+					this._pruneArtCache(path);
 					this._setArt(path);
 				} catch (error) {
 					warn('media-art-cache', `Could not cache cover art: ${error.message}`);
 				};
+			}).catch(() => {
+				// unreachable art, oversize body, or blocked redirect: keep current art
 			});
+		};
+
+		_pruneArtCache(keepPath) {
+			try {
+				const dir = Gio.File.new_for_path(GLib.path_get_dirname(keepPath));
+				const enumerator = dir.enumerate_children('standard::name,standard::type,time::modified', Gio.FileQueryInfoFlags.NONE, null);
+				const entries = [];
+				let info;
+
+				while ((info = enumerator.next_file(null)) !== null) {
+					if (info.get_file_type() !== Gio.FileType.REGULAR) {
+						continue;
+					};
+
+					entries.push({
+						path: dir.get_child(info.get_name()).get_path(),
+						modified: info.get_attribute_uint64('time::modified'),
+					});
+				};
+
+				enumerator.close(null);
+
+				entries.sort((a, b) => a.modified - b.modified);
+
+				for (const entry of entries.slice(0, Math.max(0, entries.length - ART_CACHE_MAX_FILES))) {
+					if (entry.path !== keepPath) {
+						Gio.File.new_for_path(entry.path).delete(null);
+					};
+				};
+			} catch (error) {
+				warn('media-art-cache', `Could not prune cover art cache: ${error.message}`);
+			};
 		};
 	});
 

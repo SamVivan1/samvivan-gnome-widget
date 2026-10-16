@@ -2,6 +2,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Soup from 'gi://Soup';
 
+import { fetchSameOrigin } from '../../lib/http.js';
 import { warn } from '../../logger.js';
 
 const REQUEST_TIMEOUT_SECONDS = 20;
@@ -18,6 +19,16 @@ const CONTENT_TYPE_EXTENSIONS = {
 	'image/bmp': '.bmp',
 };
 const CACHE_EXTENSIONS = [...new Set([...Object.values(CONTENT_TYPE_EXTENSIONS), '.img'])];
+
+// Server-provided asset ids end up in cache filenames, so reject anything
+// that is not a plain id before it can escape the cache directory.
+const ASSET_ID_PATTERN = /^[A-Za-z0-9_-]+$/;
+
+function assertAssetId(id) {
+	if (typeof id !== 'string' || !ASSET_ID_PATTERN.test(id)) {
+		throw new Error(`Refusing to cache Immich asset with invalid id ${JSON.stringify(id)}`);
+	};
+};
 
 let session = null;
 
@@ -57,34 +68,18 @@ function cacheDirectory(settings) {
 };
 
 function request(method, url, apiKey, bodyText = null, accept = 'application/json') {
-	return new Promise((resolve, reject) => {
-		const message = Soup.Message.new(method, url);
-
-		message.request_headers.append('x-api-key', apiKey);
-		message.request_headers.append('accept', accept);
-
-		if (bodyText !== null) {
-			message.set_request_body_from_bytes('application/json', new GLib.Bytes(new TextEncoder().encode(bodyText)));
+	return fetchSameOrigin(soupSession(), method, url, {
+		headers: {'x-api-key': apiKey, accept},
+		body: bodyText === null ? null : {
+			bytes: new TextEncoder().encode(bodyText),
+			contentType: 'application/json',
+		},
+	}).then(({bytes, status, contentType}) => {
+		if (status !== Soup.Status.OK) {
+			throw new Error(`Immich request failed with status ${status} (${url})`);
 		};
 
-		soupSession().send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (self, result) => {
-			try {
-				const bytes = self.send_and_read_finish(result);
-				const status = message.get_status();
-
-				if (status !== Soup.Status.OK) {
-					reject(new Error(`Immich request failed with status ${status} (${url})`));
-					return;
-				};
-
-				resolve({
-					bytes,
-					contentType: (message.get_response_headers().get_one('content-type') ?? '').split(';')[0].trim().toLowerCase(),
-				});
-			} catch (error) {
-				reject(error);
-			};
-		});
+		return {bytes, contentType};
 	});
 };
 
@@ -141,6 +136,8 @@ export async function fetchAlbumChoices(settings) {
 };
 
 function cachedPath(settings, id) {
+	assertAssetId(id);
+
 	const dir = cacheDirectory(settings);
 
 	for (const extension of CACHE_EXTENSIONS) {
@@ -155,6 +152,8 @@ function cachedPath(settings, id) {
 };
 
 export async function ensureThumbnail(settings, id, size) {
+	assertAssetId(id);
+
 	const existing = cachedPath(settings, id);
 
 	if (existing) {
