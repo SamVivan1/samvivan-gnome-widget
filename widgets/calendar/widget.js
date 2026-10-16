@@ -1,8 +1,9 @@
+import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 
 export const type = 'calendar';
-export const label = 'Calendar';
+export function label() { return _('Calendar'); };
 export const stylesheet = 'widgets/calendar/stylesheet.css';
 export const appIds = ['org.gnome.Calendar.desktop'];
 export const defaultSize = 'small';
@@ -136,7 +137,7 @@ export function render({body, createLabel, theme, calendar}) {
 		style_class: 'widget-calendar-content',
 		x_align: Clutter.ActorAlign.CENTER,
 	});
-	const weekdays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+	const weekdays = [_('S'), _('M'), _('T'), _('W'), _('T'), _('F'), _('S')];
 	const weekdayRow = new St.BoxLayout({style_class: 'widget-calendar-row'});
 	let day = 1;
 

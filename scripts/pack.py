@@ -20,7 +20,6 @@ EXCLUDE_FILES = {
     "Makefile",
     "install.sh",
     "uninstall.sh",
-    "LICENSE",
     ".gitignore",
     "package.json",
 }

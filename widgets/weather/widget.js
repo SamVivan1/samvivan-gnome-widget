@@ -1,3 +1,4 @@
+import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
@@ -7,7 +8,7 @@ import St from 'gi://St';
 import { warn } from '../../logger.js';
 
 export const type = 'weather';
-export const label = 'Weather';
+export function label() { return _('Weather'); };
 export const stylesheet = 'widgets/weather/stylesheet.css';
 export const appIds = ['org.gnome.Weather.desktop'];
 export const settingsSchema = 'org.gnome.Weather';
@@ -79,7 +80,7 @@ export function weatherFromInfo(info, location, displayName = null) {
 		summary: cleanSummary(currentInfo.get_weather_summary(), locationName),
 		location: displayName || location.get_city_name() || locationName,
 		icon: currentInfo.get_icon_name() || 'weather-clear',
-		feelsLike: apparent && apparent !== '--' ? `It feels like ${apparent}` : null,
+		feelsLike: apparent && apparent !== '--' ? _('It feels like %s').format(apparent) : null,
 	};
 };
 
@@ -132,7 +133,7 @@ function formatTemperature(temperature) {
 
 function cleanSummary(summary, locationName) {
 	if (!summary) {
-		return 'Weather unavailable';
+		return _('Weather unavailable');
 	};
 
 	if (locationName && summary.startsWith(`${locationName}: `)) {
@@ -189,10 +190,10 @@ function fullColorWeatherIcon(iconName) {
 };
 
 export function render({body, widget, createLabel, theme, weather, weatherLocation}) {
-	const detail = widget.data.detail || 'Weather unavailable';
+	const detail = widget.data.detail || _('Weather unavailable');
 	const renderedWeather = weather ?? {
 		temp: formatTemperature(String(detail).split(/\s+/)[0] || '--'),
-		summary: String(detail).replace(/^\S+\s*/, '') || 'Open Weather to set a location',
+		summary: String(detail).replace(/^\S+\s*/, '') || _('Open Weather to set a location'),
 		location: weatherLocation || widget.data.location || 'GNOME Weather',
 		icon: fallbackIcon(detail),
 		feelsLike: null,

@@ -1,8 +1,9 @@
+import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 
 export const type = 'agenda';
-export const label = 'Agenda';
+export function label() { return _('Agenda'); };
 export const stylesheet = 'widgets/agenda/stylesheet.css';
 export const appIds = ['org.gnome.Calendar.desktop'];
 export const defaultSize = 'medium';
@@ -59,7 +60,7 @@ function formatDay(date) {
 
 function eventTimeText(event, day) {
 	if (event.allDay) {
-		return 'All day';
+		return _('All day');
 	};
 
 	if (!sameDay(event.startDate, day)) {
@@ -78,13 +79,13 @@ function buildEntries(calendar, today) {
 	const todayEvents = calendar.eventsOnDay(today);
 
 	if (todayEvents.length > 0) {
-		entries.push({kind: 'section', text: 'Today'});
+		entries.push({kind: 'section', text: _('Today')});
 
 		for (const event of todayEvents) {
 			entries.push({kind: 'event', event, day: today});
 		};
 	} else {
-		entries.push({kind: 'empty', text: 'No events today'});
+		entries.push({kind: 'empty', text: _('No events today')});
 	};
 
 	for (let offset = 1; offset <= UPCOMING_DAYS; offset++) {
@@ -147,7 +148,7 @@ function renderEntry(entry, createLabel, theme) {
 	};
 
 	if (entry.kind === 'more') {
-		return createLabel(`+${entry.count} more`, 'widget-agenda-more', `color: ${theme.muted};`);
+		return createLabel(_('+%s more').format(entry.count), 'widget-agenda-more', `color: ${theme.muted};`);
 	};
 
 	return createLabel(entry.text, 'widget-agenda-section', `color: ${theme.muted}; font-weight: 700; letter-spacing: 1px;`);
@@ -167,18 +168,18 @@ function entryHeight(entry) {
 
 function formatMessage(calendar) {
 	if (!calendar) {
-		return 'Calendar module unavailable';
+		return _('Calendar module unavailable');
 	};
 
 	if (calendar.status === 'unavailable') {
-		return 'Calendar data unavailable — install python3-gi and Evolution Data Server';
+		return _('Calendar data unavailable — install python3-gi and Evolution Data Server');
 	};
 
 	if (calendar.status === 'error') {
-		return calendar.error || 'Could not read calendar data';
+		return calendar.error || _('Could not read calendar data');
 	};
 
-	return 'Loading calendar…';
+	return _('Loading calendar…');
 };
 
 export function style(theme) {
@@ -209,7 +210,7 @@ export function render({body, widget, theme, createLabel, calendar, sizeForWidge
 
 	if (events.length === 0) {
 		body.add_child(new St.Widget({y_expand: true}));
-		body.add_child(createLabel('No upcoming events', 'widget-agenda-message', `color: ${theme.muted};`));
+		body.add_child(createLabel(_('No upcoming events'), 'widget-agenda-message', `color: ${theme.muted};`));
 		body.add_child(new St.Widget({y_expand: true}));
 		return;
 	};
@@ -241,7 +242,7 @@ export function render({body, widget, theme, createLabel, calendar, sizeForWidge
 	body.add_child(list);
 
 	if (hidden > 0) {
-		body.add_child(createLabel(`+${hidden} more`, 'widget-agenda-more', `color: ${theme.muted};`));
+		body.add_child(createLabel(_('+%s more').format(hidden), 'widget-agenda-more', `color: ${theme.muted};`));
 	};
 
 	body.add_child(new St.Widget({y_expand: true}));

@@ -1,2 +1,13 @@
 # Source files scanned by xgettext for translatable strings.
+extension.js
 prefs.js
+lib/bambuData.js
+lib/calendarData.js
+widgets/agenda/widget.js
+widgets/bambu/widget.js
+widgets/battery/widget.js
+widgets/calendar/widget.js
+widgets/clock/widget.js
+widgets/media/widget.js
+widgets/photos/widget.js
+widgets/weather/widget.js

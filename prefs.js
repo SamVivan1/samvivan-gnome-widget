@@ -78,11 +78,11 @@ function monitorChoices(display) {
     for (let i = 0; i < count; i++) {
       const monitor = monitors.get_item(i);
       const geometry = monitor.get_geometry();
-      const connector = monitor.get_connector?.() ?? `Monitor ${i + 1}`;
+      const connector = monitor.get_connector?.() ?? _('Monitor %s').format(i + 1);
 
       choices.push({
         index: i,
-        label: `${connector} (${geometry.width}×${geometry.height})`,
+        label: _('%s (%s×%s)').format(connector, geometry.width, geometry.height),
       });
     };
   };
@@ -114,7 +114,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
     const placement = new Adw.PreferencesGroup({
       title: _('Placement'),
-      description: 'Where the widgets live and how they are positioned.',
+      description: _('Where the widgets live and how they are positioned.'),
     });
 
     const choices = monitorChoices(window.get_display());
@@ -183,7 +183,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
     const panel = new Adw.PreferencesGroup({
       title: _('Top panel'),
-      description: 'Control the Desktop Widget button in the top panel.',
+      description: _('Control the Desktop Widget button in the top panel.'),
     });
 
     const panelIconRow = new Adw.SwitchRow({
@@ -211,13 +211,13 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
     const sourceGroup = new Adw.PreferencesGroup({
       title: _('Display'),
-      description: 'Where the Photos widget gets its images and how often it changes.',
+      description: _('Where the Photos widget gets its images and how often it changes.'),
     });
 
     const sourceRow = new Adw.ComboRow({
       title: _('Photo source'),
       subtitle: _('Immich is used first; local photos are a fallback when unavailable'),
-      model: Gtk.StringList.new(['Immich + local (fallback)', 'Immich only', 'Local only']),
+      model: Gtk.StringList.new([_('Immich + local (fallback)'), _('Immich only'), _('Local only')]),
     });
     sourceRow.set_selected(Math.max(0, sources.indexOf(this._settings.get_string('photos-source'))));
     sourceRow.connect('notify::selected', () => {
@@ -239,7 +239,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
     const immichGroup = new Adw.PreferencesGroup({
       title: _('Immich'),
-      description: 'Pull random photos from your Immich server. Create an API key under Account Settings → API Keys.',
+      description: _('Pull random photos from your Immich server. Create an API key under Account Settings → API Keys.'),
     });
 
     const urlRow = new Adw.EntryRow({title: _('Server URL')});
@@ -258,7 +258,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
     const scopeRow = new Adw.ComboRow({
       title: _('Show'),
-      model: Gtk.StringList.new(['All photos', 'Favorites only', 'Specific album']),
+      model: Gtk.StringList.new([_('All photos'), _('Favorites only'), _('Specific album')]),
     });
     scopeRow.set_selected(Math.max(0, scopes.indexOf(this._settings.get_string('immich-scope'))));
     immichGroup.add(scopeRow);
@@ -270,7 +270,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
     const sizeRow = new Adw.ComboRow({
       title: _('Image quality'),
-      model: Gtk.StringList.new(['Preview (recommended)', 'Thumbnail (lightest)', 'Full size']),
+      model: Gtk.StringList.new([_('Preview (recommended)'), _('Thumbnail (lightest)'), _('Full size')]),
     });
     sizeRow.set_selected(Math.max(0, sizes.indexOf(this._settings.get_string('immich-size'))));
     sizeRow.connect('notify::selected', () => {
@@ -366,7 +366,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
     const group = new Adw.PreferencesGroup({
       title: _('Calendars'),
-      description: 'Which calendars the Calendar and Agenda widgets read from Evolution. Deselecting every calendar shows all of them.',
+      description: _('Which calendars the Calendar and Agenda widgets read from Evolution. Deselecting every calendar shows all of them.'),
     });
 
     const statusRow = new Adw.ActionRow({title: _('Loading calendars…')});
@@ -383,8 +383,8 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     const python = GLib.find_program_in_path('python3');
 
     if (!python || !Gio.File.new_for_path(helper).query_exists(null)) {
-      statusRow.title = 'Calendar support unavailable';
-      statusRow.subtitle = 'Install python3-gi and Evolution Data Server introspection';
+      statusRow.title = _('Calendar support unavailable');
+      statusRow.subtitle = _('Install python3-gi and Evolution Data Server introspection');
       return;
     };
 
@@ -395,7 +395,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
         [python, helper, '--list-sources'],
         Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
     } catch (error) {
-      statusRow.title = 'Could not read calendars';
+      statusRow.title = _('Could not read calendars');
       statusRow.subtitle = error.message;
       return;
     };
@@ -406,7 +406,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
       try {
         [, stdout] = proc.communicate_utf8_finish(result);
       } catch (error) {
-        statusRow.title = 'Could not read calendars';
+        statusRow.title = _('Could not read calendars');
         statusRow.subtitle = error.message;
         return;
       };
@@ -416,7 +416,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
       try {
         payload = JSON.parse(stdout || '{}');
       } catch (error) {
-        statusRow.title = 'Could not read calendars';
+        statusRow.title = _('Could not read calendars');
         statusRow.subtitle = error.message;
         return;
       };
@@ -427,16 +427,16 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
   _populateCalendarSources(group, statusRow, payload) {
     if (payload.ok !== true) {
-      statusRow.title = 'Calendar support unavailable';
-      statusRow.subtitle = payload.error ?? 'Install python3-gi and Evolution Data Server introspection';
+      statusRow.title = _('Calendar support unavailable');
+      statusRow.subtitle = payload.error ?? _('Install python3-gi and Evolution Data Server introspection');
       return;
     };
 
     const sources = payload.sources ?? [];
 
     if (sources.length === 0) {
-      statusRow.title = 'No calendars found';
-      statusRow.subtitle = 'Add a calendar in GNOME Calendar or Evolution';
+      statusRow.title = _('No calendars found');
+      statusRow.subtitle = _('Add a calendar in GNOME Calendar or Evolution');
       return;
     };
 
@@ -458,7 +458,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     for (const source of sources) {
       const row = new Adw.SwitchRow({
         title: source.name,
-        subtitle: source.holiday ? 'Public holidays' : (source.uid ?? ''),
+        subtitle: source.holiday ? _('Public holidays') : (source.uid ?? ''),
       });
 
       row.set_active(allSelected || selected.has(source.uid));
@@ -477,7 +477,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
     const group = new Adw.PreferencesGroup({
       title: _('Bridge connection'),
-      description: 'Point the widget at the self-hosted Bambu bridge (see homelab/bambu-bridge). Run it next to the printer and expose it through a Cloudflare Tunnel.',
+      description: _('Point the widget at the self-hosted Bambu bridge (see homelab/bambu-bridge). Run it next to the printer and expose it through a Cloudflare Tunnel.'),
     });
 
     const urlRow = new Adw.EntryRow({title: _('Bridge URL')});
@@ -536,7 +536,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
     const group = new Adw.PreferencesGroup({
       title: _('Lyrics'),
-      description: 'The Music widget reads what other apps play over MPRIS. Time-synced lyrics are fetched from lrclib.net and cached under ~/.cache/desktop-widget/lyrics.',
+      description: _('The Music widget reads what other apps play over MPRIS. Time-synced lyrics are fetched from lrclib.net and cached under ~/.cache/desktop-widget/lyrics.'),
     });
 
     const showRow = new Adw.SwitchRow({
@@ -572,7 +572,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
   _buildBambuOfflineGroup() {
     const group = new Adw.PreferencesGroup({
       title: _('Offline face'),
-      description: 'What to show when the bridge is reachable but the printer is offline.',
+      description: _('What to show when the bridge is reachable but the printer is offline.'),
     });
 
     const funRow = new Adw.SwitchRow({
@@ -632,10 +632,10 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
       thresholdRows.push(row);
     };
 
-    addThreshold('Hot above', 'Temperature (°C) at or above which the face looks hot', 'bambu-hot-temp', 30, 110);
-    addThreshold('Sleepy below', 'Battery (%) at or below which the face looks sleepy while unplugged', 'bambu-low-battery', 0, 100);
-    addThreshold('Busy above', 'CPU load (%) at or above which the face looks busy', 'bambu-high-load', 0, 100);
-    addThreshold('Overloaded above', 'RAM usage (%) at or above which the face looks overloaded', 'bambu-high-ram', 0, 100);
+    addThreshold(_('Hot above'), _('Temperature (°C) at or above which the face looks hot'), 'bambu-hot-temp', 30, 110);
+    addThreshold(_('Sleepy below'), _('Battery (%) at or below which the face looks sleepy while unplugged'), 'bambu-low-battery', 0, 100);
+    addThreshold(_('Busy above'), _('CPU load (%) at or above which the face looks busy'), 'bambu-high-load', 0, 100);
+    addThreshold(_('Overloaded above'), _('RAM usage (%) at or above which the face looks overloaded'), 'bambu-high-ram', 0, 100);
 
     let syncing = false;
 
@@ -717,19 +717,19 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     const token = this._settings.get_string('bambu-token').trim();
 
     if (!endpoint || !token) {
-      row.subtitle = 'Set the bridge URL and token first';
+      row.subtitle = _('Set the bridge URL and token first');
       this._toast(_('Set the bridge URL and token first'));
       return;
     };
 
-    row.subtitle = `Testing ${endpoint}/health…`;
+    row.subtitle = _('Testing %s…').format(`${endpoint}/health`);
     button.set_sensitive(false);
 
     const session = new Soup.Session({timeout: 12, user_agent: 'desktop-widget'});
     const message = Soup.Message.new('GET', `${endpoint}/health`);
 
     if (!message) {
-      row.subtitle = 'Invalid bridge URL';
+      row.subtitle = _('Invalid bridge URL');
       button.set_sensitive(true);
       this._toast(_('Invalid bridge URL'));
       return;
@@ -747,7 +747,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     const timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 15, () => {
       if (!settled) {
         session.abort();
-        row.subtitle = 'Connection timed out after 15s';
+        row.subtitle = _('Connection timed out after 15s');
         this._toast(_('Connection timed out'));
         finish();
       };
@@ -768,21 +768,21 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
         if (status !== Soup.Status.OK) {
           row.subtitle = status === Soup.Status.BAD_GATEWAY
-            ? 'HTTP 502 — the tunnel is up but the bridge is not running'
+            ? _('HTTP 502 — the tunnel is up but the bridge is not running')
             : status === Soup.Status.UNAUTHORIZED
-              ? 'HTTP 401 — token does not match API_TOKEN'
-              : `Bridge replied with HTTP ${status}`;
+              ? _('HTTP 401 — token does not match API_TOKEN')
+              : _('Bridge replied with HTTP %s').format(status);
           this._toast(row.subtitle);
         } else {
           const payload = JSON.parse(new TextDecoder().decode(bytes.get_data()));
 
           row.subtitle = payload.connected === true
-            ? 'Bridge reachable, printer connected'
-            : `Bridge reachable, printer not connected (mock=${payload.mock === true})`;
+            ? _('Bridge reachable, printer connected')
+            : _('Bridge reachable, printer not connected (mock: %s)').format(payload.mock === true);
           this._toast(row.subtitle);
         };
       } catch (error) {
-        row.subtitle = `Connection failed: ${error.message}`;
+        row.subtitle = _('Connection failed: %s').format(error.message);
         this._toast(_('Connection failed — see Bambu Lab page'));
       } finally {
         finish();
@@ -792,10 +792,10 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
   _subtitleFor(widget) {
     if (widget.hidden === true) {
-      return 'Hidden';
+      return _('Hidden');
     };
 
-    return `Position: ${Math.round(widget.x ?? 0)}, ${Math.round(widget.y ?? 0)} · ${Math.round(widget.width ?? 0)}×${Math.round(widget.height ?? 0)}`;
+    return _('Position: %s, %s · %s×%s').format(Math.round(widget.x ?? 0), Math.round(widget.y ?? 0), Math.round(widget.width ?? 0), Math.round(widget.height ?? 0));
   };
 
   _buildDeveloperPage() {
@@ -807,7 +807,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
     const master = new Adw.PreferencesGroup({
       title: _('Developer mode'),
-      description: 'Reveal extra controls for testing widgets without real-world conditions.',
+      description: _('Reveal extra controls for testing widgets without real-world conditions.'),
     });
 
     const devRow = new Adw.SwitchRow({
@@ -820,7 +820,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
     const faceGroup = new Adw.PreferencesGroup({
       title: _('Bambu face'),
-      description: 'Preview every mood without stressing the CPU or draining the battery. Turn on “Always show the face” on the Bambu Lab page to see it while the printer is online.',
+      description: _('Preview every mood without stressing the CPU or draining the battery. Turn on “Always show the face” on the Bambu Lab page to see it while the printer is online.'),
     });
 
     const cycleRow = new Adw.SwitchRow({
@@ -833,7 +833,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     const moods = ['auto', 'chill', 'hot', 'sleepy', 'charging', 'busy', 'overload', 'printing', 'paused', 'error', 'done'];
     const moodRow = new Adw.ComboRow({
       title: _('Force mood'),
-      model: Gtk.StringList.new(['Auto (real sensors)', 'Chill', 'Hot', 'Sleepy', 'Charging', 'Busy', 'Overloaded', 'Printing', 'Paused', 'Error', 'Finished']),
+      model: Gtk.StringList.new([_('Auto (real sensors)'), _('Chill'), _('Hot'), _('Sleepy'), _('Charging'), _('Busy'), _('Overloaded'), _('Printing'), _('Paused'), _('Error'), _('Finished')]),
     });
     moodRow.set_selected(Math.max(0, moods.indexOf(this._settings.get_string('bambu-dev-mood'))));
     moodRow.connect('notify::selected', () => {
@@ -874,13 +874,13 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
     const listGroup = new Adw.PreferencesGroup({
       title: _('Individual widgets'),
-      description: 'Add, remove, show or hide each widget and fine-tune its position and size.',
+      description: _('Add, remove, show or hide each widget and fine-tune its position and size.'),
     });
     page.add(listGroup);
 
     const addGroup = new Adw.PreferencesGroup({
       title: _('Add widget'),
-      description: 'Adds a new widget to the layout below.',
+      description: _('Adds a new widget to the layout below.'),
     });
     page.add(addGroup);
 
@@ -930,7 +930,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     };
 
     for (const [type, label] of Object.entries(widgetLabels())) {
-      const row = new Adw.ButtonRow({title: `Add ${label}`});
+      const row = new Adw.ButtonRow({title: _('Add %s').format(label)});
       row.connect('activated', () => {
         this._layout.widgets.push(this._newWidget(type));
         persist();
@@ -999,10 +999,10 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
       row.add_row(spin);
     };
 
-    addSpin('X position', 'x', -10000, 10000);
-    addSpin('Y position', 'y', -10000, 10000);
-    addSpin('Width', 'width', 80, 10000);
-    addSpin('Height', 'height', 80, 10000);
+    addSpin(_('X position'), 'x', -10000, 10000);
+    addSpin(_('Y position'), 'y', -10000, 10000);
+    addSpin(_('Width'), 'width', 80, 10000);
+    addSpin(_('Height'), 'height', 80, 10000);
 
     const removeRow = new Adw.ButtonRow({title: _('Remove widget')});
     removeRow.add_css_class('destructive-action');

@@ -1,10 +1,11 @@
+import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import St from 'gi://St';
 
 export const type = 'clock';
-export const label = 'Clock';
+export function label() { return _('Clock'); };
 export const stylesheet = 'widgets/clock/stylesheet.css';
 export const defaultSize = 'small';
 

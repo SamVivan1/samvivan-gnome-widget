@@ -1,3 +1,4 @@
+import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
@@ -7,7 +8,7 @@ import St from 'gi://St';
 import { warn } from '../../logger.js';
 
 export const type = 'battery';
-export const label = 'Battery';
+export function label() { return _('Battery'); };
 export const stylesheet = 'widgets/battery/stylesheet.css';
 export const defaultSize = 'medium';
 
@@ -53,27 +54,26 @@ const DEVICE_TYPE = {
 	OTHER_AUDIO: 21,
 };
 
-const DEVICE_FALLBACK_NAMES = {
-	[DEVICE_TYPE.BATTERY]: 'Battery',
-	[DEVICE_TYPE.UPS]: 'UPS',
-	[DEVICE_TYPE.MOUSE]: 'Mouse',
-	[DEVICE_TYPE.KEYBOARD]: 'Keyboard',
-	[DEVICE_TYPE.PDA]: 'PDA',
-	[DEVICE_TYPE.PHONE]: 'Phone',
-	[DEVICE_TYPE.MEDIA_PLAYER]: 'Media Player',
-	[DEVICE_TYPE.TABLET]: 'Tablet',
-	[DEVICE_TYPE.COMPUTER]: 'Computer',
-	[DEVICE_TYPE.GAMING_INPUT]: 'Gamepad',
-	[DEVICE_TYPE.PEN]: 'Stylus',
-	[DEVICE_TYPE.TOUCHPAD]: 'Touchpad',
-	[DEVICE_TYPE.HEADSET]: 'Headset',
-	[DEVICE_TYPE.SPEAKERS]: 'Speakers',
-	[DEVICE_TYPE.HEADPHONES]: 'Headphones',
-	[DEVICE_TYPE.OTHER_AUDIO]: 'Audio Device',
-};
-
 function fallbackNameForKind(kind) {
-	return DEVICE_FALLBACK_NAMES[kind] ?? 'Device';
+	switch (kind) {
+		case DEVICE_TYPE.BATTERY: return _('Battery');
+		case DEVICE_TYPE.UPS: return _('UPS');
+		case DEVICE_TYPE.MOUSE: return _('Mouse');
+		case DEVICE_TYPE.KEYBOARD: return _('Keyboard');
+		case DEVICE_TYPE.PDA: return _('PDA');
+		case DEVICE_TYPE.PHONE: return _('Phone');
+		case DEVICE_TYPE.MEDIA_PLAYER: return _('Media Player');
+		case DEVICE_TYPE.TABLET: return _('Tablet');
+		case DEVICE_TYPE.COMPUTER: return _('Computer');
+		case DEVICE_TYPE.GAMING_INPUT: return _('Gamepad');
+		case DEVICE_TYPE.PEN: return _('Stylus');
+		case DEVICE_TYPE.TOUCHPAD: return _('Touchpad');
+		case DEVICE_TYPE.HEADSET: return _('Headset');
+		case DEVICE_TYPE.SPEAKERS: return _('Speakers');
+		case DEVICE_TYPE.HEADPHONES: return _('Headphones');
+		case DEVICE_TYPE.OTHER_AUDIO: return _('Audio Device');
+		default: return _('Device');
+	};
 };
 
 function fallbackNameForBluetoothIcon(iconClass) {
@@ -83,31 +83,31 @@ function fallbackNameForBluetoothIcon(iconClass) {
 		return null;
 	};
 	if (name.includes('mouse')) {
-		return 'Mouse';
+		return _('Mouse');
 	};
 	if (name.includes('keyboard')) {
-		return 'Keyboard';
+		return _('Keyboard');
 	};
 	if (name.includes('tablet') || name.includes('pen')) {
-		return 'Tablet';
+		return _('Tablet');
 	};
 	if (name.includes('gaming') || name.includes('joystick') || name.includes('gamepad')) {
-		return 'Gamepad';
+		return _('Gamepad');
 	};
 	if (name.includes('headset')) {
-		return 'Headset';
+		return _('Headset');
 	};
 	if (name.includes('headphone')) {
-		return 'Headphones';
+		return _('Headphones');
 	};
 	if (name.includes('speaker') || name.includes('audio-card') || name.includes('audio')) {
-		return 'Speakers';
+		return _('Speakers');
 	};
 	if (name.includes('phone')) {
-		return 'Phone';
+		return _('Phone');
 	};
 	if (name.includes('computer')) {
-		return 'Computer';
+		return _('Computer');
 	};
 
 	return null;
@@ -330,7 +330,7 @@ async function readBlueZDevices() {
 
 			devices.push({
 				source: 'bluez',
-				name: alias || fallbackNameForBluetoothIcon(iconClass) || 'Bluetooth Device',
+				name: alias || fallbackNameForBluetoothIcon(iconClass) || _('Bluetooth Device'),
 				percentage: Math.round(Math.max(0, Math.min(100, percentage))),
 				powerSupply: false,
 				iconName,
@@ -402,7 +402,7 @@ async function readGSConnectDevices() {
 
 			devices.push({
 				source: 'gsconnect',
-				name: name || 'Phone',
+				name: name || _('Phone'),
 				kind: DEVICE_TYPE.PHONE,
 				percentage: Math.round(Math.max(0, Math.min(100, battery.level))),
 				powerSupply: false,

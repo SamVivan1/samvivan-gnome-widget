@@ -1,3 +1,4 @@
+import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
@@ -13,19 +14,22 @@ import {
 } from '../../lib/mood.js';
 
 export const type = 'bambu';
-export const label = 'Bambu Lab';
+export function label() { return _('Bambu Lab'); };
 export const stylesheet = 'widgets/bambu/stylesheet.css';
 export const defaultSize = 'medium';
 export const defaultInLayout = false;
 
-const STATE_LABELS = {
-	IDLE: 'Idle',
-	RUNNING: 'Printing',
-	PAUSE: 'Paused',
-	FINISH: 'Finished',
-	FAILED: 'Failed',
-	PREPARE: 'Preparing',
-	SLICING: 'Slicing',
+function stateLabel(state) {
+	switch (state) {
+		case 'IDLE': return _('Idle');
+		case 'RUNNING': return _('Printing');
+		case 'PAUSE': return _('Paused');
+		case 'FINISH': return _('Finished');
+		case 'FAILED': return _('Failed');
+		case 'PREPARE': return _('Preparing');
+		case 'SLICING': return _('Slicing');
+		default: return null;
+	};
 };
 
 const STATE_COLORS = {
@@ -88,13 +92,13 @@ function formatRemaining(minutes) {
 	const mins = rounded % 60;
 
 	if (hours <= 0) {
-		return `${mins} min left`;
+		return _('%s min left').format(mins);
 	};
 	if (mins === 0) {
-		return `${hours} h left`;
+		return _('%s h left').format(hours);
 	};
 
-	return `${hours} h ${mins} min left`;
+	return _('%s h %s min left').format(hours, mins);
 };
 
 function temperature(value) {
@@ -1167,7 +1171,7 @@ function buildAmsRow(createLabel, theme, filament) {
 	};
 
 	const active = slots.find(slot => slot.active) ?? slots[0];
-	const text = active?.type ? `AMS · ${active.type}` : 'AMS';
+	const text = active?.type ? _('AMS · %s').format(active.type) : _('AMS');
 	const label = createLabel(text, 'widget-bambu-ams-text', `color: ${theme.muted};`);
 
 	label.x_expand = false;
@@ -1206,19 +1210,19 @@ function buildJobView({body, widget, createLabel, theme, sizeForWidget, status})
 		x_expand: true,
 	});
 
-	const name = createLabel(printer.name || printer.model || 'Bambu Lab', 'widget-bambu-name', `color: ${theme.muted};`);
+	const name = createLabel(printer.name || printer.model || _('Bambu Lab'), 'widget-bambu-name', `color: ${theme.muted};`);
 
 	name.clutter_text.set_line_wrap(false);
 	header.add_child(name);
 
-	const badge = createLabel(STATE_LABELS[state] || state, 'widget-bambu-badge', `color: ${color ?? theme.muted};`);
+	const badge = createLabel(stateLabel(state) || state, 'widget-bambu-badge', `color: ${color ?? theme.muted};`);
 
 	badge.x_expand = false;
 	badge.clutter_text.set_line_wrap(false);
 	header.add_child(badge);
 	info.add_child(header);
 
-	const file = createLabel(job.file || job.subtask || 'No active print', 'widget-bambu-file', `color: ${theme.text};`);
+	const file = createLabel(job.file || job.subtask || _('No active print'), 'widget-bambu-file', `color: ${theme.text};`);
 
 	file.clutter_text.set_line_wrap(true);
 	info.add_child(file);
@@ -1230,11 +1234,11 @@ function buildJobView({body, widget, createLabel, theme, sizeForWidget, status})
 	};
 
 	if (Number.isFinite(job.layer) && Number.isFinite(job.total_layers)) {
-		info.add_child(buildMetaRow(createLabel, theme, 'view-grid-symbolic', `Layer ${job.layer} / ${job.total_layers}`));
+		info.add_child(buildMetaRow(createLabel, theme, 'view-grid-symbolic', _('Layer %s / %s').format(job.layer, job.total_layers)));
 	};
 
 	info.add_child(new St.Widget({y_expand: true}));
-	info.add_child(buildMetaRow(createLabel, theme, 'emblem-system-symbolic', `Nozzle ${temperature(temps.nozzle)} · Bed ${temperature(temps.bed)}`));
+	info.add_child(buildMetaRow(createLabel, theme, 'emblem-system-symbolic', _('Nozzle %s · Bed %s').format(temperature(temps.nozzle), temperature(temps.bed))));
 
 	const amsRow = buildAmsRow(createLabel, theme, status.filament);
 
@@ -1253,10 +1257,10 @@ function faceCaption(bambu, custom) {
 
 	const job = bambu.status.job ?? {};
 	const state = String(job.state || 'IDLE').toUpperCase();
-	const label = STATE_LABELS[state] || 'Printing';
+	const printLabel = stateLabel(state) || _('Printing');
 	const progress = clampProgress(job.progress);
 
-	return progress === null ? label : `${label} · ${Math.round(progress)}%`;
+	return progress === null ? printLabel : _('%s · %s%%').format(printLabel, Math.round(progress));
 };
 
 function sceneKind(bambu, settings) {
@@ -1293,26 +1297,26 @@ function sceneKind(bambu, settings) {
 
 function hintText(bambu) {
 	if (!bambu) {
-		return 'Bambu Lab is unavailable';
+		return _('Bambu Lab is unavailable');
 	};
 
 	if (bambu.state === 'unavailable') {
-		return 'Configure the Bambu bridge endpoint and token in Settings';
+		return _('Configure the Bambu bridge endpoint and token in Settings');
 	};
 
 	if (bambu.state === 'error') {
-		return bambu.error || 'Bambu bridge unreachable';
+		return bambu.error || _('Bambu bridge unreachable');
 	};
 
 	if (bambu.state === 'idle') {
-		return bambu.error || 'Connecting to the Bambu bridge…';
+		return bambu.error || _('Connecting to the Bambu bridge…');
 	};
 
 	if (!bambu.status) {
-		return 'Waiting for the Bambu bridge…';
+		return _('Waiting for the Bambu bridge…');
 	};
 
-	return 'Printer offline';
+	return _('Printer offline');
 };
 
 function faceToken(settings, animate) {

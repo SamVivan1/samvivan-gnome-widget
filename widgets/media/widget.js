@@ -1,3 +1,4 @@
+import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
@@ -10,7 +11,7 @@ import { activeLyricIndex } from '../../lib/lyrics.js';
 import { warn } from '../../logger.js';
 
 export const type = 'media';
-export const label = 'Music';
+export function label() { return _('Music'); };
 export const stylesheet = 'widgets/media/stylesheet.css';
 export const defaultSize = 'medium';
 export const defaultInLayout = false;
@@ -371,17 +372,17 @@ const MediaView = GObject.registerClass(
 			const view = this._media?.view;
 
 			if (!view) {
-				this._title.text = 'Music';
-				this._artist.text = 'No media player detected';
-				this._lyricView.setMessage('No media player detected');
+				this._title.text = _('Music');
+				this._artist.text = _('No media player detected');
+				this._lyricView.setMessage(_('No media player detected'));
 				this._progress.hide();
 				return;
 			};
 
 			this._playing = view.playback === 'Playing';
 
-			this._title.text = view.title || (view.available ? 'Unknown track' : 'Nothing playing');
-			this._artist.text = view.artist || 'Unknown artist';
+			this._title.text = view.title || (view.available ? _('Unknown track') : _('Nothing playing'));
+			this._artist.text = view.artist || _('Unknown artist');
 			this._updateArt(view.artUrl);
 
 			this._progress.show();
@@ -404,12 +405,12 @@ const MediaView = GObject.registerClass(
 			const lyrics = view.lyrics ?? {};
 
 			if (!view.available) {
-				this._lyricView.setMessage('No media player detected');
+				this._lyricView.setMessage(_('No media player detected'));
 				return;
 			};
 
 			if (!view.title) {
-				this._lyricView.setMessage('Nothing playing');
+				this._lyricView.setMessage(_('Nothing playing'));
 				return;
 			};
 
@@ -419,7 +420,7 @@ const MediaView = GObject.registerClass(
 			};
 
 			if (lyrics.status === 'instrumental') {
-				this._lyricView.setMessage('♪ Instrumental');
+				this._lyricView.setMessage(_('♪ Instrumental'));
 				return;
 			};
 
@@ -445,7 +446,7 @@ const MediaView = GObject.registerClass(
 				return;
 			};
 
-			this._lyricView.setMessage('No lyrics found');
+			this._lyricView.setMessage(_('No lyrics found'));
 		};
 
 		_updateArt(artUrl) {

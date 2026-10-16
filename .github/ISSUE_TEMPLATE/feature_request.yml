@@ -1,0 +1,32 @@
+name: Feature request
+description: Suggest an idea or a new widget
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: New widget ideas are welcome! Please read CONTRIBUTING.md (widget contract) first.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      placeholder: "I want to see ... on my desktop without opening ..."
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      placeholder: "A widget that ..."
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: input
+    id: willing
+    attributes:
+      label: Would you be willing to contribute this?
+      placeholder: "Yes / No / Need guidance"
+    validations:
+      required: false

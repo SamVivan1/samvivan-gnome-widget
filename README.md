@@ -286,7 +286,11 @@ covered by `node --test`. Both `make check` and the unit tests run in CI
 ### Widget module contract
 Each widget module must export:
 - `export const type = '...'`
-- `export const label = '...'`
+- `export function label()` – returns the translated display name, e.g.
+  ``return _('My Widget');`` with
+  `import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js'`
+  (a function, not a const, so gettext runs at display time — module-level code
+  executes before the translation domain is bound)
 - `export const stylesheet = 'widgets/<type>/stylesheet.css'`
 - `export const defaultSize = 'small'|'medium'|'large'`
 
@@ -314,6 +318,13 @@ XDG_RUNTIME_DIR=/tmp/opencode/xrt dbus-run-session -- gnome-shell --headless 2>&
 
 - Forked from [`widgets@distro.com`](https://extensions.gnome.org/extension/6081/widgets/) — original concept and structure
 - Immich integration, Photos rotation/fallback, GSConnect phone battery, prefs, and polish by `desktop-widget@samvivan`
+
+## Contributing
+
+Contributions are welcome — bug reports, translations, new widgets, and general
+improvements. Please see [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow,
+code style, widget contract, and translation guide. Translation-only pull
+requests (a new or improved `po/<lang>.po`) are especially appreciated.
 
 ## License
 

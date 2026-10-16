@@ -1,7 +1,7 @@
 {
   "uuid": "desktop-widget@samvivan",
   "name": "Desktop Widget",
-  "description": "Desktop widgets (clock, calendar, agenda, weather, photos, battery, Bambu Lab) for GNOME Shell 50. Lightweight, runs in gnome-shell. Calendar shows event dots and Agenda lists upcoming events from Evolution/Online Accounts. Photos can rotate from local images or your Immich library with fallback. Bambu Lab shows live 3D print progress from a self-hosted bridge. Drag, resize, snap to grid, multi-monitor, and fully configurable.",
+  "description": "Desktop widgets for GNOME Shell: clock, calendar, agenda, weather, photos, battery, music with synced lyrics, and 3D-print monitor. Drag, resize, multi-monitor.",
   "shell-version": ["50"],
   "settings-schema": "org.gnome.shell.extensions.desktop-widget",
   "gettext-domain": "desktop-widget",

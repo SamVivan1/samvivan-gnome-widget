@@ -4,7 +4,7 @@ import GLib from 'gi://GLib';
 import Pango from 'gi://Pango';
 import St from 'gi://St';
 
-import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
+import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
@@ -59,7 +59,11 @@ const WIDGET_MODULES = [
   BambuWidget,
 ];
 const WIDGETS = new Map(WIDGET_MODULES.map(widgetModule => [widgetModule.type, widgetModule]));
-const WIDGET_TYPES = WIDGET_MODULES.map(widgetModule => [widgetModule.type, widgetModule.label]);
+const WIDGET_TYPES = WIDGET_MODULES.map(widgetModule => widgetModule.type);
+
+function widgetLabel(type) {
+	return WIDGET_MODULES.find(widgetModule => widgetModule.type === type)?.label() ?? type;
+};
 const DEFAULT_WIDGETS = WIDGET_MODULES
   .filter(widgetModule => widgetModule.defaultInLayout !== false)
   .map(widgetModule => ({
@@ -149,15 +153,38 @@ function accentColor(settings) {
   return ACCENT_COLORS[accent] ?? ACCENT_COLORS.blue;
 };
 
+function bambuEventTitle(previous, event) {
+  switch (event.id) {
+    case 'printer-connected':
+      return _('Printer connected');
+    case 'printer-disconnected':
+      return _('Printer disconnected');
+    case 'print-started': {
+      const source = previous?.status ?? previous;
+      const wasPaused = String(source?.state ?? '').toUpperCase() === 'PAUSE';
+
+      return wasPaused ? _('Print resumed') : _('Print started');
+    };
+    case 'print-paused':
+      return _('Print paused');
+    case 'print-finished':
+      return _('Print finished');
+    case 'print-failed':
+      return _('Print failed');
+    default:
+      return event.title;
+  };
+};
+
 function bambuEventBody(status, event) {
   const job = status?.job ?? {};
-  const name = job.file || 'Unknown file';
+  const name = job.file || _('Unknown file');
 
   switch (event.id) {
     case 'printer-connected':
-      return 'The printer is online.';
+      return _('The printer is online.');
     case 'printer-disconnected':
-      return 'The printer went offline — check the bridge and LAN mode.';
+      return _('The printer went offline — check the bridge and LAN mode.');
     case 'print-failed':
       return name;
     default:
@@ -541,7 +568,7 @@ class WidgetController {
 
     return parsed.widgets
       .filter(widget => widget.id && widget.type)
-      .filter(widget => WIDGET_TYPES.some(([type]) => type === widget.type))
+      .filter(widget => WIDGET_TYPES.includes(widget.type))
       .map(widget => {
         const size = WIDGET_SIZES[widget.size] ? widget.size : 'small';
         const [defaultWidth, defaultHeight] = WIDGET_SIZES[size];
@@ -823,7 +850,8 @@ class WidgetController {
     };
 
     const status = this._bambuData?.status ?? null;
-    const event = bambuNotification(this._bambuLastStatus, status);
+    const previous = this._bambuLastStatus;
+    const event = bambuNotification(previous, status);
 
     this._bambuLastStatus = status;
 
@@ -831,7 +859,7 @@ class WidgetController {
       return;
     };
 
-    this._bambuNotifier.show(event.title, bambuEventBody(this._bambuData?.status ?? null, event));
+    this._bambuNotifier.show(bambuEventTitle(previous, event), bambuEventBody(this._bambuData?.status ?? null, event));
   };
 
   _refreshMediaViews(force = false) {
@@ -954,13 +982,13 @@ class WidgetController {
   };
 
   _createIndicator() {
-    this._indicator = new PanelMenu.Button(0.0, 'Desktop Widgets');
+    this._indicator = new PanelMenu.Button(0.0, _('Desktop Widgets'));
     this._indicator.add_child(new St.Icon({
       icon_name: 'view-grid-symbolic',
       style_class: 'widget-panel-icon',
     }));
 
-    this._editItem = new PopupMenu.PopupSwitchMenuItem('Edit Widgets', this._editMode);
+    this._editItem = new PopupMenu.PopupSwitchMenuItem(_('Edit Widgets'), this._editMode);
     this._editItem.connectObject('toggled', (_item, state) => {
       if (this._syncingMenu) {
         return;
@@ -970,7 +998,7 @@ class WidgetController {
     }, this);
     this._indicator.menu.addMenuItem(this._editItem);
 
-    this._hideItem = new PopupMenu.PopupSwitchMenuItem('Hide All Widgets', this._layoutSettings.get_boolean('hide-all'));
+    this._hideItem = new PopupMenu.PopupSwitchMenuItem(_('Hide All Widgets'), this._layoutSettings.get_boolean('hide-all'));
     this._hideItem.connectObject('toggled', (_item, state) => {
       if (this._syncingMenu) {
         return;
@@ -982,15 +1010,15 @@ class WidgetController {
 
     this._indicator.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
-    for (const [type, label] of WIDGET_TYPES) {
-      const item = new PopupMenu.PopupMenuItem(`Add ${label}`);
+    for (const type of WIDGET_TYPES) {
+      const item = new PopupMenu.PopupMenuItem(_('Add %s').format(widgetLabel(type)));
       item.connectObject('activate', () => this.addWidget(type), this);
       this._indicator.menu.addMenuItem(item);
     };
 
     this._indicator.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
-    const resetItem = new PopupMenu.PopupMenuItem('Reset Default Widgets');
+    const resetItem = new PopupMenu.PopupMenuItem(_('Reset Default Widgets'));
     resetItem.connectObject('activate', () => {
       this._widgets = cloneDefaultWidgets();
       this._saveWidgets();
@@ -1290,7 +1318,7 @@ class WidgetController {
       reactive: true,
       can_focus: true,
       track_hover: true,
-      accessible_name: 'Remove widget',
+      accessible_name: _('Remove widget'),
     });
 
     this._layer.add_child(removeButton);

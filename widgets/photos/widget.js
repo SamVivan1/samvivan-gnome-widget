@@ -1,3 +1,4 @@
+import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import St from 'gi://St';
@@ -8,7 +9,7 @@ import * as Immich from './immich.js';
 import { warn } from '../../logger.js';
 
 export const type = 'photos';
-export const label = 'Photos';
+export function label() { return _('Photos'); };
 export const stylesheet = 'widgets/photos/stylesheet.css';
 export const defaultSize = 'medium';
 

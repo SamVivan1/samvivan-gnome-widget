@@ -5,3 +5,4 @@ screenshots/
 __pycache__/
 *.pyc
 locale/
+schemas/gschemas.compiled
