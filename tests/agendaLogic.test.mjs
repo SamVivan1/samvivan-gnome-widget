@@ -190,3 +190,19 @@ test('fitEntries never counts headers as hidden', async () => {
 	assert.deepEqual(result.shown.map(entry => entry.id ?? entry.kind), ['today', 'a']);
 	assert.equal(result.hiddenEvents, 1);
 });
+
+test('fitEntries trims a trailing orphan header', async () => {
+	const {fitEntries} = await import('../lib/agendaLogic.js');
+	const entries = [
+		{kind: 'today'},
+		{kind: 'event', id: 'a'},
+		{kind: 'day'},
+		{kind: 'event', id: 'b'},
+	];
+	const heights = {today: 16, event: 20, day: 16};
+	const measure = entry => heights[entry.kind];
+	const result = fitEntries(entries, 16 + 20 + 16 + 15, 15, measure);
+
+	assert.deepEqual(result.shown.map(entry => entry.id ?? entry.kind), ['today', 'a']);
+	assert.equal(result.hiddenEvents, 1);
+});
