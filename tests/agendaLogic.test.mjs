@@ -206,3 +206,11 @@ test('fitEntries trims a trailing orphan header', async () => {
 	assert.deepEqual(result.shown.map(entry => entry.id ?? entry.kind), ['today', 'a']);
 	assert.equal(result.hiddenEvents, 1);
 });
+
+test('formatTimeRange shares one meridiem in 12-hour locales', async () => {
+	const {formatTimeRange} = await import('../lib/agendaLogic.js');
+	const text = formatTimeRange(new Date(2026, 9, 19, 16, 30), new Date(2026, 9, 19, 19, 0));
+
+	assert.ok(!/PM.*PM/i.test(text), text);
+	assert.ok(text.includes('4') || text.includes('16'), text);
+});

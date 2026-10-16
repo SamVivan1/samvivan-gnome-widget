@@ -1,5 +1,6 @@
 import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 import Clutter from 'gi://Clutter';
+import GLib from 'gi://GLib';
 import St from 'gi://St';
 
 import {
@@ -233,25 +234,98 @@ export function render({body, widget, theme, createLabel, calendar, sizeForWidge
 	});
 	const probe = createLabel(_('+%s more').format(0), 'widget-agenda-more', `color: ${theme.muted};`);
 	const moreCost = probe.get_preferred_height(width)[1];
-	const fit = fitEntries(
+
+	let moreActor = null;
+
+	const fillList = fit => {
+		if (moreActor) {
+			moreActor.destroy();
+			moreActor = null;
+		};
+
+		// Detach, never destroy: entry actors are reused across refits.
+		list.remove_all_children();
+
+		for (const item of measured.slice(0, fit.shown.length)) {
+			list.add_child(item.actor);
+		};
+
+		if (fit.hiddenEvents > 0 && fit.moreFits) {
+			moreActor = createLabel(
+				_('+%s more').format(fit.hiddenEvents),
+				'widget-agenda-more',
+				`color: ${theme.muted};`);
+			list.add_child(moreActor);
+		};
+	};
+
+	let fit = fitEntries(
 		measured.map(item => item.entry),
 		Math.max(0, usable - nextCost),
 		moreCost,
 		(_entry, index) => measured[index].height);
 
-	for (const item of measured.slice(0, fit.shown.length)) {
-		list.add_child(item.actor);
-	};
-
+	fillList(fit);
 	body.add_child(new St.Widget({y_expand: true}));
 	body.add_child(list);
-
-	if (fit.hiddenEvents > 0 && fit.moreFits) {
-		body.add_child(createLabel(
-			_('+%s more').format(fit.hiddenEvents),
-			'widget-agenda-more',
-			`color: ${theme.muted};`));
-	};
-
 	body.add_child(new St.Widget({y_expand: true}));
+
+	// Preferred heights measured above predate stylesheets and layout, so
+	// they over-count. Re-check on a timer until two consecutive snapshots
+	// of the allocated rows agree, then fit once against that ground truth.
+	// Timers (not allocation signals) drive this because style application
+	// and layout race each other differently on every machine.
+	let rounds = 0;
+	let lastSnapshot = '';
+	let dead = false;
+
+	body.connect('destroy', () => {
+		dead = true;
+	});
+
+	const snapshot = () => list.get_children().map(kid => {
+		const box = kid.get_allocation_box();
+
+		return Math.max(0, Math.round(box.y2 - box.y1));
+	}).join(',');
+
+	GLib.timeout_add(GLib.PRIORITY_DEFAULT, 300, () => {
+		rounds += 1;
+
+		try {
+			if (dead || body.is_finalized?.()) {
+				return GLib.SOURCE_REMOVE;
+			};
+
+			const current = snapshot();
+			const stable = current.length > 0 && current === lastSnapshot;
+
+			lastSnapshot = current;
+
+			if (!stable || rounds >= 12) {
+				return rounds >= 12 ? GLib.SOURCE_REMOVE : GLib.SOURCE_CONTINUE;
+			};
+
+			const allocated = current.split(',').map(Number);
+			const refit = fitEntries(
+				measured.map(item => item.entry),
+				Math.max(0, usable - nextCost),
+				moreCost,
+				(entry, index) => index < allocated.length && allocated[index] > 0
+					? allocated[index]
+					: measured[index].height);
+
+			if (refit.shown.length !== fit.shown.length) {
+				fit = refit;
+				fillList(refit);
+				lastSnapshot = '';
+
+				return GLib.SOURCE_CONTINUE;
+			};
+		} catch {
+			return GLib.SOURCE_REMOVE;
+		};
+
+		return GLib.SOURCE_REMOVE;
+	});
 };
