@@ -92,3 +92,56 @@ test('formatTimeRange spans start and end', () => {
 	assert.ok(text.includes('10'), text);
 	assert.ok(text.includes('–') || text.includes('-'), text);
 });
+
+test('buildDayPlan fills forward past the briefing window when asked', async () => {
+	const {buildDayPlan} = await import('../lib/agendaLogic.js');
+	const today = startOfDay(new Date(2026, 9, 19, 12));
+	const calendar = calendarFor({
+		'2026-9-19': [event('a', new Date(2026, 9, 19, 9), new Date(2026, 9, 19, 10))],
+		'2026-9-24': [event('far', new Date(2026, 9, 24, 9), new Date(2026, 9, 24, 10))],
+	});
+	const entries = buildDayPlan(calendar, today, 2, {extraDays: 11});
+	const ids = entries.filter(entry => entry.kind === 'event').map(entry => entry.event.id);
+
+	assert.deepEqual(ids, ['a', 'far']);
+});
+
+test('buildDayPlan caps the fill-forward window', async () => {
+	const {buildDayPlan} = await import('../lib/agendaLogic.js');
+	const today = startOfDay(new Date(2026, 9, 19, 12));
+	const calendar = calendarFor({
+		'2026-10-9': [event('too-far', new Date(2026, 10, 9, 9), new Date(2026, 10, 9, 10))],
+	});
+	const entries = buildDayPlan(calendar, today, 2, {extraDays: 11});
+	const ids = entries.filter(entry => entry.kind === 'event').map(entry => entry.event.id);
+
+	assert.deepEqual(ids, []);
+});
+
+test('nextUp prefers the ongoing event, then the earliest future one', async () => {
+	const {nextUp} = await import('../lib/agendaLogic.js');
+	const now = new Date(2026, 9, 19, 12);
+	const ongoing = event('live', new Date(2026, 9, 19, 11), new Date(2026, 9, 19, 13));
+	const later = event('next', new Date(2026, 9, 19, 15), new Date(2026, 9, 19, 16));
+
+	assert.equal(nextUp([later, ongoing], now).event.id, 'live');
+	assert.equal(nextUp([later, ongoing], now).kind, 'ongoing');
+	assert.equal(nextUp([later], now).kind, 'upcoming');
+});
+
+test('nextUp ignores ended events and returns null when empty', async () => {
+	const {nextUp} = await import('../lib/agendaLogic.js');
+	const now = new Date(2026, 9, 19, 12);
+	const done = event('done', new Date(2026, 9, 19, 9), new Date(2026, 9, 19, 10));
+
+	assert.equal(nextUp([done], now), null);
+	assert.equal(nextUp([], now), null);
+});
+
+test('formatCountdown renders minutes, hours, and days', async () => {
+	const {formatCountdown} = await import('../lib/agendaLogic.js');
+
+	assert.equal(formatCountdown(45 * 60000), '45m');
+	assert.equal(formatCountdown((2 * 60 + 15) * 60000), '2h 15m');
+	assert.equal(formatCountdown(3 * 86400000), '3d');
+});

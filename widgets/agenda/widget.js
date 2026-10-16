@@ -5,9 +5,11 @@ import St from 'gi://St';
 import {
 	addDays,
 	buildDayPlan,
+	formatCountdown,
 	formatTime,
 	formatTimeRange,
 	isPastEvent,
+	nextUp,
 	sameDay,
 	startOfDay,
 } from '../../lib/agendaLogic.js';
@@ -25,6 +27,8 @@ const DAY_HEIGHT = 18;
 const ROW_HEIGHT = 24;
 const LIST_SPACING = 1;
 const UPCOMING_DAYS = 2;
+const FILL_EXTRA_DAYS = 11;
+const NEXTUP_HEIGHT = 20;
 
 function formatHeader(date) {
 	return date.toLocaleDateString(undefined, {
@@ -207,13 +211,24 @@ export function render({body, widget, theme, createLabel, calendar, sizeForWidge
 		return;
 	};
 
-	const entries = buildDayPlan(calendar, today, UPCOMING_DAYS);
+	const entries = buildDayPlan(calendar, today, UPCOMING_DAYS, {extraDays: FILL_EXTRA_DAYS});
+	const upcoming = nextUp(entries.filter(entry => entry.kind === 'event').map(entry => entry.event), now);
+
+	if (upcoming) {
+		const text = upcoming.kind === 'ongoing'
+			? _('Happening now: %s until %s').format(upcoming.event.summary, formatTime(upcoming.event.endDate))
+			: _('Next up: %s in %s').format(upcoming.event.summary, formatCountdown(upcoming.event.start - now.getTime()));
+		const nextLabel = createLabel(text, 'widget-agenda-nextup', `color: ${theme.text}; font-weight: 800;`);
+
+		nextLabel.clutter_text.set_line_wrap(false);
+		body.add_child(nextLabel);
+	};
 	const list = new St.BoxLayout({
 		orientation: Clutter.Orientation.VERTICAL,
 		style_class: 'widget-agenda-list',
 		x_expand: true,
 	});
-	let used = 0;
+	let used = upcoming ? NEXTUP_HEIGHT + 2 + LIST_SPACING : 0;
 	let rendered = 0;
 	let hidden = 0;
 

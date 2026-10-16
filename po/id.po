@@ -84,7 +84,7 @@ msgstr "Jam"
 msgid "Calendar"
 msgstr "Kalender"
 
-#: prefs.js:23 widgets/agenda/widget.js:16
+#: prefs.js:23 widgets/agenda/widget.js:18
 msgid "Agenda"
 msgstr "Agenda"
 
@@ -768,45 +768,53 @@ msgstr ""
 msgid "calendar data is unavailable"
 msgstr ""
 
-#: widgets/agenda/widget.js:51
+#: widgets/agenda/widget.js:55
 msgid "All day"
 msgstr "Seharian"
 
-#: widgets/agenda/widget.js:77
+#: widgets/agenda/widget.js:81
 msgid "Today"
 msgstr "Hari ini"
 
-#: widgets/agenda/widget.js:81
+#: widgets/agenda/widget.js:85
 msgid "Tomorrow"
 msgstr "Besok"
 
-#: widgets/agenda/widget.js:134
+#: widgets/agenda/widget.js:138
 msgid "No events today"
 msgstr ""
 
-#: widgets/agenda/widget.js:138 widgets/agenda/widget.js:237
+#: widgets/agenda/widget.js:142 widgets/agenda/widget.js:252
 msgid "+%s more"
 msgstr ""
 
-#: widgets/agenda/widget.js:160
+#: widgets/agenda/widget.js:164
 msgid "Calendar module unavailable"
 msgstr ""
 
-#: widgets/agenda/widget.js:164
+#: widgets/agenda/widget.js:168
 msgid "Calendar data unavailable — install python3-gi and Evolution Data Server"
 msgstr ""
 
-#: widgets/agenda/widget.js:168
+#: widgets/agenda/widget.js:172
 msgid "Could not read calendar data"
 msgstr ""
 
-#: widgets/agenda/widget.js:171
+#: widgets/agenda/widget.js:175
 msgid "Loading calendar…"
 msgstr ""
 
-#: widgets/agenda/widget.js:205
+#: widgets/agenda/widget.js:209
 msgid "No upcoming events"
 msgstr "Tidak ada acara mendatang"
+
+#: widgets/agenda/widget.js:219
+msgid "Happening now: %s until %s"
+msgstr "Berlangsung sekarang: %s sampai %s"
+
+#: widgets/agenda/widget.js:220
+msgid "Next up: %s in %s"
+msgstr "Berikutnya: %s dalam %s"
 
 #: widgets/bambu/widget.js:24
 msgid "Idle"
