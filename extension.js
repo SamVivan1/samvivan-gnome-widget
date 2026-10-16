@@ -37,6 +37,7 @@ import { WorkspaceIntegration } from './workspaceIntegration.js';
 
 const EXTENSION_PATH = GLib.path_get_dirname(GLib.filename_from_uri(import.meta.url)[0]);
 const LAYOUT_KEY = 'layout-json';
+const DONATE_URL = 'https://ko-fi.com/samvivan';
 const GRID_DEFAULT = 20;
 const GAP_DEFAULT = 14;
 let GRID_SIZE = GRID_DEFAULT;
@@ -1026,6 +1027,16 @@ class WidgetController {
     }, this);
 
     this._indicator.menu.addMenuItem(resetItem);
+
+    const donateItem = new PopupMenu.PopupMenuItem(_('Donate'));
+    donateItem.connectObject('activate', () => {
+      try {
+        Gio.AppInfo.launch_default_for_uri(DONATE_URL, null);
+      } catch (error) {
+        warn('donate', `could not open donate page: ${error.message}`);
+      };
+    }, this);
+    this._indicator.menu.addMenuItem(donateItem);
     Main.panel.addToStatusArea(this._extension.uuid, this._indicator);
   };
 

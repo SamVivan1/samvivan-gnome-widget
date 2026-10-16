@@ -1,8 +1,12 @@
 # Desktop Widget for GNOME Shell
 
-[![GNOME Shell 50](https://img.shields.io/badge/GNOME%20Shell-50-e67e22.svg)](#requirements) [![License: Unlicense](https://img.shields.io/badge/license-Unlicense-green.svg)](LICENSE) [![Release](https://img.shields.io/github/v/release/SamVivan1/samvivan-gnome-widget)](https://github.com/SamVivan1/samvivan-gnome-widget/releases)
+[![GNOME Shell 48–51](https://img.shields.io/badge/GNOME%20Shell-48--51-e67e22.svg)](#requirements) [![License: Unlicense](https://img.shields.io/badge/license-Unlicense-green.svg)](LICENSE) [![Release](https://img.shields.io/github/v/release/SamVivan1/samvivan-gnome-widget)](https://github.com/SamVivan1/samvivan-gnome-widget/releases) [![Donate](https://img.shields.io/badge/donate-Ko--fi-ff5e5b.svg)](https://ko-fi.com/samvivan)
 
-A lightweight desktop widget suite for GNOME Shell 50. Forked from `widgets@distro.com`, it lives directly on your desktop layer with full drag/resize controls and a comprehensive settings panel.
+A lightweight desktop widget suite for GNOME Shell 48–51. Forked from `widgets@distro.com`, it lives directly on your desktop layer with full drag/resize controls and a comprehensive settings panel.
+
+## Support
+
+If Desktop Widget is useful to you, consider [supporting its development with a small donation via Ko-fi](https://ko-fi.com/samvivan). Thank you!
 
 ![Desktop Widget preview](docs/screenshot-desktop.png)
 
@@ -22,7 +26,7 @@ A lightweight desktop widget suite for GNOME Shell 50. Forked from `widgets@dist
 
 ## Requirements
 
-- GNOME Shell 50
+- GNOME Shell 48–51
 - `glib-compile-schemas` (usually present on Linux distros with GNOME)
 - For Immich: a running Immich server + API key
 - For Bambu Lab: the self-hosted `homelab/bambu-bridge` service reachable over HTTP(S) (see [Bambu Lab Setup](#bambu-lab-setup))

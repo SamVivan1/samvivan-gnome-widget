@@ -11,6 +11,7 @@ import * as Immich from './widgets/photos/immich.js';
 
 const LAYOUT_KEY = 'layout-json';
 const EXTENSION_PATH = GLib.path_get_dirname(GLib.filename_from_uri(import.meta.url)[0]);
+const DONATE_URL = 'https://ko-fi.com/samvivan';
 
 // Built on demand: the shell only assigns the preferences' stateObj after
 // importing this module, so gettext must not run while it is being evaluated.
@@ -194,6 +195,28 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     panel.add(panelIconRow);
 
     page.add(panel);
+
+    const support = new Adw.PreferencesGroup({
+      title: _('Support'),
+      description: _('If Desktop Widget is useful, consider supporting its development.'),
+    });
+
+    const donateRow = new Adw.ActionRow({
+      title: _('Donate'),
+      subtitle: _('Support development with a small donation via Ko-fi'),
+      activatable: true,
+    });
+    donateRow.add_suffix(new Gtk.Image({icon_name: 'external-link-symbolic'}));
+    donateRow.connect('activated', () => {
+      try {
+        Gio.AppInfo.launch_default_for_uri(DONATE_URL, null);
+      } catch (error) {
+        donateRow.subtitle = error.message;
+      };
+    });
+    support.add(donateRow);
+
+    page.add(support);
 
     return page;
   };

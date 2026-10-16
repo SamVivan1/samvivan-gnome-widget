@@ -2,7 +2,7 @@
   "uuid": "desktop-widget@samvivan",
   "name": "Desktop Widget",
   "description": "Desktop widgets for GNOME Shell: clock, calendar, agenda, weather, photos, battery, music with synced lyrics, and 3D-print monitor. Drag, resize, multi-monitor.",
-  "shell-version": ["50"],
+  "shell-version": ["48", "49", "50", "51"],
   "settings-schema": "org.gnome.shell.extensions.desktop-widget",
   "gettext-domain": "desktop-widget",
   "url": "https://github.com/SamVivan1/samvivan-gnome-widget",
