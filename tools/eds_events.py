@@ -101,6 +101,41 @@ def component_time(component_date_time):
         return None
 
 
+def component_tzid(component):
+    try:
+        return component.get_dtstart().get_tzid() or None
+    except Exception:
+        return None
+
+
+def moment_epoch(moment, tzid):
+    """Unix epoch for an ICalGLib.Time.
+
+    libecal hands back floating wall times (tzid None) even when DTSTART
+    carries a TZID, and as_timet() then misreads them as UTC. When the
+    component declares a zone, interpret floating times in it instead.
+    """
+    try:
+        floating = not moment.get_tzid()
+    except Exception:
+        floating = False
+
+    if floating and tzid:
+        try:
+            from zoneinfo import ZoneInfo
+            from datetime import datetime
+
+            wall = datetime(
+                moment.get_year(), moment.get_month(), moment.get_day(),
+                moment.get_hour(), moment.get_minute(), moment.get_second(),
+                tzinfo=ZoneInfo(tzid))
+            return int(wall.timestamp())
+        except Exception:
+            pass
+
+    return moment.as_timet()
+
+
 def occurrences(component, start_epoch, end_epoch):
     """Yield (start, end, all_day) tuples within [start_epoch, end_epoch]."""
     dtstart = component_time(component.get_dtstart())
@@ -108,9 +143,10 @@ def occurrences(component, start_epoch, end_epoch):
     if dtstart is None:
         return []
 
-    start_ts = dtstart.as_timet()
+    tzid = component_tzid(component)
+    start_ts = moment_epoch(dtstart, tzid)
     dtend = component_time(component.get_dtend())
-    end_ts = dtend.as_timet() if dtend is not None else start_ts
+    end_ts = moment_epoch(dtend, tzid) if dtend is not None else start_ts
     all_day = dtstart.is_date()
 
     if end_ts <= start_ts:
@@ -134,7 +170,7 @@ def occurrences(component, start_epoch, end_epoch):
             if occurrence is None:
                 break
 
-            ts = occurrence.as_timet()
+            ts = moment_epoch(occurrence, tzid)
             seen += 1
 
             if ts >= end_epoch:
@@ -168,7 +204,7 @@ def occurrences(component, start_epoch, end_epoch):
         moment = entry_moment(entry)
 
         if moment is not None:
-            excluded.add(moment.as_timet())
+            excluded.add(moment_epoch(moment, tzid))
 
     for rule in component.get_exrules() or []:
         excluded.update(expand_rule(rule))
@@ -182,7 +218,7 @@ def occurrences(component, start_epoch, end_epoch):
         if moment is None:
             continue
 
-        ts = moment.as_timet()
+        ts = moment_epoch(moment, tzid)
 
         if ts < end_epoch and ts + duration > start_epoch and ts not in excluded:
             extra.append((ts, ts + duration, all_day))
