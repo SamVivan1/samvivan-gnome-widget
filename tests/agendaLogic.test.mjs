@@ -145,3 +145,48 @@ test('formatCountdown renders minutes, hours, and days', async () => {
 	assert.equal(formatCountdown((2 * 60 + 15) * 60000), '2h 15m');
 	assert.equal(formatCountdown(3 * 86400000), '3d');
 });
+
+test('fitEntries shows everything that fits and counts only events as hidden', async () => {
+	const {fitEntries} = await import('../lib/agendaLogic.js');
+	const entries = [
+		{kind: 'today'},
+		{kind: 'event', id: 'a'},
+		{kind: 'event', id: 'b'},
+		{kind: 'day'},
+		{kind: 'event', id: 'c'},
+		{kind: 'event', id: 'd'},
+	];
+	const heights = {today: 16, event: 20, day: 16};
+	const result = fitEntries(entries, 16 + 20 + 20 + 15, 15, entry => heights[entry.kind]);
+
+	assert.deepEqual(result.shown.map(entry => entry.id ?? entry.kind), ['today', 'a', 'b']);
+	assert.equal(result.hiddenEvents, 2);
+	assert.equal(result.moreFits, true);
+});
+
+test('fitEntries drops the more-label reserve when everything fits', async () => {
+	const {fitEntries} = await import('../lib/agendaLogic.js');
+	const entries = [{kind: 'today'}, {kind: 'event', id: 'a'}];
+	const heights = {today: 16, event: 20};
+	const result = fitEntries(entries, 200, 15, entry => heights[entry.kind]);
+
+	assert.equal(result.shown.length, 2);
+	assert.equal(result.hiddenEvents, 0);
+	assert.equal(result.moreFits, false);
+});
+
+test('fitEntries never counts headers as hidden', async () => {
+	const {fitEntries} = await import('../lib/agendaLogic.js');
+	const entries = [
+		{kind: 'today'},
+		{kind: 'event', id: 'a'},
+		{kind: 'day'},
+		{kind: 'day'},
+		{kind: 'event', id: 'b'},
+	];
+	const heights = {today: 16, event: 20, day: 16};
+	const result = fitEntries(entries, 16 + 20 + 16 + 10, 15, entry => heights[entry.kind]);
+
+	assert.deepEqual(result.shown.map(entry => entry.id ?? entry.kind), ['today', 'a']);
+	assert.equal(result.hiddenEvents, 1);
+});

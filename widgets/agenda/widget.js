@@ -5,6 +5,7 @@ import St from 'gi://St';
 import {
 	addDays,
 	buildDayPlan,
+	fitEntries,
 	formatCountdown,
 	formatTime,
 	formatTimeRange,
@@ -22,13 +23,8 @@ export const defaultSize = 'medium';
 
 const USABLE_PADDING = 30;
 const HEADER_HEIGHT = 30;
-const SECTION_HEIGHT = 20;
-const DAY_HEIGHT = 18;
-const ROW_HEIGHT = 24;
-const LIST_SPACING = 1;
 const UPCOMING_DAYS = 2;
 const FILL_EXTRA_DAYS = 11;
-const NEXTUP_HEIGHT = 20;
 
 function formatHeader(date) {
 	return date.toLocaleDateString(undefined, {
@@ -44,6 +40,16 @@ function formatDay(date) {
 		day: 'numeric',
 		month: 'short',
 	});
+};
+
+function measureWidth(body, widget, sizeForWidget) {
+	if (body.width > 0) {
+		return body.width;
+	};
+
+	const [width] = sizeForWidget(widget);
+
+	return Math.max(50, width - 28);
 };
 
 function formatDayShort(date) {
@@ -145,20 +151,6 @@ function renderEntry(entry, createLabel, theme, now) {
 	return createLabel(entry.text, 'widget-agenda-section', `color: ${theme.muted}; font-weight: 700; letter-spacing: 1px;`);
 };
 
-function entryHeight(entry) {
-	// Costs include the list spacing and each class's top margin so the
-	// fitted list never overflows the fixed widget box.
-	if (entry.kind === 'event') {
-		return ROW_HEIGHT + LIST_SPACING;
-	};
-
-	if (entry.kind === 'day' || entry.kind === 'empty') {
-		return DAY_HEIGHT + 5 + LIST_SPACING;
-	};
-
-	return SECTION_HEIGHT + 2 + LIST_SPACING;
-};
-
 function formatMessage(calendar) {
 	if (!calendar) {
 		return _('Calendar module unavailable');
@@ -213,6 +205,7 @@ export function render({body, widget, theme, createLabel, calendar, sizeForWidge
 
 	const entries = buildDayPlan(calendar, today, UPCOMING_DAYS, {extraDays: FILL_EXTRA_DAYS});
 	const upcoming = nextUp(entries.filter(entry => entry.kind === 'event').map(entry => entry.event), now);
+	let nextCost = 0;
 
 	if (upcoming) {
 		const text = upcoming.kind === 'ongoing'
@@ -222,34 +215,42 @@ export function render({body, widget, theme, createLabel, calendar, sizeForWidge
 
 		nextLabel.clutter_text.set_line_wrap(false);
 		body.add_child(nextLabel);
+		nextCost = nextLabel.get_preferred_height(measureWidth(body, widget, sizeForWidget))[1];
 	};
 	const list = new St.BoxLayout({
 		orientation: Clutter.Orientation.VERTICAL,
 		style_class: 'widget-agenda-list',
 		x_expand: true,
 	});
-	let used = upcoming ? NEXTUP_HEIGHT + 2 + LIST_SPACING : 0;
-	let rendered = 0;
-	let hidden = 0;
+	// Measure every entry actor and fit exactly what the box holds instead
+	// of guessing from font sizes; guesses drift with locale, theme, and
+	// text-scaling and end up clipping real content.
+	const width = measureWidth(body, widget, sizeForWidget);
+	const measured = entries.map(entry => {
+		const actor = renderEntry(entry, createLabel, theme, now);
 
-	for (const [index, entry] of entries.entries()) {
-		const cost = entryHeight(entry);
+		return {entry, height: actor.get_preferred_height(width)[1], actor};
+	});
+	const probe = createLabel(_('+%s more').format(0), 'widget-agenda-more', `color: ${theme.muted};`);
+	const moreCost = probe.get_preferred_height(width)[1];
+	const fit = fitEntries(
+		measured.map(item => item.entry),
+		Math.max(0, usable - nextCost),
+		moreCost,
+		(_entry, index) => measured[index].height);
 
-		if (used + cost > usable && rendered > 0) {
-			hidden = entries.slice(index).filter(candidate => candidate.kind === 'event').length;
-			break;
-		};
-
-		used += cost;
-		rendered += 1;
-		list.add_child(renderEntry(entry, createLabel, theme, now));
+	for (const item of measured.slice(0, fit.shown.length)) {
+		list.add_child(item.actor);
 	};
 
 	body.add_child(new St.Widget({y_expand: true}));
 	body.add_child(list);
 
-	if (hidden > 0) {
-		body.add_child(createLabel(_('+%s more').format(hidden), 'widget-agenda-more', `color: ${theme.muted};`));
+	if (fit.hiddenEvents > 0 && fit.moreFits) {
+		body.add_child(createLabel(
+			_('+%s more').format(fit.hiddenEvents),
+			'widget-agenda-more',
+			`color: ${theme.muted};`));
 	};
 
 	body.add_child(new St.Widget({y_expand: true}));
