@@ -245,7 +245,16 @@ def build_payload(start_epoch, end_epoch, only_sources, list_sources=False):
 
 
 def main():
-    start_epoch, end_epoch, only_sources, list_sources = parse_args(sys.argv[1:])
+    try:
+        start_epoch, end_epoch, only_sources, list_sources = parse_args(sys.argv[1:])
+    except (ValueError, SystemExit) as error:
+        print(json.dumps({
+            'ok': False,
+            'error': f'invalid arguments: {error}',
+            'events': [],
+            'sources': [],
+        }))
+        return
 
     error = load_eds()
 

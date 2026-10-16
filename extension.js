@@ -31,6 +31,7 @@ import {
   positionForFractions as positionFromWidgetFractions,
   rectForWidget as widgetRect,
   rectsOverlap as rectsOverlapWithGap,
+  stripTransientWidgetFields as cleanWidgetForSave,
 } from './lib/geometry.js';
 import { configureLogger, resetLogger, warn } from './logger.js';
 import { WorkspaceIntegration } from './workspaceIntegration.js';
@@ -562,8 +563,15 @@ class WidgetController {
   };
 
   _parseWidgets(serialized) {
-    const parsed = JSON.parse(serialized);
-    if (!Array.isArray(parsed.widgets)) {
+    let parsed = null;
+
+    try {
+      parsed = JSON.parse(serialized);
+    } catch (error) {
+      warn('layout', `Ignoring corrupt widget layout, restoring defaults: ${error.message}`);
+    };
+
+    if (!parsed || !Array.isArray(parsed.widgets)) {
       return cloneDefaultWidgets();
     };
 
@@ -629,7 +637,7 @@ class WidgetController {
       };
     };
 
-    const serialized = JSON.stringify({widgets: this._widgets});
+    const serialized = JSON.stringify({widgets: this._widgets.map(cleanWidgetForSave)});
 
     this._lastLayoutJson = serialized;
     this._layoutSettings.set_string(LAYOUT_KEY, serialized);
@@ -846,15 +854,16 @@ class WidgetController {
   };
 
   _notifyBambuEvents() {
+    const status = this._bambuData?.status ?? null;
+    const previous = this._bambuLastStatus;
+
+    this._bambuLastStatus = status;
+
     if (!this._layoutSettings.get_boolean('bambu-notify')) {
       return;
     };
 
-    const status = this._bambuData?.status ?? null;
-    const previous = this._bambuLastStatus;
     const event = bambuNotification(previous, status);
-
-    this._bambuLastStatus = status;
 
     if (!event) {
       return;
