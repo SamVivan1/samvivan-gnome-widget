@@ -2,6 +2,16 @@ import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js'
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 
+import {
+	addDays,
+	buildDayPlan,
+	formatTime,
+	formatTimeRange,
+	isPastEvent,
+	sameDay,
+	startOfDay,
+} from '../../lib/agendaLogic.js';
+
 export const type = 'agenda';
 export function label() { return _('Agenda'); };
 export const stylesheet = 'widgets/agenda/stylesheet.css';
@@ -10,37 +20,11 @@ export const defaultSize = 'medium';
 
 const USABLE_PADDING = 30;
 const HEADER_HEIGHT = 30;
-const SECTION_HEIGHT = 22;
-const DAY_HEIGHT = 20;
-const ROW_HEIGHT = 28;
-const UPCOMING_DAYS = 7;
-
-function startOfDay(date) {
-	const day = new Date(date);
-
-	day.setHours(0, 0, 0, 0);
-	return day;
-};
-
-function addDays(date, amount) {
-	const next = new Date(date);
-
-	next.setDate(next.getDate() + amount);
-	return next;
-};
-
-function sameDay(a, b) {
-	return a.getFullYear() === b.getFullYear() &&
-		a.getMonth() === b.getMonth() &&
-		a.getDate() === b.getDate();
-};
-
-function formatTime(date) {
-	return date.toLocaleTimeString(undefined, {
-		hour: '2-digit',
-		minute: '2-digit',
-	});
-};
+const SECTION_HEIGHT = 20;
+const DAY_HEIGHT = 18;
+const ROW_HEIGHT = 24;
+const LIST_SPACING = 1;
+const UPCOMING_DAYS = 2;
 
 function formatHeader(date) {
 	return date.toLocaleDateString(undefined, {
@@ -58,60 +42,57 @@ function formatDay(date) {
 	});
 };
 
+function formatDayShort(date) {
+	return date.toLocaleDateString(undefined, {weekday: 'short'});
+};
+
 function eventTimeText(event, day) {
 	if (event.allDay) {
 		return _('All day');
 	};
 
 	if (!sameDay(event.startDate, day)) {
-		return '→';
+		// Continues from an earlier day: point at when it ends so the
+		// arrow is never a mystery.
+		return sameDay(event.endDate, day)
+			? `→ ${formatTime(event.endDate)}`
+			: `→ ${formatDayShort(event.endDate)}`;
 	};
 
 	if (!sameDay(event.endDate, day) && event.end > event.start + 60000) {
 		return `${formatTime(event.startDate)} →`;
 	};
 
+	if (event.end > event.start + 60000) {
+		return formatTimeRange(event.startDate, event.endDate);
+	};
+
 	return formatTime(event.startDate);
 };
 
-function buildEntries(calendar, today) {
-	const entries = [];
-	const todayEvents = calendar.eventsOnDay(today);
+function dayHeaderText(entry) {
+	const date = formatDay(entry.date);
 
-	if (todayEvents.length > 0) {
-		entries.push({kind: 'section', text: _('Today')});
-
-		for (const event of todayEvents) {
-			entries.push({kind: 'event', event, day: today});
-		};
-	} else {
-		entries.push({kind: 'empty', text: _('No events today')});
+	if (entry.kind === 'today') {
+		return `${_('Today')} • ${date}`;
 	};
 
-	for (let offset = 1; offset <= UPCOMING_DAYS; offset++) {
-		const day = addDays(today, offset);
-		const dayEvents = calendar.eventsOnDay(day);
-
-		if (dayEvents.length === 0) {
-			continue;
-		};
-
-		entries.push({kind: 'day', date: day});
-
-		for (const event of dayEvents) {
-			entries.push({kind: 'event', event, day});
-		};
+	if (entry.isTomorrow) {
+		return `${_('Tomorrow')} • ${date}`;
 	};
 
-	return entries;
+	return date;
 };
 
-function eventRow(event, day, createLabel, theme) {
+function eventRow(event, day, createLabel, theme, now) {
 	const row = new St.BoxLayout({
 		style_class: 'widget-agenda-row',
 		x_expand: true,
 	});
-	const time = createLabel(eventTimeText(event, day), 'widget-agenda-time', `color: ${theme.muted};`);
+	const timeClass = event.allDay
+		? 'widget-agenda-time widget-agenda-allday'
+		: 'widget-agenda-time';
+	const time = createLabel(eventTimeText(event, day), timeClass, `color: ${theme.muted};`);
 	const dot = new St.Widget({
 		style_class: 'widget-agenda-dot',
 		style: `background-color: ${event.sourceColor || theme.accent};`,
@@ -133,20 +114,24 @@ function eventRow(event, day, createLabel, theme) {
 	row.add_child(dot);
 	row.add_child(title);
 
+	if (isPastEvent(event, now)) {
+		row.opacity = 120;
+	};
+
 	return row;
 };
 
-function renderEntry(entry, createLabel, theme) {
+function renderEntry(entry, createLabel, theme, now) {
 	if (entry.kind === 'event') {
-		return eventRow(entry.event, entry.day, createLabel, theme);
+		return eventRow(entry.event, entry.day, createLabel, theme, now);
 	};
 
-	if (entry.kind === 'day') {
-		return createLabel(formatDay(entry.date), 'widget-agenda-day', `color: ${theme.muted}; font-weight: 700;`);
+	if (entry.kind === 'day' || entry.kind === 'today') {
+		return createLabel(dayHeaderText(entry), 'widget-agenda-day', `color: ${theme.muted}; font-weight: 700;`);
 	};
 
 	if (entry.kind === 'empty') {
-		return createLabel(entry.text, 'widget-agenda-message', `color: ${theme.muted};`);
+		return createLabel(_('No events today'), 'widget-agenda-message', `color: ${theme.muted};`);
 	};
 
 	if (entry.kind === 'more') {
@@ -157,15 +142,17 @@ function renderEntry(entry, createLabel, theme) {
 };
 
 function entryHeight(entry) {
+	// Costs include the list spacing and each class's top margin so the
+	// fitted list never overflows the fixed widget box.
 	if (entry.kind === 'event') {
-		return ROW_HEIGHT;
+		return ROW_HEIGHT + LIST_SPACING;
 	};
 
 	if (entry.kind === 'day' || entry.kind === 'empty') {
-		return DAY_HEIGHT;
+		return DAY_HEIGHT + 5 + LIST_SPACING;
 	};
 
-	return SECTION_HEIGHT;
+	return SECTION_HEIGHT + 2 + LIST_SPACING;
 };
 
 function formatMessage(calendar) {
@@ -198,7 +185,10 @@ export function render({body, widget, theme, createLabel, calendar, sizeForWidge
 		x_expand: true,
 	});
 
-	header.add_child(createLabel(formatHeader(now), 'widget-agenda-title-date', `color: ${theme.text};`));
+	const headerLabel = createLabel(formatHeader(now), 'widget-agenda-title-date', `color: ${theme.text};`);
+
+	headerLabel.clutter_text.set_line_wrap(false);
+	header.add_child(headerLabel);
 	body.add_child(header);
 
 	if (!calendar || (calendar.status !== 'ready' && !calendar.available)) {
@@ -217,7 +207,7 @@ export function render({body, widget, theme, createLabel, calendar, sizeForWidge
 		return;
 	};
 
-	const entries = buildEntries(calendar, today);
+	const entries = buildDayPlan(calendar, today, UPCOMING_DAYS);
 	const list = new St.BoxLayout({
 		orientation: Clutter.Orientation.VERTICAL,
 		style_class: 'widget-agenda-list',
@@ -231,13 +221,13 @@ export function render({body, widget, theme, createLabel, calendar, sizeForWidge
 		const cost = entryHeight(entry);
 
 		if (used + cost > usable && rendered > 0) {
-			hidden = entries.length - index;
+			hidden = entries.slice(index).filter(candidate => candidate.kind === 'event').length;
 			break;
 		};
 
 		used += cost;
 		rendered += 1;
-		list.add_child(renderEntry(entry, createLabel, theme));
+		list.add_child(renderEntry(entry, createLabel, theme, now));
 	};
 
 	body.add_child(new St.Widget({y_expand: true}));

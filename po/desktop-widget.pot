@@ -93,7 +93,7 @@ msgstr ""
 msgid "Calendar"
 msgstr ""
 
-#: prefs.js:23 widgets/agenda/widget.js:6
+#: prefs.js:23 widgets/agenda/widget.js:16
 msgid "Agenda"
 msgstr ""
 
@@ -105,7 +105,7 @@ msgstr ""
 msgid "Photos"
 msgstr ""
 
-#: prefs.js:26 widgets/battery/widget.js:11 widgets/battery/widget.js:59
+#: prefs.js:26 widgets/battery/widget.js:30 widgets/battery/widget.js:63
 msgid "Battery"
 msgstr ""
 
@@ -777,39 +777,43 @@ msgstr ""
 msgid "calendar data is unavailable"
 msgstr ""
 
-#: widgets/agenda/widget.js:63
+#: widgets/agenda/widget.js:51
 msgid "All day"
 msgstr ""
 
-#: widgets/agenda/widget.js:82
+#: widgets/agenda/widget.js:77
 msgid "Today"
 msgstr ""
 
-#: widgets/agenda/widget.js:88
+#: widgets/agenda/widget.js:81
+msgid "Tomorrow"
+msgstr ""
+
+#: widgets/agenda/widget.js:134
 msgid "No events today"
 msgstr ""
 
-#: widgets/agenda/widget.js:153 widgets/agenda/widget.js:247
+#: widgets/agenda/widget.js:138 widgets/agenda/widget.js:237
 msgid "+%s more"
 msgstr ""
 
-#: widgets/agenda/widget.js:173
+#: widgets/agenda/widget.js:160
 msgid "Calendar module unavailable"
 msgstr ""
 
-#: widgets/agenda/widget.js:177
+#: widgets/agenda/widget.js:164
 msgid "Calendar data unavailable — install python3-gi and Evolution Data Server"
 msgstr ""
 
-#: widgets/agenda/widget.js:181
+#: widgets/agenda/widget.js:168
 msgid "Could not read calendar data"
 msgstr ""
 
-#: widgets/agenda/widget.js:184
+#: widgets/agenda/widget.js:171
 msgid "Loading calendar…"
 msgstr ""
 
-#: widgets/agenda/widget.js:215
+#: widgets/agenda/widget.js:205
 msgid "No upcoming events"
 msgstr ""
 
@@ -901,75 +905,75 @@ msgstr ""
 msgid "Printer offline"
 msgstr ""
 
-#: widgets/battery/widget.js:60
+#: widgets/battery/widget.js:64
 msgid "UPS"
 msgstr ""
 
-#: widgets/battery/widget.js:61 widgets/battery/widget.js:86
+#: widgets/battery/widget.js:65 widgets/battery/widget.js:90
 msgid "Mouse"
 msgstr ""
 
-#: widgets/battery/widget.js:62 widgets/battery/widget.js:89
+#: widgets/battery/widget.js:66 widgets/battery/widget.js:93
 msgid "Keyboard"
 msgstr ""
 
-#: widgets/battery/widget.js:63
+#: widgets/battery/widget.js:67
 msgid "PDA"
 msgstr ""
 
-#: widgets/battery/widget.js:64 widgets/battery/widget.js:107 widgets/battery/widget.js:406
+#: widgets/battery/widget.js:68 widgets/battery/widget.js:111 widgets/battery/widget.js:407
 msgid "Phone"
 msgstr ""
 
-#: widgets/battery/widget.js:65
+#: widgets/battery/widget.js:69
 msgid "Media Player"
 msgstr ""
 
-#: widgets/battery/widget.js:66 widgets/battery/widget.js:92
+#: widgets/battery/widget.js:70 widgets/battery/widget.js:96
 msgid "Tablet"
 msgstr ""
 
-#: widgets/battery/widget.js:67 widgets/battery/widget.js:110
+#: widgets/battery/widget.js:71 widgets/battery/widget.js:114
 msgid "Computer"
 msgstr ""
 
-#: widgets/battery/widget.js:68 widgets/battery/widget.js:95
+#: widgets/battery/widget.js:72 widgets/battery/widget.js:99
 msgid "Gamepad"
 msgstr ""
 
-#: widgets/battery/widget.js:69
+#: widgets/battery/widget.js:73
 msgid "Stylus"
 msgstr ""
 
-#: widgets/battery/widget.js:70
+#: widgets/battery/widget.js:74
 msgid "Touchpad"
 msgstr ""
 
-#: widgets/battery/widget.js:71 widgets/battery/widget.js:98
+#: widgets/battery/widget.js:75 widgets/battery/widget.js:102
 msgid "Headset"
 msgstr ""
 
-#: widgets/battery/widget.js:72 widgets/battery/widget.js:104
+#: widgets/battery/widget.js:76 widgets/battery/widget.js:108
 msgid "Speakers"
 msgstr ""
 
-#: widgets/battery/widget.js:73 widgets/battery/widget.js:101
+#: widgets/battery/widget.js:77 widgets/battery/widget.js:105
 msgid "Headphones"
 msgstr ""
 
-#: widgets/battery/widget.js:74
+#: widgets/battery/widget.js:78
 msgid "Audio Device"
 msgstr ""
 
-#: widgets/battery/widget.js:75
+#: widgets/battery/widget.js:79
 msgid "Device"
 msgstr ""
 
-#: widgets/battery/widget.js:334
+#: widgets/battery/widget.js:335
 msgid "Bluetooth Device"
 msgstr ""
 
-#: widgets/battery/widget.js:1201
+#: widgets/battery/widget.js:1066
 msgid "No batteries found"
 msgstr ""
 

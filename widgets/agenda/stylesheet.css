@@ -17,8 +17,17 @@
 
 .widget-agenda-time {
 	font-size: 12px;
-	width: 68px;
+	width: 80px;
 	text-align: left;
+}
+
+.widget-agenda-allday {
+	font-size: 10px;
+	font-weight: 700;
+	text-transform: uppercase;
+	background-color: rgba(127, 127, 127, 0.22);
+	border-radius: 6px;
+	padding: 2px 6px;
 }
 
 .widget-agenda-dot {
