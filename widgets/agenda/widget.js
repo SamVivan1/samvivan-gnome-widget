@@ -127,6 +127,8 @@ function eventRow(event, day, createLabel, theme) {
 		: `color: ${theme.text};`;
 	const title = createLabel(event.summary, 'widget-agenda-title', titleStyle);
 
+	title.clutter_text.set_line_wrap(false);
+
 	row.add_child(time);
 	row.add_child(dot);
 	row.add_child(title);

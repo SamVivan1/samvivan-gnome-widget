@@ -25,3 +25,8 @@
 .widget-battery-name {
   font-weight: 600;
 }
+
+.widget-battery-empty {
+	font-size: 14px;
+	text-align: center;
+}

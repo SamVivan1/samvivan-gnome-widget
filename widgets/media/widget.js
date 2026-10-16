@@ -20,21 +20,37 @@ export const defaultInLayout = false;
 const ACTIVE_TICK_MS = 100;
 const IDLE_TICK_MS = 500;
 const LYRIC_SCROLL_MS = 380;
+
+function withAlpha(hex, alpha) {
+	const cleaned = String(hex || '').replace('#', '').trim();
+	const full = cleaned.length === 3
+		? cleaned.split('').map(part => part + part).join('')
+		: cleaned.padEnd(6, '0').slice(0, 6);
+	const value = Number.parseInt(full, 16);
+
+	if (!Number.isFinite(value)) {
+		return `rgba(127, 127, 127, ${alpha})`;
+	};
+
+	return `rgba(${(value >> 16) & 0xff}, ${(value >> 8) & 0xff}, ${value & 0xff}, ${alpha})`;
+};
 const ART_CACHE_MAX_FILES = 100;
 
 const LineProgress = GObject.registerClass(
 	class LineProgress extends St.Widget {
-		_init() {
+		_init(theme) {
 			super._init({
 				style_class: 'widget-media-progress',
 				x_expand: true,
 				layout_manager: new Clutter.BoxLayout({
 					orientation: Clutter.Orientation.HORIZONTAL,
 				}),
+				style: `background-color: ${withAlpha(theme?.muted ?? '#888888', 0.28)};`,
 			});
 
 			this._fill = new St.Widget({
 				style_class: 'widget-media-progress-fill',
+				style: `background-color: ${theme?.text ?? '#ffffff'};`,
 				y_expand: true,
 			});
 
@@ -64,7 +80,7 @@ const LineProgress = GObject.registerClass(
 
 const LyricView = GObject.registerClass(
 	class LyricView extends St.Widget {
-		_init() {
+		_init(theme) {
 			super._init({
 				style_class: 'widget-media-lyrics',
 				clip_to_allocation: true,
@@ -83,6 +99,8 @@ const LyricView = GObject.registerClass(
 
 			this.add_child(this._inner);
 
+			this._lineColor = theme?.muted ?? 'rgba(255, 255, 255, 0.5)';
+			this._lineActiveColor = theme?.text ?? '#ffffff';
 			this._labels = [];
 			this._offsets = null;
 			this._active = -1;
@@ -107,12 +125,13 @@ const LyricView = GObject.registerClass(
 			this._active = -1;
 		};
 
-		_label(text, styleClass) {
+		_label(text, styleClass, color) {
 			const label = new St.Label({
 				text,
 				style_class: styleClass,
 				x_expand: true,
 				x_align: Clutter.ActorAlign.FILL,
+				style: `color: ${color ?? this._lineColor};`,
 			});
 
 			label.clutter_text.line_wrap = true;
@@ -133,7 +152,7 @@ const LyricView = GObject.registerClass(
 			this._inner.y_align = Clutter.ActorAlign.CENTER;
 
 			if (text) {
-				this._inner.add_child(this._label(text, 'widget-media-lyric-message'));
+				this._inner.add_child(this._label(text, 'widget-media-lyric-message', this._lineColor));
 			};
 		};
 
@@ -148,7 +167,7 @@ const LyricView = GObject.registerClass(
 			this._inner.y_align = Clutter.ActorAlign.START;
 
 			if (text) {
-				this._inner.add_child(this._label(text, 'widget-media-lyric-plain'));
+				this._inner.add_child(this._label(text, 'widget-media-lyric-plain', this._lineColor));
 			};
 		};
 
@@ -163,7 +182,7 @@ const LyricView = GObject.registerClass(
 			this._inner.y_align = Clutter.ActorAlign.START;
 
 			for (const line of lines) {
-				this._inner.add_child(this._label(line?.text ?? '', 'widget-media-lyric-line'));
+				this._inner.add_child(this._label(line?.text ?? '', 'widget-media-lyric-line', this._lineColor));
 			};
 
 			this._labels = this._inner.get_children();
@@ -237,6 +256,7 @@ const LyricView = GObject.registerClass(
 				const isActive = i === index;
 
 				label.opacity = isActive ? 255 : 110;
+			label.style = `color: ${isActive ? this._lineActiveColor : this._lineColor};`;
 
 				if (isActive) {
 					label.add_style_class_name('widget-media-lyric-line-active');
@@ -301,20 +321,25 @@ const MediaView = GObject.registerClass(
 				style_class: 'widget-media-art-icon',
 			});
 			this._artWrap.set_child(this._artIcon);
+			this._artPlaceholderStyle = `background-color: ${withAlpha(theme?.muted ?? '#888888', 0.15)}; border: 1px solid ${withAlpha(theme?.muted ?? '#888888', 0.25)};`;
+			this._artWrap.style = this._artPlaceholderStyle;
+			this._artIcon.style = `color: ${withAlpha(theme?.muted ?? '#888888', 0.6)};`;
 			left.add_child(this._artWrap);
 
 			this._title = createLabel('', 'widget-media-title', `color: ${theme.text};`);
 			this._artist = createLabel('', 'widget-media-artist', `color: ${theme.muted};`);
 			this._title.x_align = Clutter.ActorAlign.CENTER;
 			this._artist.x_align = Clutter.ActorAlign.CENTER;
+			this._title.clutter_text.set_line_wrap(false);
+			this._artist.clutter_text.set_line_wrap(false);
 
 			left.add_child(this._title);
 			left.add_child(this._artist);
 
-			this._progress = new LineProgress();
+			this._progress = new LineProgress(theme);
 			left.add_child(this._progress);
 
-			this._lyricView = new LyricView();
+			this._lyricView = new LyricView(theme);
 			this._lyricView.setAnimate(this._animate);
 
 			main.add_child(left);
@@ -495,14 +520,14 @@ const MediaView = GObject.registerClass(
 			this._artIcon.gicon = new Gio.FileIcon({file});
 			this._artIcon.icon_name = null;
 			this._artIcon.visible = true;
-			this._artWrap.style = `background-image: url(${JSON.stringify(uri)});`;
+			this._artWrap.style = `${this._artPlaceholderStyle} background-image: url(${JSON.stringify(uri)});`;
 		};
 
 		_clearArt() {
 			this._artIcon.gicon = null;
 			this._artIcon.icon_name = 'audio-x-generic-symbolic';
 			this._artIcon.visible = true;
-			this._artWrap.style = '';
+			this._artWrap.style = this._artPlaceholderStyle ?? '';
 		};
 
 		_artCachePath(uri) {

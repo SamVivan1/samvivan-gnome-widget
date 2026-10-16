@@ -60,7 +60,7 @@ msgstr "Edit Widget"
 msgid "Hide All Widgets"
 msgstr "Sembunyikan Semua Widget"
 
-#: extension.js:1024 prefs.js:980
+#: extension.js:1024 prefs.js:997
 msgid "Add %s"
 msgstr "Tambah %s"
 
@@ -72,7 +72,7 @@ msgstr "Kembalikan Widget Bawaan"
 msgid "Donate"
 msgstr "Donasi"
 
-#: extension.js:1341 prefs.js:1054
+#: extension.js:1341 prefs.js:1071
 msgid "Remove widget"
 msgstr "Hapus widget"
 
@@ -92,7 +92,7 @@ msgstr "Agenda"
 msgid "Weather"
 msgstr "Cuaca"
 
-#: prefs.js:25 prefs.js:228 widgets/photos/widget.js:12
+#: prefs.js:25 prefs.js:228 widgets/photos/widget.js:12 widgets/photos/widget.js:184
 msgid "Photos"
 msgstr "Foto"
 
@@ -100,11 +100,11 @@ msgstr "Foto"
 msgid "Battery"
 msgstr "Baterai"
 
-#: prefs.js:27 prefs.js:506 widgets/bambu/widget.js:17 widgets/bambu/widget.js:1213
+#: prefs.js:27 prefs.js:506 widgets/bambu/widget.js:17 widgets/bambu/widget.js:1232
 msgid "Bambu Lab"
 msgstr "Bambu Lab"
 
-#: prefs.js:28 prefs.js:573 widgets/media/widget.js:15 widgets/media/widget.js:377
+#: prefs.js:28 prefs.js:573 widgets/media/widget.js:15 widgets/media/widget.js:402
 msgid "Music"
 msgstr "Musik"
 
@@ -600,43 +600,43 @@ msgstr ""
 msgid "Auto (real sensors)"
 msgstr ""
 
-#: prefs.js:883
+#: prefs.js:883 widgets/bambu/widget.js:166 widgets/bambu/widget.js:443
 msgid "Chill"
 msgstr ""
 
-#: prefs.js:883
+#: prefs.js:883 widgets/bambu/widget.js:167
 msgid "Hot"
 msgstr ""
 
-#: prefs.js:883
+#: prefs.js:883 widgets/bambu/widget.js:168
 msgid "Sleepy"
 msgstr ""
 
-#: prefs.js:883
+#: prefs.js:883 widgets/bambu/widget.js:169
 msgid "Charging"
 msgstr ""
 
-#: prefs.js:883
+#: prefs.js:883 widgets/bambu/widget.js:170
 msgid "Busy"
 msgstr ""
 
-#: prefs.js:883
+#: prefs.js:883 widgets/bambu/widget.js:171
 msgid "Overloaded"
 msgstr ""
 
-#: prefs.js:883 widgets/bambu/widget.js:25 widgets/bambu/widget.js:1260
+#: prefs.js:883 widgets/bambu/widget.js:25 widgets/bambu/widget.js:172 widgets/bambu/widget.js:1279
 msgid "Printing"
 msgstr ""
 
-#: prefs.js:883 widgets/bambu/widget.js:26
+#: prefs.js:883 widgets/bambu/widget.js:26 widgets/bambu/widget.js:173
 msgid "Paused"
 msgstr ""
 
-#: prefs.js:883
+#: prefs.js:883 widgets/bambu/widget.js:174
 msgid "Error"
 msgstr ""
 
-#: prefs.js:883 widgets/bambu/widget.js:27
+#: prefs.js:883 widgets/bambu/widget.js:27 widgets/bambu/widget.js:175
 msgid "Finished"
 msgstr ""
 
@@ -672,25 +672,53 @@ msgstr ""
 msgid "Reset to default layout"
 msgstr ""
 
-#: prefs.js:1022
+#: prefs.js:973
+msgid "Reset to default layout?"
+msgstr "Kembalikan ke tata letak bawaan?"
+
+#: prefs.js:974
+msgid "Every widget position, size, and visibility setting will be replaced with the defaults."
+msgstr "Semua posisi, ukuran, dan pengaturan visibilitas widget akan diganti dengan bawaan."
+
+#: prefs.js:976 prefs.js:1079
+msgid "Cancel"
+msgstr "Batal"
+
+#: prefs.js:977
+msgid "Reset"
+msgstr "Kembalikan"
+
+#: prefs.js:1039
 msgid "Visible"
 msgstr ""
 
-#: prefs.js:1049
+#: prefs.js:1066
 msgid "X position"
 msgstr ""
 
-#: prefs.js:1050
+#: prefs.js:1067
 msgid "Y position"
 msgstr ""
 
-#: prefs.js:1051
+#: prefs.js:1068
 msgid "Width"
 msgstr ""
 
-#: prefs.js:1052
+#: prefs.js:1069
 msgid "Height"
 msgstr ""
+
+#: prefs.js:1076
+msgid "Remove this widget?"
+msgstr "Hapus widget ini?"
+
+#: prefs.js:1077
+msgid "The widget and its position and size settings will be deleted."
+msgstr "Widget beserta pengaturan posisi dan ukurannya akan dihapus."
+
+#: prefs.js:1080
+msgid "Remove"
+msgstr "Hapus"
 
 #: lib/bambuData.js:179
 msgid "Set the endpoint URL and token in preferences"
@@ -752,27 +780,27 @@ msgstr "Hari ini"
 msgid "No events today"
 msgstr "Tidak ada acara hari ini"
 
-#: widgets/agenda/widget.js:151 widgets/agenda/widget.js:245
+#: widgets/agenda/widget.js:153 widgets/agenda/widget.js:247
 msgid "+%s more"
 msgstr ""
 
-#: widgets/agenda/widget.js:171
+#: widgets/agenda/widget.js:173
 msgid "Calendar module unavailable"
 msgstr ""
 
-#: widgets/agenda/widget.js:175
+#: widgets/agenda/widget.js:177
 msgid "Calendar data unavailable — install python3-gi and Evolution Data Server"
 msgstr ""
 
-#: widgets/agenda/widget.js:179
+#: widgets/agenda/widget.js:181
 msgid "Could not read calendar data"
 msgstr ""
 
-#: widgets/agenda/widget.js:182
+#: widgets/agenda/widget.js:184
 msgid "Loading calendar…"
 msgstr ""
 
-#: widgets/agenda/widget.js:213
+#: widgets/agenda/widget.js:215
 msgid "No upcoming events"
 msgstr "Tidak ada acara mendatang"
 
@@ -804,51 +832,59 @@ msgstr ""
 msgid "%s h %s min left"
 msgstr ""
 
-#: widgets/bambu/widget.js:1174
+#: widgets/bambu/widget.js:439
+msgid "load %s%%"
+msgstr "beban %s%%"
+
+#: widgets/bambu/widget.js:440
+msgid "ram %s%%"
+msgstr "ram %s%%"
+
+#: widgets/bambu/widget.js:1193
 msgid "AMS · %s"
 msgstr ""
 
-#: widgets/bambu/widget.js:1174
+#: widgets/bambu/widget.js:1193
 msgid "AMS"
 msgstr ""
 
-#: widgets/bambu/widget.js:1225
+#: widgets/bambu/widget.js:1244
 msgid "No active print"
 msgstr ""
 
-#: widgets/bambu/widget.js:1237
+#: widgets/bambu/widget.js:1256
 msgid "Layer %s / %s"
 msgstr ""
 
-#: widgets/bambu/widget.js:1241
+#: widgets/bambu/widget.js:1260
 msgid "Nozzle %s · Bed %s"
 msgstr ""
 
-#: widgets/bambu/widget.js:1263
+#: widgets/bambu/widget.js:1282
 msgid "%s · %s%%"
 msgstr ""
 
-#: widgets/bambu/widget.js:1300
+#: widgets/bambu/widget.js:1319
 msgid "Bambu Lab is unavailable"
 msgstr ""
 
-#: widgets/bambu/widget.js:1304
+#: widgets/bambu/widget.js:1323
 msgid "Configure the Bambu bridge endpoint and token in Settings"
 msgstr ""
 
-#: widgets/bambu/widget.js:1308
+#: widgets/bambu/widget.js:1327
 msgid "Bambu bridge unreachable"
 msgstr ""
 
-#: widgets/bambu/widget.js:1312
+#: widgets/bambu/widget.js:1331
 msgid "Connecting to the Bambu bridge…"
 msgstr ""
 
-#: widgets/bambu/widget.js:1316
+#: widgets/bambu/widget.js:1335
 msgid "Waiting for the Bambu bridge…"
 msgstr ""
 
-#: widgets/bambu/widget.js:1319
+#: widgets/bambu/widget.js:1338
 msgid "Printer offline"
 msgstr ""
 
@@ -920,49 +956,57 @@ msgstr ""
 msgid "Bluetooth Device"
 msgstr ""
 
-#: widgets/calendar/widget.js:140 widgets/calendar/widget.js:140
+#: widgets/battery/widget.js:1200
+msgid "No batteries found"
+msgstr "Tidak ada baterai ditemukan"
+
+#: widgets/calendar/widget.js:168 widgets/calendar/widget.js:168
 msgid "S"
 msgstr ""
 
-#: widgets/calendar/widget.js:140
+#: widgets/calendar/widget.js:168
 msgid "M"
 msgstr ""
 
-#: widgets/calendar/widget.js:140 widgets/calendar/widget.js:140
+#: widgets/calendar/widget.js:168 widgets/calendar/widget.js:168
 msgid "T"
 msgstr ""
 
-#: widgets/calendar/widget.js:140
+#: widgets/calendar/widget.js:168
 msgid "W"
 msgstr ""
 
-#: widgets/calendar/widget.js:140
+#: widgets/calendar/widget.js:168
 msgid "F"
 msgstr ""
 
-#: widgets/media/widget.js:378 widgets/media/widget.js:379 widgets/media/widget.js:410
+#: widgets/media/widget.js:403 widgets/media/widget.js:404 widgets/media/widget.js:435
 msgid "No media player detected"
 msgstr "Tidak ada pemutar media terdeteksi"
 
-#: widgets/media/widget.js:386
+#: widgets/media/widget.js:411
 msgid "Unknown track"
 msgstr "Trek tak dikenal"
 
-#: widgets/media/widget.js:386 widgets/media/widget.js:415
+#: widgets/media/widget.js:411 widgets/media/widget.js:440
 msgid "Nothing playing"
 msgstr "Tidak ada yang diputar"
 
-#: widgets/media/widget.js:387
+#: widgets/media/widget.js:412
 msgid "Unknown artist"
 msgstr "Artis tak dikenal"
 
-#: widgets/media/widget.js:425
+#: widgets/media/widget.js:450
 msgid "♪ Instrumental"
 msgstr ""
 
-#: widgets/media/widget.js:451
+#: widgets/media/widget.js:476
 msgid "No lyrics found"
 msgstr "Lirik tidak ditemukan"
+
+#: widgets/photos/widget.js:188
+msgid "No photos found — check Photos settings"
+msgstr "Tidak ada foto ditemukan — periksa pengaturan Foto"
 
 #: widgets/weather/widget.js:83
 msgid "It feels like %s"

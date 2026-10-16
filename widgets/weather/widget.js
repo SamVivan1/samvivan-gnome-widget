@@ -241,13 +241,16 @@ export function render({body, widget, createLabel, theme, weather, weatherLocati
 	});
 
 	locationLabel.x_expand = false;
+	locationLabel.clutter_text.set_line_wrap(false);
 	locationRow.add_child(locationLabel);
 	locationRow.add_child(locationIcon);
 	body.add_child(locationRow);
 	body.add_child(createLabel(renderedWeather.temp, 'widget-weather-temp', `color: ${theme.text};`));
 	body.add_child(new St.Widget({y_expand: true}));
 
-	details.add_child(createLabel(renderedWeather.summary, 'widget-weather-summary', `color: ${theme.text};`));
+	const summaryLabel = createLabel(renderedWeather.summary, 'widget-weather-summary', `color: ${theme.text};`);
+	summaryLabel.clutter_text.set_line_wrap(false);
+	details.add_child(summaryLabel);
 	if (renderedWeather.feelsLike) {
 		details.add_child(createLabel(renderedWeather.feelsLike, 'widget-weather-feels-like', `color: ${theme.muted};`));
 	};

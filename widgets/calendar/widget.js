@@ -12,6 +12,34 @@ const CALENDAR_CELL_WIDTH = 24;
 const CALENDAR_CELL_HEIGHT = 24;
 const COMPACT_CALENDAR_CELL_HEIGHT = 23;
 const TODAY_CIRCLE_SIZE = 18;
+
+function linearChannel(value) {
+	const scaled = value / 255;
+
+	return scaled <= 0.03928 ? scaled / 12.92 : Math.pow((scaled + 0.055) / 1.055, 2.4);
+};
+
+function accentLuminance(hex) {
+	const cleaned = String(hex || '').replace('#', '').trim();
+	const full = cleaned.length === 3
+		? cleaned.split('').map(part => part + part).join('')
+		: cleaned.padEnd(6, '0').slice(0, 6);
+	const value = Number.parseInt(full, 16);
+
+	if (!Number.isFinite(value)) {
+		return 0;
+	};
+
+	return 0.2126 * linearChannel((value >> 16) & 0xff) +
+		0.7152 * linearChannel((value >> 8) & 0xff) +
+		0.0722 * linearChannel(value & 0xff);
+};
+
+function todayInk(accent) {
+	// Dark ink above this threshold reads better than white on light accents
+	// (e.g. yellow), while blue and other dark accents keep white text.
+	return accentLuminance(accent) > 0.25 ? '#111111' : '#ffffff';
+};
 const DOTS_HEIGHT = 5;
 const DOT_SIZE = 4;
 const MAX_DOTS = 3;
@@ -163,10 +191,10 @@ export function render({body, createLabel, theme, calendar}) {
 			const isWeekend = column === 0 || column === 6;
 			const count = counts ? counts.get(dateKey(year, month, day)) ?? 0 : 0;
 			const labelStyle = isToday
-				? 'color: #ffffff; font-weight: 800;'
+				? `color: ${todayInk(theme.accent)}; font-weight: 800;`
 				: `color: ${isWeekend ? theme.muted : theme.text};`;
 			const highlightColor = isToday ? theme.accent : null;
-			const dotColor = isToday ? '#ffffff' : theme.accent;
+			const dotColor = isToday ? todayInk(theme.accent) : theme.accent;
 
 			row.add_child(calendarCell(
 				`${day}`,

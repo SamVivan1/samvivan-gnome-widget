@@ -968,9 +968,26 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
       const resetRow = new Adw.ButtonRow({title: _('Reset to default layout')});
       resetRow.add_css_class('destructive-action');
       resetRow.connect('activated', () => {
-        this._settings.set_string(LAYOUT_KEY, '');
-        this._layout = {widgets: []};
-        render();
+        const dialog = new Adw.MessageDialog({
+          transient_for: this._window,
+          heading: _('Reset to default layout?'),
+          body: _('Every widget position, size, and visibility setting will be replaced with the defaults.'),
+        });
+        dialog.add_response('cancel', _('Cancel'));
+        dialog.add_response('reset', _('Reset'));
+        dialog.set_response_appearance('reset', Adw.ResponseAppearance.DESTRUCTIVE);
+        dialog.set_default_response('cancel');
+        dialog.set_close_response('cancel');
+        dialog.connect('response', (_dialog, response) => {
+          if (response !== 'reset') {
+            return;
+          };
+
+          this._settings.set_string(LAYOUT_KEY, '');
+          this._layout = {widgets: []};
+          render();
+        });
+        dialog.present();
       });
       listGroup.add(resetRow);
       rows.push(resetRow);
@@ -1053,7 +1070,24 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
 
     const removeRow = new Adw.ButtonRow({title: _('Remove widget')});
     removeRow.add_css_class('destructive-action');
-    removeRow.connect('activated', () => onRemove());
+    removeRow.connect('activated', () => {
+      const dialog = new Adw.MessageDialog({
+        transient_for: this._window,
+        heading: _('Remove this widget?'),
+        body: _('The widget and its position and size settings will be deleted.'),
+      });
+      dialog.add_response('cancel', _('Cancel'));
+      dialog.add_response('remove', _('Remove'));
+      dialog.set_response_appearance('remove', Adw.ResponseAppearance.DESTRUCTIVE);
+      dialog.set_default_response('cancel');
+      dialog.set_close_response('cancel');
+      dialog.connect('response', (_dialog, response) => {
+        if (response === 'remove') {
+          onRemove();
+        };
+      });
+      dialog.present();
+    });
     row.add_row(removeRow);
 
     return row;

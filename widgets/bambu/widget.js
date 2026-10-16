@@ -158,6 +158,23 @@ const DONE_COLOR = '#3584e4';
 const CRITICAL_STRESS = 3;
 const DEV_MOODS = ['chill', 'hot', 'sleepy', 'charging', 'busy', 'overload', ...PRINT_MOODS];
 const DEV_CYCLE_SECONDS = 3.5;
+
+function moodLabel(mood) {
+	// Built per call: gettext is only bound after module import, so a
+	// module-level map would freeze every label in English.
+	return {
+		chill: _('Chill'),
+		hot: _('Hot'),
+		sleepy: _('Sleepy'),
+		charging: _('Charging'),
+		busy: _('Busy'),
+		overload: _('Overloaded'),
+		printing: _('Printing'),
+		paused: _('Paused'),
+		error: _('Error'),
+		done: _('Finished'),
+	}[mood] ?? mood;
+};
 const ACTIVE_TICK_MS = 120;
 const IDLE_TICK_MS = 500;
 
@@ -419,9 +436,11 @@ const MochiFace = GObject.registerClass(
 
 			const temp = this._temp === null ? '--' : `${Math.round(this._temp)}°C`;
 			const battery = this._battery === null ? '--' : `${this._battery}%`;
-			const load = this._load === null ? '--' : `load ${this._load}%`;
-			const ram = this._ram === null ? '--' : `ram ${this._ram}%`;
-			const combo = this._active.length ? this._active.join('+') : 'chill';
+			const load = this._load === null ? '--' : _('load %s%%').format(this._load);
+			const ram = this._ram === null ? '--' : _('ram %s%%').format(this._ram);
+			const combo = this._active.length
+				? this._active.map(moodLabel).join('+')
+				: _('Chill');
 
 			return `${combo} · ${temp} · ${battery} · ${load} · ${ram}`;
 		};
@@ -1224,7 +1243,7 @@ function buildJobView({body, widget, createLabel, theme, sizeForWidget, status})
 
 	const file = createLabel(job.file || job.subtask || _('No active print'), 'widget-bambu-file', `color: ${theme.text};`);
 
-	file.clutter_text.set_line_wrap(true);
+	file.clutter_text.set_line_wrap(false);
 	info.add_child(file);
 
 	const remaining = formatRemaining(job.remaining_min);

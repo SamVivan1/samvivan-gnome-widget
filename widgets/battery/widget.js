@@ -1196,7 +1196,38 @@ export function reconcile({body, widget, createLabel, theme, sizeForWidget, anim
 			};
 		};
 
+		if (!state.emptyHint) {
+			state.emptyHint = createLabel(_('No batteries found'), 'widget-battery-empty', `color: ${theme.muted};`);
+			// The tray uses a fixed layout, so center the hint manually
+			// whenever the tray is (re)allocated.
+			state.emptyHintPlace = () => {
+				if (!state.emptyHint) {
+					return;
+				};
+
+				const [, , naturalWidth, naturalHeight] = state.emptyHint.get_preferred_size();
+
+				state.emptyHint.set_position(
+					Math.max(0, (state.tray.width - naturalWidth) / 2),
+					Math.max(0, (state.tray.height - naturalHeight) / 2));
+			};
+			state.emptyHintAllocId = state.tray.connect('notify::allocation', state.emptyHintPlace);
+			state.emptyHintPlace();
+			state.tray.add_child(state.emptyHint);
+		};
+
 		return;
+	};
+
+	if (state.emptyHint) {
+		if (state.emptyHintAllocId) {
+			state.tray.disconnect(state.emptyHintAllocId);
+			state.emptyHintAllocId = 0;
+		};
+
+		state.emptyHintPlace = null;
+		state.emptyHint.destroy();
+		state.emptyHint = null;
 	};
 
 	const [width, height] = sizeForWidget ? sizeForWidget(widget) : [FALLBACK_WIDGET_WIDTH, FALLBACK_WIDGET_HEIGHT];

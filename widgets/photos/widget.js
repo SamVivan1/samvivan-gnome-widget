@@ -173,14 +173,24 @@ function maybePruneCache(settings) {
 
 const PhotoFrame = GObject.registerClass(
 	class PhotoFrame extends St.Widget {
-		_init({assignment, settings = null}) {
+		_init({assignment, settings = null, createLabel = null, theme = null}) {
 			super._init({
 				style_class: 'widget-photo',
 				x_expand: true,
 				y_expand: true,
 				x_align: Clutter.ActorAlign.FILL,
 				y_align: Clutter.ActorAlign.FILL,
+				layout_manager: new Clutter.BinLayout(),
+				accessible_name: _('Photos'),
 			});
+
+			this._hint = createLabel
+				? createLabel(_('No photos found — check Photos settings'), 'widget-photo-empty', `color: ${theme?.muted ?? '#c0bfbc'};`)
+				: null;
+
+			if (this._hint) {
+				this.add_child(this._hint);
+			};
 
 			this._assignment = assignment;
 			this._settings = settings;
@@ -258,6 +268,10 @@ const PhotoFrame = GObject.registerClass(
 
 			this._bgUri = uri;
 			this.set_style(`background-image: url(${JSON.stringify(uri)});`);
+
+			if (this._hint) {
+				this._hint.visible = false;
+			};
 		};
 
 		_rotate() {
@@ -401,9 +415,9 @@ export function style(theme) {
   return `border-radius: ${PHOTO_RADIUS}px; padding: 0px;`;
 };
 
-export function render({body, widget, settings = null}) {
+export function render({body, widget, settings = null, createLabel = null, theme = null}) {
 	const assignment = {seed: widget.id};
-	const frame = new PhotoFrame({assignment, settings});
+	const frame = new PhotoFrame({assignment, settings, createLabel, theme});
 
 	frame.set_x_expand(true);
 	frame.set_y_expand(true);

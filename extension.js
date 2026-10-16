@@ -1312,7 +1312,7 @@ class WidgetController {
 
     const button = this._removeButtonPosition(widget, view);
 
-    if (animate) {
+    if (animate && this._animationsEnabled()) {
       view.removeButton.ease({
         x: button.x,
         y: button.y,
@@ -1651,7 +1651,7 @@ class WidgetController {
       return;
     };
 
-    if (!animate) {
+    if (!animate || !this._animationsEnabled()) {
       view.actor.set_position(widget.x, widget.y);
       view.actor.set_size(widget.width, widget.height);
       this._syncEditControls(widget);
