@@ -38,6 +38,9 @@ make install   # installs to ~/.local/share/gnome-shell/extensions, then log out
 ```
 
 On Wayland there is no `Alt+F2 → r`; log out and back in after every install.
+The running shell keeps the previously loaded code, so always re-install
+and re-login before testing live — otherwise you validate code the live
+session never sees.
 Useful checks (also run in CI):
 
 ```bash
