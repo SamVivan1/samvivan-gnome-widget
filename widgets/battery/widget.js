@@ -6,33 +6,33 @@ import GObject from 'gi://GObject';
 import St from 'gi://St';
 
 import { warn } from '../../logger.js';
+import {
+	MAX_SLOTS,
+	MIN_GAUGE_SIZE,
+	SLOT_GAP,
+	WIDGET_PADDING,
+	LAYOUT_MARGIN,
+	FALLBACK_WIDGET_WIDTH,
+	FALLBACK_WIDGET_HEIGHT,
+	SLOT_SPACING,
+	HORIZONTAL_GAP,
+	deviceKey,
+	mergeDevices,
+	bestLayout,
+	computeLayout,
+} from '../../lib/batteryDevices.js';
 
 export const type = 'battery';
 export function label() { return _('Battery'); };
 export const stylesheet = 'widgets/battery/stylesheet.css';
 export const defaultSize = 'medium';
 
-const MAX_GAUGE_SIZE = 320;
-const MIN_GAUGE_SIZE = 36;
-const SLOT_GAP = 12;
-const MAX_SLOTS = 8;
-const TEXT_SLOT_LIMIT = 4;
-const MIN_TEXT_GAUGE = 52;
-const WIDGET_PADDING = 30;
-const LAYOUT_MARGIN = 18;
-const FALLBACK_WIDGET_WIDTH = 454;
-const FALLBACK_WIDGET_HEIGHT = 190;
-const SLOT_SPACING = 6;
-const PERCENT_TEXT_RATIO = 0.4;
-const NAME_TEXT_RATIO = 0.2;
 const PERCENT_FONT_RATIO = 0.29;
 const NAME_FONT_RATIO = 0.15;
 const HORIZONTAL_PERCENT_RATIO = 0.27;
 const HORIZONTAL_NAME_RATIO = 0.15;
 const HORIZONTAL_TEXT_SAFETY = 1.15;
 const HORIZONTAL_CHAR_WIDTH = 0.64;
-const HORIZONTAL_GAP = 16;
-const MIN_TEXT_WIDTH = 56;
 const NAME_MIN_FONT = 10;
 
 const DEVICE_TYPE = {
@@ -128,9 +128,6 @@ function batteryColor(percentage) {
 	return [0.34, 0.89, 0.54];
 };
 
-function normalizeName(name) {
-	return String(name || '').trim().toLowerCase();
-};
 
 function bluezIconName(iconName) {
 	if (!iconName) {
@@ -419,32 +416,6 @@ async function readGSConnectDevices() {
 	};
 };
 
-function deviceKey(device) {
-	// Prefer the D-Bus object path: two identical mice report the same
-	// name but live at different paths, and collapsing them hides one.
-	const id = String(device.path || device.nativePath || '');
-
-	if (id.startsWith('/')) {
-		return id;
-	};
-
-	return normalizeName(device.name);
-};
-
-function mergeDevices(devices) {
-	const merged = new Map();
-
-	for (const device of devices) {
-		const key = deviceKey(device);
-		const existing = merged.get(key);
-
-		if (!existing || (existing.source !== 'upower' && device.source === 'upower')) {
-			merged.set(key, device);
-		};
-	};
-
-	return [...merged.values()].sort((a, b) => Number(b.powerSupply) - Number(a.powerSupply) || a.name.localeCompare(b.name));
-};
 
 const DEVICES_CACHE_MS = 2000;
 const DBUS_REFRESH_MIN_MS = 750;
@@ -1033,116 +1004,6 @@ function trayFor(body) {
 	return body._batteryState;
 };
 
-function bestGrid(count, availWidth, availHeight, style) {
-	const maxCols = Math.max(1, Math.min(count, MAX_SLOTS));
-	let best = null;
-
-	for (let cols = 1; cols <= maxCols; cols++) {
-		const rows = Math.ceil(count / cols);
-		const cellWidth = (availWidth - (cols - 1) * SLOT_GAP) / cols;
-		const cellHeight = (availHeight - (rows - 1) * SLOT_GAP) / rows;
-
-		if (cellWidth <= 0 || cellHeight <= 0) {
-			continue;
-		};
-
-		let size;
-
-		if (style.horizontal) {
-			size = Math.min(cellHeight, (cellWidth - SLOT_SPACING) / (1 + (style.textRatio ?? 0)));
-		} else {
-			const denom = 1 + PERCENT_TEXT_RATIO + (style.showName ? NAME_TEXT_RATIO : 0);
-			const gaps = (style.showName ? 2 : 1) * SLOT_SPACING;
-
-			size = Math.min(cellWidth, (cellHeight - gaps) / denom);
-		};
-
-		if (!Number.isFinite(size) || size < MIN_GAUGE_SIZE) {
-			continue;
-		};
-
-		size = Math.min(size, MAX_GAUGE_SIZE);
-
-		if (!best || size > best.size) {
-			best = {cols, rows, size};
-		};
-	};
-
-	return best;
-};
-
-function bestLayout(count, availWidth, availHeight, showName, textRatio) {
-	let best = null;
-
-	for (const horizontal of [false, true]) {
-		const grid = bestGrid(count, availWidth, availHeight, {horizontal, showName, textRatio});
-
-		if (!grid || (showName && grid.size < MIN_TEXT_GAUGE)) {
-			continue;
-		};
-
-		const score = grid.size + (horizontal ? 1 : 0);
-
-		if (!best || score > best.score) {
-			best = {...grid, horizontal, showName, textRatio, score};
-		};
-	};
-
-	return best;
-};
-
-function fitName(name, limit) {
-	const value = String(name ?? '');
-
-	if (!Number.isFinite(limit) || value.length <= limit) {
-		return value;
-	};
-
-	if (limit <= 1) {
-		return value.slice(0, 1);
-	};
-
-	return `${value.slice(0, limit - 1)}\u2026`;
-};
-
-function singleDeviceLayout(availWidth, availHeight) {
-	const cap = Math.max(MIN_GAUGE_SIZE, availWidth - HORIZONTAL_GAP - MIN_TEXT_WIDTH);
-	const size = Math.max(MIN_GAUGE_SIZE, Math.min(availHeight, availWidth * 0.5, cap));
-	const textWidth = Math.max(MIN_TEXT_WIDTH, availWidth - size - HORIZONTAL_GAP);
-
-	return {
-		cols: 1,
-		rows: 1,
-		size,
-		horizontal: true,
-		showName: true,
-		textRatio: textWidth / size,
-		textWidth,
-		score: 1,
-	};
-};
-
-function computeLayout(count, availWidth, availHeight, textRatio) {
-	if (count === 1) {
-		return singleDeviceLayout(availWidth, availHeight);
-	};
-
-	if (count <= TEXT_SLOT_LIMIT) {
-		const named = bestLayout(count, availWidth, availHeight, true, textRatio);
-
-		if (named) {
-			return named;
-		};
-	};
-
-	const plain = bestLayout(count, availWidth, availHeight, false, textRatio);
-
-	if (plain) {
-		return plain;
-	};
-
-	return {cols: count, rows: 1, size: MIN_GAUGE_SIZE, horizontal: false, showName: false, textRatio, score: 0};
-};
 
 export function reconcile({body, widget, createLabel, theme, sizeForWidget, animate = true}) {
 	const state = trayFor(body);
