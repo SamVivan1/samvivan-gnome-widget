@@ -1014,7 +1014,7 @@ export default class DesktopWidgetPreferences extends ExtensionPreferences {
     const count = this._layout.widgets.length;
 
     return {
-      id: `${type}-${Date.now()}`,
+      id: `${type}-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
       type,
       size,
       x: 32 + (count % 4) * 240,

@@ -58,3 +58,8 @@ test('cacheKey normalises case and duration', () => {
 	);
 	assert.notEqual(cacheKey({title: 'a'}), cacheKey({title: 'b'}));
 });
+
+test('parseSyncedLyrics tolerates single-digit seconds and long fractions', () => {
+	assert.deepEqual(parseSyncedLyrics('[0:5] a'), [{time: 5, text: 'a'}]);
+	assert.deepEqual(parseSyncedLyrics('[00:01.0059] b'), [{time: 1.005, text: 'b'}]);
+});

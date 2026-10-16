@@ -41,6 +41,7 @@ const LAYOUT_KEY = 'layout-json';
 const DONATE_URL = 'https://ko-fi.com/samvivan';
 const GRID_DEFAULT = 20;
 const GAP_DEFAULT = 14;
+const MAX_OPEN_POSITION_CANDIDATES = 100000;
 let GRID_SIZE = GRID_DEFAULT;
 let WIDGET_GAP = GAP_DEFAULT;
 let SNAP_TO_GRID = true;
@@ -575,9 +576,22 @@ class WidgetController {
       return cloneDefaultWidgets();
     };
 
+    const seenIds = new Set();
+
     return parsed.widgets
       .filter(widget => widget.id && widget.type)
       .filter(widget => WIDGET_TYPES.includes(widget.type))
+      .filter(widget => {
+        const id = String(widget.id);
+
+        if (seenIds.has(id)) {
+          return false;
+        };
+
+        seenIds.add(id);
+
+        return true;
+      })
       .map(widget => {
         const size = WIDGET_SIZES[widget.size] ? widget.size : 'small';
         const [defaultWidth, defaultHeight] = WIDGET_SIZES[size];
@@ -1122,7 +1136,7 @@ class WidgetController {
     const size = WIDGET_SIZES[widgetModule.defaultSize] ? widgetModule.defaultSize : 'small';
 
     const widget = {
-      id: `${type}-${Date.now()}`,
+      id: `${type}-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
       type,
       size,
       x: snap(32 + (index % 4) * 240),
@@ -1693,8 +1707,18 @@ class WidgetController {
     const originY = clamp(snap(widget.y), minY, maxY);
     const candidates = [];
 
-    for (let y = minY; y <= maxY; y += GRID_SIZE) {
-      for (let x = minX; x <= maxX; x += GRID_SIZE) {
+    // A 1px grid on a large monitor yields over a million candidates and
+    // freezes the compositor while they are built and sorted. Coarsen the
+    // search stride (final coordinates still snap to GRID_SIZE) so the
+    // candidate list stays bounded.
+    let stride = GRID_SIZE;
+
+    while (((maxX - minX) / stride + 1) * ((maxY - minY) / stride + 1) > MAX_OPEN_POSITION_CANDIDATES) {
+      stride *= 2;
+    };
+
+    for (let y = minY; y <= maxY; y += stride) {
+      for (let x = minX; x <= maxX; x += stride) {
         const snappedX = clamp(snap(x), minX, maxX);
         const snappedY = clamp(snap(y), minY, maxY);
         const distance = Math.abs(snappedX - originX) + Math.abs(snappedY - originY);

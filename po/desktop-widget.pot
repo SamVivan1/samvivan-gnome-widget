@@ -17,71 +17,71 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: extension.js:161
+#: extension.js:162
 msgid "Printer connected"
 msgstr ""
 
-#: extension.js:163
+#: extension.js:164
 msgid "Printer disconnected"
 msgstr ""
 
-#: extension.js:168
+#: extension.js:169
 msgid "Print resumed"
 msgstr ""
 
-#: extension.js:168
+#: extension.js:169
 msgid "Print started"
 msgstr ""
 
-#: extension.js:171
+#: extension.js:172
 msgid "Print paused"
 msgstr ""
 
-#: extension.js:173
+#: extension.js:174
 msgid "Print finished"
 msgstr ""
 
-#: extension.js:175
+#: extension.js:176
 msgid "Print failed"
 msgstr ""
 
-#: extension.js:183
+#: extension.js:184
 msgid "Unknown file"
 msgstr ""
 
-#: extension.js:187
+#: extension.js:188
 msgid "The printer is online."
 msgstr ""
 
-#: extension.js:189
+#: extension.js:190
 msgid "The printer went offline — check the bridge and LAN mode."
 msgstr ""
 
-#: extension.js:995
+#: extension.js:1009
 msgid "Desktop Widgets"
 msgstr ""
 
-#: extension.js:1001
+#: extension.js:1015
 msgid "Edit Widgets"
 msgstr ""
 
-#: extension.js:1011
+#: extension.js:1025
 msgid "Hide All Widgets"
 msgstr ""
 
-#: extension.js:1024 prefs.js:997
+#: extension.js:1038 prefs.js:997
 msgid "Add %s"
 msgstr ""
 
-#: extension.js:1031
+#: extension.js:1045
 msgid "Reset Default Widgets"
 msgstr ""
 
-#: extension.js:1040 prefs.js:206
+#: extension.js:1054 prefs.js:206
 msgid "Donate"
 msgstr ""
 
-#: extension.js:1341 prefs.js:1071
+#: extension.js:1355 prefs.js:1071
 msgid "Remove widget"
 msgstr ""
 
@@ -109,11 +109,11 @@ msgstr ""
 msgid "Battery"
 msgstr ""
 
-#: prefs.js:27 prefs.js:506 widgets/bambu/widget.js:17 widgets/bambu/widget.js:1232
+#: prefs.js:27 prefs.js:506 widgets/bambu/widget.js:17 widgets/bambu/widget.js:1233
 msgid "Bambu Lab"
 msgstr ""
 
-#: prefs.js:28 prefs.js:573 widgets/media/widget.js:15 widgets/media/widget.js:402
+#: prefs.js:28 prefs.js:573 widgets/media/widget.js:15 widgets/media/widget.js:420
 msgid "Music"
 msgstr ""
 
@@ -609,7 +609,7 @@ msgstr ""
 msgid "Auto (real sensors)"
 msgstr ""
 
-#: prefs.js:883 widgets/bambu/widget.js:166 widgets/bambu/widget.js:443
+#: prefs.js:883 widgets/bambu/widget.js:166 widgets/bambu/widget.js:444
 msgid "Chill"
 msgstr ""
 
@@ -633,7 +633,7 @@ msgstr ""
 msgid "Overloaded"
 msgstr ""
 
-#: prefs.js:883 widgets/bambu/widget.js:25 widgets/bambu/widget.js:172 widgets/bambu/widget.js:1279
+#: prefs.js:883 widgets/bambu/widget.js:25 widgets/bambu/widget.js:172 widgets/bambu/widget.js:1280
 msgid "Printing"
 msgstr ""
 
@@ -753,27 +753,27 @@ msgstr ""
 msgid "bridge reported an error"
 msgstr ""
 
-#: lib/calendarData.js:181
+#: lib/calendarData.js:140
 msgid "python3 was not found on PATH"
 msgstr ""
 
-#: lib/calendarData.js:186
+#: lib/calendarData.js:145
 msgid "calendar helper script is missing"
 msgstr ""
 
-#: lib/calendarData.js:222
+#: lib/calendarData.js:181
 msgid "could not start the calendar helper: %s"
 msgstr ""
 
-#: lib/calendarData.js:248
+#: lib/calendarData.js:207
 msgid "calendar helper failed: %s"
 msgstr ""
 
-#: lib/calendarData.js:257
+#: lib/calendarData.js:216
 msgid "could not parse calendar data: %s"
 msgstr ""
 
-#: lib/calendarData.js:263
+#: lib/calendarData.js:222
 msgid "calendar data is unavailable"
 msgstr ""
 
@@ -841,59 +841,63 @@ msgstr ""
 msgid "%s h %s min left"
 msgstr ""
 
-#: widgets/bambu/widget.js:439
-msgid "load %s%%"
+#: widgets/bambu/widget.js:378
+msgid "Printer status face"
 msgstr ""
 
 #: widgets/bambu/widget.js:440
+msgid "load %s%%"
+msgstr ""
+
+#: widgets/bambu/widget.js:441
 msgid "ram %s%%"
 msgstr ""
 
-#: widgets/bambu/widget.js:1193
+#: widgets/bambu/widget.js:1194
 msgid "AMS · %s"
 msgstr ""
 
-#: widgets/bambu/widget.js:1193
+#: widgets/bambu/widget.js:1194
 msgid "AMS"
 msgstr ""
 
-#: widgets/bambu/widget.js:1244
+#: widgets/bambu/widget.js:1245
 msgid "No active print"
 msgstr ""
 
-#: widgets/bambu/widget.js:1256
+#: widgets/bambu/widget.js:1257
 msgid "Layer %s / %s"
 msgstr ""
 
-#: widgets/bambu/widget.js:1260
+#: widgets/bambu/widget.js:1261
 msgid "Nozzle %s · Bed %s"
 msgstr ""
 
-#: widgets/bambu/widget.js:1282
+#: widgets/bambu/widget.js:1283
 msgid "%s · %s%%"
 msgstr ""
 
-#: widgets/bambu/widget.js:1319
+#: widgets/bambu/widget.js:1320
 msgid "Bambu Lab is unavailable"
 msgstr ""
 
-#: widgets/bambu/widget.js:1323
+#: widgets/bambu/widget.js:1324
 msgid "Configure the Bambu bridge endpoint and token in Settings"
 msgstr ""
 
-#: widgets/bambu/widget.js:1327
+#: widgets/bambu/widget.js:1328
 msgid "Bambu bridge unreachable"
 msgstr ""
 
-#: widgets/bambu/widget.js:1331
+#: widgets/bambu/widget.js:1332
 msgid "Connecting to the Bambu bridge…"
 msgstr ""
 
-#: widgets/bambu/widget.js:1335
+#: widgets/bambu/widget.js:1336
 msgid "Waiting for the Bambu bridge…"
 msgstr ""
 
-#: widgets/bambu/widget.js:1338
+#: widgets/bambu/widget.js:1339
 msgid "Printer offline"
 msgstr ""
 
@@ -913,7 +917,7 @@ msgstr ""
 msgid "PDA"
 msgstr ""
 
-#: widgets/battery/widget.js:64 widgets/battery/widget.js:107 widgets/battery/widget.js:405
+#: widgets/battery/widget.js:64 widgets/battery/widget.js:107 widgets/battery/widget.js:406
 msgid "Phone"
 msgstr ""
 
@@ -961,11 +965,11 @@ msgstr ""
 msgid "Device"
 msgstr ""
 
-#: widgets/battery/widget.js:333
+#: widgets/battery/widget.js:334
 msgid "Bluetooth Device"
 msgstr ""
 
-#: widgets/battery/widget.js:1200
+#: widgets/battery/widget.js:1201
 msgid "No batteries found"
 msgstr ""
 
@@ -989,27 +993,31 @@ msgstr ""
 msgid "F"
 msgstr ""
 
-#: widgets/media/widget.js:403 widgets/media/widget.js:404 widgets/media/widget.js:435
+#: widgets/media/widget.js:331
+msgid "Album artwork"
+msgstr ""
+
+#: widgets/media/widget.js:421 widgets/media/widget.js:422 widgets/media/widget.js:453
 msgid "No media player detected"
 msgstr ""
 
-#: widgets/media/widget.js:411
+#: widgets/media/widget.js:429
 msgid "Unknown track"
 msgstr ""
 
-#: widgets/media/widget.js:411 widgets/media/widget.js:440
+#: widgets/media/widget.js:429 widgets/media/widget.js:458
 msgid "Nothing playing"
 msgstr ""
 
-#: widgets/media/widget.js:412
+#: widgets/media/widget.js:430
 msgid "Unknown artist"
 msgstr ""
 
-#: widgets/media/widget.js:450
+#: widgets/media/widget.js:468
 msgid "♪ Instrumental"
 msgstr ""
 
-#: widgets/media/widget.js:476
+#: widgets/media/widget.js:494
 msgid "No lyrics found"
 msgstr ""
 
@@ -1017,15 +1025,19 @@ msgstr ""
 msgid "No photos found — check Photos settings"
 msgstr ""
 
-#: widgets/weather/widget.js:83
+#: widgets/weather/widget.js:71
 msgid "It feels like %s"
 msgstr ""
 
-#: widgets/weather/widget.js:136 widgets/weather/widget.js:193
+#: widgets/weather/widget.js:124 widgets/weather/widget.js:181
 msgid "Weather unavailable"
 msgstr ""
 
-#: widgets/weather/widget.js:196
+#: widgets/weather/widget.js:184
 msgid "Open Weather to set a location"
+msgstr ""
+
+#: widgets/weather/widget.js:225
+msgid "Current weather conditions"
 msgstr ""
 

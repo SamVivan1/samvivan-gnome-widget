@@ -20,25 +20,13 @@ export function style(theme) {
 };
 
 export function locationNameFromSettings(settings) {
-	const strings = locationStringsFromSettings(settings);
+	try {
+		const location = locationFromSettings(settings);
 
-	return strings[0] || null;
-};
-
-function locationStringsFromSettings(settings) {
-	if (!settings) {
-		return [];
+		return location?.get_city_name?.() || location?.get_name?.() || null;
+	} catch {
+		return null;
 	};
-
-	const locations = settings.get_value('locations');
-
-	if (locations.n_children() === 0) {
-		return [];
-	};
-
-	const serialized = locations.get_child_value(0).print(true);
-
-	return [...serialized.matchAll(/'([^']*)'/g)].map(match => match[1]);
 };
 
 export function locationFromSettings(settings) {
@@ -234,6 +222,7 @@ export function render({body, widget, createLabel, theme, weather, weatherLocati
 	};
 
 	const icon = new St.Icon(iconParams);
+	icon.accessible_name = _('Current weather conditions');
 	const details = new St.BoxLayout({
 		orientation: Clutter.Orientation.VERTICAL,
 		style_class: 'widget-weather-details',

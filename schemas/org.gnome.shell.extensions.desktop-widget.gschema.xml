@@ -26,11 +26,6 @@
       <summary>Snap to grid</summary>
       <description>Whether widget positions snap to the grid while dragging.</description>
     </key>
-    <key name="lock-widgets" type="b">
-      <default>false</default>
-      <summary>Lock widgets</summary>
-      <description>Disable dragging and resizing of widgets.</description>
-    </key>
     <key name="hide-all" type="b">
       <default>false</default>
       <summary>Hide all widgets</summary>

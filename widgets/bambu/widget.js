@@ -375,6 +375,7 @@ const MochiFace = GObject.registerClass(
 				y_expand: true,
 				x_align: Clutter.ActorAlign.FILL,
 				y_align: Clutter.ActorAlign.FILL,
+				accessible_name: _('Printer status face'),
 			});
 
 			this._color = color;

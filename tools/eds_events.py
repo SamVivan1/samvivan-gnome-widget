@@ -120,16 +120,11 @@ def occurrences(component, start_epoch, end_epoch):
     rules = list(component.get_rrules() or [])
     results = []
 
-    if not rules:
-        if start_ts < end_epoch and end_ts > start_epoch:
-            results.append((start_ts, end_ts, all_day))
-        return results
-
-    for rule in rules:
+    def expand_rule(rule):
         try:
             iterator = ICalGLib.RecurIterator.new(rule, dtstart)
         except Exception:
-            continue
+            return
 
         seen = 0
 
@@ -146,9 +141,64 @@ def occurrences(component, start_epoch, end_epoch):
                 break
 
             if ts + duration > start_epoch:
+                yield ts
+
+    def entry_moment(entry):
+        moment = component_time(entry)
+
+        if moment is not None:
+            return moment
+
+        # RDATEs arrive as periods; EXDATEs as datetimes.
+        get_start = getattr(entry, 'get_start', None)
+
+        if callable(get_start):
+            try:
+                return get_start()
+            except Exception:
+                return None
+
+        return None
+
+    # Deleted and moved-away instances never render, even when the RRULE
+    # still generates them.
+    excluded = set()
+
+    for entry in component.get_exdates() or []:
+        moment = entry_moment(entry)
+
+        if moment is not None:
+            excluded.add(moment.as_timet())
+
+    for rule in component.get_exrules() or []:
+        excluded.update(expand_rule(rule))
+
+    # RDATEs add standalone occurrences on top of the base instance.
+    extra = []
+
+    for entry in component.get_rdates() or []:
+        moment = entry_moment(entry)
+
+        if moment is None:
+            continue
+
+        ts = moment.as_timet()
+
+        if ts < end_epoch and ts + duration > start_epoch and ts not in excluded:
+            extra.append((ts, ts + duration, all_day))
+
+    if not rules:
+        if start_ts < end_epoch and end_ts > start_epoch and start_ts not in excluded:
+            results.append((start_ts, end_ts, all_day))
+
+        return results + extra
+
+    for rule in rules:
+        for ts in expand_rule(rule):
+            if ts not in excluded:
                 results.append((ts, ts + duration, all_day))
 
-    return results
+    return results + extra
 
 
 def source_color(source):

@@ -45,7 +45,9 @@ function colorFromHex(hex, fallback) {
 
 const AnalogClockFace = GObject.registerClass(
 	class AnalogClockFace extends St.DrawingArea {
-		_init(theme) {
+		_init(theme, animate = true) {
+			this._animate = animate;
+
 			super._init({
 				x_expand: true,
 				y_expand: true,
@@ -62,7 +64,10 @@ const AnalogClockFace = GObject.registerClass(
 					return GLib.SOURCE_REMOVE;
 				};
 
-				this.queue_repaint();
+				if (this._animate !== false) {
+					this.queue_repaint();
+				};
+
 				return GLib.SOURCE_CONTINUE;
 			});
 
@@ -150,8 +155,8 @@ export function style(theme) {
   return `border-radius: ${CLOCK_RADIUS}px; padding: 0px;`;
 };
 
-export function render({body, theme}) {
-	const clock = new AnalogClockFace(theme);
+export function render({body, theme, animate = true}) {
+	const clock = new AnalogClockFace(theme, animate);
 
 	clock.set_x_expand(true);
 	clock.set_y_expand(true);

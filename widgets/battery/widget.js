@@ -289,6 +289,7 @@ async function readUPowerDevices() {
 				powerSupply: variantValue(props, 'PowerSupply', false),
 				iconName: variantValue(props, 'IconName', null),
 				nativePath: variantValue(props, 'NativePath', null),
+				path,
 			});
 		};
 
@@ -419,12 +420,12 @@ async function readGSConnectDevices() {
 };
 
 function deviceKey(device) {
-	const path = String(device.nativePath || '');
-	if (path.startsWith('/org/bluez/')) {
-		return path;
-	};
-	if (path.startsWith('/org/gnome/Shell/Extensions/GSConnect/Device/')) {
-		return path;
+	// Prefer the D-Bus object path: two identical mice report the same
+	// name but live at different paths, and collapsing them hides one.
+	const id = String(device.path || device.nativePath || '');
+
+	if (id.startsWith('/')) {
+		return id;
 	};
 
 	return normalizeName(device.name);

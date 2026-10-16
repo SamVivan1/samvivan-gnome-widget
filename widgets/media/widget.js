@@ -193,6 +193,19 @@ const LyricView = GObject.registerClass(
 				return;
 			};
 
+			if (index < 0) {
+				this._active = -1;
+				this._inner.translation_y = 0;
+
+				this._labels.forEach(label => {
+					label.opacity = 110;
+					label.style = `color: ${this._lineColor};`;
+					label.remove_style_class_name('widget-media-lyric-line-active');
+				});
+
+				return;
+			};
+
 			this._active = index;
 			this._apply(index, true);
 		};
@@ -315,6 +328,7 @@ const MediaView = GObject.registerClass(
 				style_class: 'widget-media-art',
 				x_align: Clutter.ActorAlign.CENTER,
 				y_align: Clutter.ActorAlign.CENTER,
+				accessible_name: _('Album artwork'),
 			});
 			this._artIcon = new St.Icon({
 				icon_name: 'audio-x-generic-symbolic',
@@ -354,6 +368,10 @@ const MediaView = GObject.registerClass(
 					GLib.source_remove(this._timerId);
 					this._timerId = 0;
 				};
+
+				// Invalidate in-flight cover-art downloads so their callbacks
+				// never touch this actor after finalization.
+				this._artSeq++;
 			});
 		};
 
@@ -461,7 +479,7 @@ const MediaView = GObject.registerClass(
 				const position = view.positionUs / 1000000 + this._offsetSeconds();
 				const index = activeLyricIndex(lines, Math.max(0, position));
 
-				this._lyricView.setActive(Math.max(0, index));
+				this._lyricView.setActive(index);
 				return;
 			};
 

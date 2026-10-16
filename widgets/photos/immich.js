@@ -48,7 +48,12 @@ function trimmed(value) {
 };
 
 export function serverConfig(settings) {
-	const baseUrl = trimmed(settings.get_string('immich-server-url')).replace(/\/+$/, '');
+	let baseUrl = trimmed(settings.get_string('immich-server-url')).replace(/\/+$/, '');
+
+	if (baseUrl && !/^https?:\/\//i.test(baseUrl)) {
+		baseUrl = `https://${baseUrl}`;
+	};
+
 	const apiKey = trimmed(settings.get_string('immich-api-key'));
 
 	return {
