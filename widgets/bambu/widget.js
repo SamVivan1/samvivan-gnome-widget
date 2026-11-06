@@ -12,6 +12,8 @@ import {
 	normalizeThresholds,
 	printerMood,
 } from '../../lib/mood.js';
+import { contrastInk, hexToCssRgba, hexToRgbaArray, hexToRgb, luminance } from '../../lib/color.js';
+import { roundedRect } from '../../lib/draw.js';
 
 export const type = 'bambu';
 export function label() { return _('Bambu Lab'); };
@@ -50,24 +52,6 @@ function clampProgress(value) {
 	};
 
 	return Math.max(0, Math.min(100, number));
-};
-
-function hexToRgb(hex) {
-	const cleaned = String(hex || '').replace('#', '').trim();
-	const padded = cleaned.length === 3
-		? cleaned.split('').map(character => character + character).join('')
-		: cleaned.padEnd(6, '0').slice(0, 6);
-	const value = Number.parseInt(padded, 16);
-
-	if (!Number.isFinite(value)) {
-		return [0.6, 0.6, 0.6];
-	};
-
-	return [((value >> 16) & 0xff) / 255, ((value >> 8) & 0xff) / 255, (value & 0xff) / 255];
-};
-
-function hexToRgba(hex, alpha) {
-	return [...hexToRgb(hex), alpha];
 };
 
 function normalizeColor(color) {
@@ -175,33 +159,11 @@ function moodLabel(mood) {
 		done: _('Finished'),
 	}[mood] ?? mood;
 };
-const ACTIVE_TICK_MS = 120;
-const IDLE_TICK_MS = 500;
+const ACTIVE_TICK_MS = 33;
+const IDLE_TICK_MS = 250;
 
-function luminance(hex) {
-	const [r, g, b] = hexToRgb(hex);
 
-	return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-};
 
-function contrastInk(hex, fallback) {
-	return luminance(hex) > 0.62 ? (fallback || '#111111') : '#ffffff';
-};
-
-function roundedRect(cr, x, y, width, height, radius) {
-	const r = Math.max(0, Math.min(radius, width / 2, height / 2));
-
-	cr.moveTo(x + r, y);
-	cr.lineTo(x + width - r, y);
-	cr.arc(x + width - r, y + r, r, -Math.PI / 2, 0);
-	cr.lineTo(x + width, y + height - r);
-	cr.arc(x + width - r, y + height - r, r, 0, Math.PI / 2);
-	cr.lineTo(x + r, y + height);
-	cr.arc(x + r, y + height - r, r, Math.PI / 2, Math.PI);
-	cr.lineTo(x, y + r);
-	cr.arc(x + r, y + r, r, Math.PI, Math.PI * 1.5);
-	cr.closePath();
-};
 
 function readSysFile(path) {
 	try {
@@ -386,7 +348,11 @@ const MochiFace = GObject.registerClass(
 			this._thresholds = normalizeThresholds(thresholds);
 			this._printer = printer || null;
 			this._timerId = 0;
+			this._timeline = null;
+			this._newFrameId = 0;
+			this._lastAdvance = 0;
 			this._frame = 0;
+			this._visualChanged = true;
 			this._temp = null;
 			this._load = null;
 			this._ram = null;
@@ -410,14 +376,53 @@ const MochiFace = GObject.registerClass(
 
 			if (animate) {
 				this._scheduleBlink(this._now());
-				this._scheduleTick();
+				this._lastAdvance = this._now();
+				this._timeline = new Clutter.Timeline({
+					duration: 1000,
+					repeat_count: -1,
+					actor: this,
+				});
+				this._newFrameId = this._timeline.connect('new-frame', () => this._onFrame());
+				this._timeline.start();
 			};
+
+			this.connect('notify::visible', () => {
+				if (!this._timeline) {
+					return;
+				};
+
+				if (this.visible && this.mapped && this._animationsOn) {
+					this._timeline.start();
+				} else {
+					this._timeline.stop();
+				};
+			});
 
 			this.connect('destroy', this._onDestroy.bind(this));
 		};
 
 		_now() {
 			return GLib.get_monotonic_time() / 1000000;
+		};
+
+		get _animationsOn() {
+			if (!this._animate) {
+				return false;
+			};
+
+			try {
+				return St.Settings.get().enable_animations;
+			} catch (error) {
+				return true;
+			};
+		};
+
+		get _slowDownFactor() {
+			try {
+				return Math.max(0.1, St.Settings.get().slow_down_factor || 1);
+			} catch (error) {
+				return 1;
+			};
 		};
 
 		_readStats() {
@@ -510,61 +515,96 @@ const MochiFace = GObject.registerClass(
 				now >= this._smileUntil;
 		};
 
-		_scheduleTick() {
-			const delay = this._idleTick() ? IDLE_TICK_MS : ACTIVE_TICK_MS;
+		_onFrame() {
+			if (!this.get_parent() || !this.mapped) {
+				return;
+			};
 
-			this._tickDelay = delay;
-			this._timerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, delay, () => {
-				this._timerId = 0;
+			if (!this._animationsOn) {
+				return;
+			};
 
-				if (!this.get_parent()) {
-					return GLib.SOURCE_REMOVE;
-				};
+			const now = this._now();
 
+			if (now - this._lastAdvance >= this._tickDelay / 1000) {
 				this._advance();
-				this.queue_repaint();
-				this._scheduleTick();
-				return GLib.SOURCE_REMOVE;
-			});
+				this._lastAdvance = now;
+				this._tickDelay = (this._idleTick() ? IDLE_TICK_MS : ACTIVE_TICK_MS) * this._slowDownFactor;
+
+				if (this._visualChanged) {
+					this.queue_repaint();
+				};
+			};
 		};
+
+
 
 		_advance() {
 			const now = this._now();
 
 			this._frame++;
+			let changed = false;
 
 			if (this._frame % 16 === 0) {
 				this._readStats();
 				this._notifyStatus();
+				changed = true;
 			};
 
+			const prevMood = this._mood;
 			this._mood = this._resolveMood(now);
+			if (this._mood !== prevMood) {
+				changed = true;
+			};
 
 			if (this._mood === 'chill') {
 				if (now >= this._nextBlink) {
 					this._blinkUntil = now + 0.14;
 					this._scheduleBlink(now);
+					changed = true;
 				};
 
 				if (now >= this._lookUntil) {
 					this._lookX = Math.random() * 2 - 1;
 					this._lookY = Math.random() * 2 - 1;
 					this._lookUntil = now + 1 + Math.random() * 2;
+					changed = true;
 				};
 
 				if (now >= this._smileUntil && Math.random() < 0.02 * (this._tickDelay / ACTIVE_TICK_MS)) {
 					this._smileUntil = now + 1.2;
+					changed = true;
 				};
 			} else {
-				this._blinkUntil = 0;
-				this._lookX = 0;
-				this._lookY = 0;
+				if (this._blinkUntil !== 0) {
+					this._blinkUntil = 0;
+					changed = true;
+				};
+
+				if (this._lookX !== 0 || this._lookY !== 0) {
+					this._lookX = 0;
+					this._lookY = 0;
+					changed = true;
+				};
 			};
+
+			this._visualChanged = changed || !this._idleTick();
 		};
 
 		_onDestroy() {
+			if (this._newFrameId && this._timeline) {
+				this._timeline.disconnect(this._newFrameId);
+				this._newFrameId = 0;
+			};
+
+			if (this._timeline) {
+				this._timeline.stop();
+				delete this._timeline;
+				this._timeline = null;
+			};
+
 			if (this._timerId) {
-				GLib.Source.remove(this._timerId);
+				GLib.source_remove(this._timerId);
 				this._timerId = 0;
 			};
 		};
@@ -598,7 +638,7 @@ const MochiFace = GObject.registerClass(
 
 				cr.newPath();
 				cr.arc(cx, cy - eh * 0.1, Math.min(eyeW, eh) * 0.18, 0, Math.PI * 2);
-				cr.setSourceRGBA(...hexToRgba(ink, 0.92));
+				cr.setSourceRGBA(...hexToRgbaArray(ink, 0.92));
 				cr.fill();
 				return;
 			};
@@ -614,7 +654,7 @@ const MochiFace = GObject.registerClass(
 
 			cr.newPath();
 			cr.arc(cx + hx, cy + hy, Math.min(eyeW, eyeH) * 0.26, 0, Math.PI * 2);
-			cr.setSourceRGBA(...hexToRgba(ink, 0.9));
+			cr.setSourceRGBA(...hexToRgbaArray(ink, 0.9));
 			cr.fill();
 		};
 
@@ -903,6 +943,104 @@ const MochiFace = GObject.registerClass(
 			cr.fill();
 		};
 
+		_applyFaceTransforms(cr, w, h, now, active, stress, bob) {
+			cr.save();
+			cr.translate(0, bob);
+
+			if (active.includes('overload') && this._animationsOn) {
+				const pulse = 1 + Math.sin(now * 3.2) * 0.035;
+
+				cr.translate(0.5 * w, 0.5 * h);
+				cr.scale(pulse, pulse);
+				cr.translate(-0.5 * w, -0.5 * h);
+			};
+
+			if (this._animationsOn && (stress >= 2 || active.includes('error'))) {
+				const amp = Math.min(0.018, Math.max(stress - 1, 1) * 0.006) * w;
+
+				cr.translate(Math.sin(now * 42) * amp, Math.cos(now * 37) * amp * 0.6);
+			};
+		};
+
+		_drawEffects(cr, w, h, now, active, rgb, critical) {
+			if (active.includes('hot')) {
+				this._steam(cr, w, h, now, rgb);
+			};
+
+			if (active.includes('charging') && this._animationsOn) {
+				for (let i = 0; i < 3; i++) {
+					const phase = (now * 0.6 + i / 3) % 1;
+					const alpha = Math.sin(phase * Math.PI);
+					const sx = (0.2 + i * 0.3) * w;
+					const sy = (0.18 + (i % 2) * 0.12) * h;
+
+					this._sparkle(cr, sx, sy, 0.05 * h, Math.max(0, alpha), rgb);
+				};
+			};
+
+			if (active.includes('overload') && this._animationsOn) {
+				this._loader(cr, w, h, now, rgb);
+			};
+
+			if (active.includes('hot') && this._animationsOn) {
+				this._fan(cr, w, h, now, rgb);
+			};
+
+			if (active.includes('busy') && this._animationsOn) {
+				this._ekg(cr, w, h, now, rgb);
+			};
+
+			if (active.includes('done') && this._animationsOn) {
+				for (let i = 0; i < 4; i++) {
+					const phase = (now * 0.5 + i / 4) % 1;
+					const alpha = Math.sin(phase * Math.PI);
+					const sx = (0.15 + (i % 2) * 0.7) * w;
+					const sy = (0.16 + (i > 1 ? 0.28 : 0)) * h;
+
+					this._sparkle(cr, sx, sy, 0.055 * h, Math.max(0, alpha), rgb);
+				};
+			};
+
+			if ((critical || active.includes('error')) && this._animationsOn) {
+				this._alarm(cr, w, h, now, rgb);
+			};
+		};
+
+		_drawOverlays(cr, w, h, now, active, rgb) {
+			if (active.includes('hot') || active.includes('paused')) {
+				this._sweat(cr, w, h, now, hexToRgb('#7ec8ff'));
+			};
+
+			if (active.includes('sleepy') && this._animationsOn) {
+				this._zzz(cr, w, h, now, rgb);
+			};
+
+			if ((active.includes('busy') || active.includes('error')) && this._animationsOn) {
+				this._dizzy(cr, w, h, now, rgb);
+			};
+
+			if (active.includes('overload') && this._animationsOn) {
+				this._puffs(cr, w, h, now, rgb);
+			};
+		};
+
+		_resolveEyeMode(mood, blink) {
+			if (mood === 'sleepy') return 'closed';
+			if (mood === 'charging' || mood === 'done') return 'happy';
+			if (mood === 'busy' || mood === 'error') return 'dizzy';
+			if (mood === 'overload' || mood === 'paused') return 'strain';
+			if (blink) return 'closed';
+			return 'open';
+		};
+
+		_resolveMouthMode(mood, now) {
+			if (mood === 'hot') return 'open';
+			if (mood === 'sleepy' || mood === 'paused') return 'wave';
+			if (mood === 'charging' || mood === 'printing' || mood === 'done') return 'smile';
+			if (mood === 'busy' || mood === 'overload' || mood === 'error') return 'open';
+			return now < this._smileUntil ? 'smile' : 'flat';
+		};
+
 		vfunc_repaint() {
 			const cr = this.get_context();
 			const [width, height] = this.get_surface_size();
@@ -941,30 +1079,15 @@ const MochiFace = GObject.registerClass(
 			const catchInk = contrastInk(baseColor, this._theme?.text);
 			let bob = 0;
 
-			if (this._animate && active.includes('sleepy')) {
+			if (this._animationsOn && active.includes('sleepy')) {
 				bob = Math.sin(now * 2) * 0.02 * h;
-			} else if (this._animate && active.includes('printing')) {
+			} else if (this._animationsOn && active.includes('printing')) {
 				bob = Math.sin(now * 3) * 0.008 * h;
 			};
 
-			const blink = this._animate && now < this._blinkUntil;
+			const blink = this._animationsOn && now < this._blinkUntil;
 
-			cr.save();
-			cr.translate(0, bob);
-
-			if (active.includes('overload') && this._animate) {
-				const pulse = 1 + Math.sin(now * 3.2) * 0.035;
-
-				cr.translate(0.5 * w, 0.5 * h);
-				cr.scale(pulse, pulse);
-				cr.translate(-0.5 * w, -0.5 * h);
-			};
-
-			if (this._animate && (stress >= 2 || active.includes('error'))) {
-				const amp = Math.min(0.018, Math.max(stress - 1, 1) * 0.006) * w;
-
-				cr.translate(Math.sin(now * 42) * amp, Math.cos(now * 37) * amp * 0.6);
-			};
+			this._applyFaceTransforms(cr, w, h, now, active, stress, bob);
 
 			const eyeH = Math.min(0.42 * h, 0.92 * w);
 			const eyeW = eyeH * 0.58;
@@ -974,98 +1097,16 @@ const MochiFace = GObject.registerClass(
 			const mouthR = Math.min(0.09 * h, 0.11 * w);
 			const mouthY = 0.75 * h;
 
-			if (active.includes('hot')) {
-				this._steam(cr, w, h, now, rgb);
-			};
+			this._drawEffects(cr, w, h, now, active, rgb, critical);
 
-			if (active.includes('charging') && this._animate) {
-				for (let i = 0; i < 3; i++) {
-					const phase = (now * 0.6 + i / 3) % 1;
-					const alpha = Math.sin(phase * Math.PI);
-					const sx = (0.2 + i * 0.3) * w;
-					const sy = (0.18 + (i % 2) * 0.12) * h;
-
-					this._sparkle(cr, sx, sy, 0.05 * h, Math.max(0, alpha), rgb);
-				};
-			};
-
-			if (active.includes('overload') && this._animate) {
-				this._loader(cr, w, h, now, rgb);
-			};
-
-			if (active.includes('hot') && this._animate) {
-				this._fan(cr, w, h, now, rgb);
-			};
-
-			if (active.includes('busy') && this._animate) {
-				this._ekg(cr, w, h, now, rgb);
-			};
-
-			if (active.includes('done') && this._animate) {
-				for (let i = 0; i < 4; i++) {
-					const phase = (now * 0.5 + i / 4) % 1;
-					const alpha = Math.sin(phase * Math.PI);
-					const sx = (0.15 + (i % 2) * 0.7) * w;
-					const sy = (0.16 + (i > 1 ? 0.28 : 0)) * h;
-
-					this._sparkle(cr, sx, sy, 0.055 * h, Math.max(0, alpha), rgb);
-				};
-			};
-
-			if ((critical || active.includes('error')) && this._animate) {
-				this._alarm(cr, w, h, now, rgb);
-			};
-
-			let eyeMode;
-
-			if (mood === 'sleepy') {
-				eyeMode = 'closed';
-			} else if (mood === 'charging' || mood === 'done') {
-				eyeMode = 'happy';
-			} else if (mood === 'busy' || mood === 'error') {
-				eyeMode = 'dizzy';
-			} else if (mood === 'overload' || mood === 'paused') {
-				eyeMode = 'strain';
-			} else if (blink) {
-				eyeMode = 'closed';
-			} else {
-				eyeMode = 'open';
-			};
-
+			const eyeMode = this._resolveEyeMode(mood, blink);
 			this._eye(cr, leftX, eyeY, eyeW, eyeH, eyeMode, rgb, catchInk, now);
 			this._eye(cr, rightX, eyeY, eyeW, eyeH, eyeMode, rgb, catchInk, now);
 
-			let mouthMode;
-
-			if (mood === 'hot') {
-				mouthMode = 'open';
-			} else if (mood === 'sleepy' || mood === 'paused') {
-				mouthMode = 'wave';
-			} else if (mood === 'charging' || mood === 'printing' || mood === 'done') {
-				mouthMode = 'smile';
-			} else if (mood === 'busy' || mood === 'overload' || mood === 'error') {
-				mouthMode = 'open';
-			} else {
-				mouthMode = now < this._smileUntil ? 'smile' : 'flat';
-			};
-
+			const mouthMode = this._resolveMouthMode(mood, now);
 			this._mouth(cr, 0.5 * w, mouthY, mouthR, mouthMode, rgb);
 
-			if (active.includes('hot') || active.includes('paused')) {
-				this._sweat(cr, w, h, now, hexToRgb('#7ec8ff'));
-			};
-
-			if (active.includes('sleepy') && this._animate) {
-				this._zzz(cr, w, h, now, rgb);
-			};
-
-			if ((active.includes('busy') || active.includes('error')) && this._animate) {
-				this._dizzy(cr, w, h, now, rgb);
-			};
-
-			if (active.includes('overload') && this._animate) {
-				this._puffs(cr, w, h, now, rgb);
-			};
+			this._drawOverlays(cr, w, h, now, active, rgb);
 
 			cr.restore();
 			cr.$dispose();

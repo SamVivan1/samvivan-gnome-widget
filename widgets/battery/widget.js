@@ -10,8 +10,6 @@ import {
 	MAX_SLOTS,
 	MIN_GAUGE_SIZE,
 	SLOT_GAP,
-	WIDGET_PADDING,
-	LAYOUT_MARGIN,
 	FALLBACK_WIDGET_WIDTH,
 	FALLBACK_WIDGET_HEIGHT,
 	SLOT_SPACING,
@@ -20,7 +18,6 @@ import {
 	deviceKey,
 	fitName,
 	mergeDevices,
-	bestLayout,
 	computeLayout,
 	layoutMetrics,
 	percentTextRatio,
@@ -1104,7 +1101,7 @@ export function reconcile({body, widget, createLabel, theme, sizeForWidget, anim
 		? percentTextRatio()
 		: targets.reduce((max, device) => Math.max(max, horizontalTextRatio(device)), 0);
 	const layout = computeLayout(count, availWidth, availHeight, textRatio);
-	const {cols, rows: rowCount, size, horizontal} = layout;
+	const {cols, rows: rowCount, size} = layout;
 	const gap = layout.gap ?? metrics.gap;
 
 	const cellWidth = (availWidth - (cols - 1) * gap) / cols;

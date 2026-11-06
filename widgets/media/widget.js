@@ -7,6 +7,8 @@ import Pango from 'gi://Pango';
 import Soup from 'gi://Soup';
 import St from 'gi://St';
 
+import { withAlpha } from '../../lib/color.js';
+
 import { fetchSameOrigin } from '../../lib/http.js';
 import { activeLyricIndex } from '../../lib/lyrics.js';
 import { warn } from '../../logger.js';
@@ -21,19 +23,6 @@ const ACTIVE_TICK_MS = 100;
 const IDLE_TICK_MS = 500;
 const LYRIC_SCROLL_MS = 380;
 
-function withAlpha(hex, alpha) {
-	const cleaned = String(hex || '').replace('#', '').trim();
-	const full = cleaned.length === 3
-		? cleaned.split('').map(part => part + part).join('')
-		: cleaned.padEnd(6, '0').slice(0, 6);
-	const value = Number.parseInt(full, 16);
-
-	if (!Number.isFinite(value)) {
-		return `rgba(127, 127, 127, ${alpha})`;
-	};
-
-	return `rgba(${(value >> 16) & 0xff}, ${(value >> 8) & 0xff}, ${value & 0xff}, ${alpha})`;
-};
 const ART_CACHE_MAX_FILES = 100;
 
 const LineProgress = GObject.registerClass(

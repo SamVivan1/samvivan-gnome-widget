@@ -10,6 +10,7 @@ so the local MQTT broker accepts the ``bblp`` / access-code login.
 
 from __future__ import annotations
 
+import copy
 import logging
 import threading
 import time
@@ -99,7 +100,7 @@ class BambuClient:
 
     def status(self) -> dict[str, Any]:
         with self._lock:
-            snapshot = dict(self._snapshot)
+            snapshot = copy.deepcopy(self._snapshot)
         snapshot["connected"] = self._connected
         snapshot["error"] = self._last_error
         snapshot["updated"] = int(time.time())
@@ -140,8 +141,8 @@ class BambuClient:
             _LOGGER.info("MQTT disconnected, reconnecting to %s", self._ip)
             try:
                 self._printer.mqtt_stop()
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception as error:  # noqa: BLE001
+                _LOGGER.debug("could not stop the previous MQTT connection: %s", error)
             self._printer.mqtt_start()
             return bool(self._printer.mqtt_client_connected())
         except Exception as error:  # noqa: BLE001
@@ -207,6 +208,13 @@ class BambuClient:
 
         error_code = _as_int(data.get("print_error")) or 0
 
+        ams_payload = data.get("ams")
+        active_tray = None
+        if isinstance(ams_payload, dict):
+            active_tray = _as_int(ams_payload.get("tray_now"))
+        if active_tray is None:
+            active_tray = _as_int(data.get("tray_now"))
+
         return {
             "printer": {
                 "name": data.get("printer_name") or "A1",
@@ -234,7 +242,7 @@ class BambuClient:
             },
             "filament": {
                 "ams": self._ams(data),
-                "active": _as_int(data.get("tray_now")),
+                "active": active_tray,
             },
             "raw": {},
         }
@@ -244,6 +252,8 @@ class BambuClient:
         ams = data.get("ams")
 
         if isinstance(ams, dict):
+            active_slot = _as_int(ams.get("tray_now"))
+
             for unit in ams.get("ams", []) or []:
                 unit_id = unit.get("id")
                 for tray in unit.get("tray", []) or []:
@@ -252,7 +262,7 @@ class BambuClient:
                         "slot": tray.get("id"),
                         "type": tray.get("tray_type") or "",
                         "color": _normalize_color(tray.get("tray_color")),
-                        "active": tray.get("id") == ams.get("tray_now"),
+                        "active": active_slot is not None and _as_int(tray.get("id")) == active_slot,
                     })
             if not trays and ams.get("tray_now") not in (None, 255):
                 trays.append({
@@ -319,12 +329,12 @@ class BambuClient:
             return
         try:
             self._printer.mqtt_stop()
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as error:  # noqa: BLE001
+            _LOGGER.debug("could not stop the MQTT connection cleanly: %s", error)
         try:
             self._printer.disconnect()
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as error:  # noqa: BLE001
+            _LOGGER.debug("could not disconnect the printer cleanly: %s", error)
         self._printer = None
         self._connected = False
 
@@ -358,7 +368,7 @@ def _empty_snapshot() -> dict[str, Any]:
 def _normalize_color(value: Any) -> str:
     if not value:
         return ""
-    text = str(value).strip()
+    text = str(value).strip().lstrip("#")
     if len(text) >= 6:
         return f"#{text[0:6]}"
     return text

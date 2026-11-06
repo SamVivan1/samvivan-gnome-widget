@@ -10,9 +10,17 @@ XGETTEXT_FLAGS = --language=JavaScript --keyword=_ --from-code=UTF-8 \
 check:
 	@bash scripts/check.sh
 
+.PHONY: lint
+lint:
+	@npx --yes eslint@9 --ext .js,.mjs . --ignore-pattern build/ --ignore-pattern node_modules/
+
 .PHONY: test
 test:
 	@node --test tests/*.test.mjs
+
+.PHONY: test-bridge
+test-bridge:
+	@python3 -m pytest homelab/bambu-bridge/tests
 
 .PHONY: pot
 pot:
@@ -48,7 +56,7 @@ clean:
 	rm -rf build *.zip
 
 .PHONY: pack
-pack: clean check
+pack: clean check test
 	@python3 scripts/pack.py $(CURDIR)
 
 .PHONY: install

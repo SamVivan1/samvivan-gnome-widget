@@ -3,8 +3,7 @@ import GLib from 'gi://GLib';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { MonitorGroup as WorkspaceAnimationMonitorGroup } from 'resource:///org/gnome/shell/ui/workspaceAnimation.js';
-
-import { warn } from './logger.js';
+import { overviewControls, workspaceBackgroundGroup, workspaceMonitor } from './lib/shellCompat.js';
 
 function destroyActor(actor) {
   if (!actor) {
@@ -159,7 +158,7 @@ export class WorkspaceIntegration {
   };
 
   _addWorkspaceAnimationClone(workspaceBackground) {
-    const monitor = workspaceBackground?._monitor;
+    const monitor = workspaceMonitor(workspaceBackground);
 
     if (!this._source || monitor?.index !== this._monitorIndex()) {
       return;
@@ -206,7 +205,7 @@ export class WorkspaceIntegration {
   _overviewPreviewTargets() {
     const index = this._monitorIndex();
     const monitor = Main.layoutManager.monitors?.[index] ?? Main.layoutManager.primaryMonitor;
-    const controls = Main.overview._overview?.controls;
+    const controls = overviewControls();
     const targets = new Map();
 
     if (!monitor || !controls || !this._source) {
@@ -216,7 +215,7 @@ export class WorkspaceIntegration {
     const workspaceView = controls._workspacesDisplay?._workspacesViews?.[index];
 
     for (const workspace of workspaceView?._workspaces ?? []) {
-      const container = workspace._background?._backgroundGroup;
+      const container = workspaceBackgroundGroup(workspace);
 
       if (workspace.monitorIndex === index && container) {
         targets.set(container, {

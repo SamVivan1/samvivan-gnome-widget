@@ -9,6 +9,12 @@ import { ExtensionPreferences, gettext as _ } from 'resource:///org/gnome/Shell/
 
 import * as Immich from './widgets/photos/immich.js';
 import { fetchSameOrigin } from './lib/http.js';
+import {
+  WIDGET_DEFAULT_SIZES as CATALOG_DEFAULT_SIZES,
+  WIDGET_DIMENSIONS as CATALOG_DIMENSIONS,
+  WIDGET_TYPES,
+  widgetLabels as catalogWidgetLabels,
+} from './lib/widgetCatalog.js';
 
 const LAYOUT_KEY = 'layout-json';
 const EXTENSION_PATH = GLib.path_get_dirname(GLib.filename_from_uri(import.meta.url)[0]);
@@ -17,34 +23,11 @@ const DONATE_URL = 'https://ko-fi.com/samvivan';
 // Built on demand: the shell only assigns the preferences' stateObj after
 // importing this module, so gettext must not run while it is being evaluated.
 function widgetLabels() {
-  return {
-    clock: _('Clock'),
-    calendar: _('Calendar'),
-    agenda: _('Agenda'),
-    weather: _('Weather'),
-    photos: _('Photos'),
-    battery: _('Battery'),
-    bambu: _('Bambu Lab'),
-    media: _('Music'),
-  };
+  return catalogWidgetLabels(_);
 };
 
-const WIDGET_DEFAULT_SIZES = {
-  clock: 'small',
-  calendar: 'small',
-  agenda: 'medium',
-  weather: 'small',
-  photos: 'medium',
-  battery: 'medium',
-  bambu: 'medium',
-  media: 'medium',
-};
-
-const WIDGET_DIMENSIONS = {
-  small: [220, 220],
-  medium: [454, 220],
-  large: [454, 454],
-};
+const WIDGET_DEFAULT_SIZES = CATALOG_DEFAULT_SIZES;
+const WIDGET_DIMENSIONS = CATALOG_DIMENSIONS;
 
 function widgetLabel(type) {
   return widgetLabels()[type] ?? type;

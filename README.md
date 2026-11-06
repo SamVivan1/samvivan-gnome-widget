@@ -282,6 +282,7 @@ make test         # node --test tests/*.test.mjs (pure logic, no gi needed)
 make pot          # regenerate po/desktop-widget.pot (needs gettext)
 make update-po    # merge new strings into po/*.po
 make translations # compile po/*.po into locale/<lang>/LC_MESSAGES/*.mo
+python3 -m pytest homelab/bambu-bridge/tests  # bridge tests (needs requirements-dev.txt)
 ```
 Prefer putting gi-free logic (math, parsing, thresholds) in `lib/` so it can be
 covered by `node --test`. Both `make check` and the unit tests run in CI

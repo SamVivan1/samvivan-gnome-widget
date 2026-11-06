@@ -19,6 +19,17 @@ jobs:
       - name: ESM parse check
         run: make check
 
+      - name: Lint JavaScript
+        run: |
+          npm ci --ignore-scripts 2>/dev/null || true
+          npx --yes eslint@9 --ext .js,.mjs . --ignore-pattern build/ --ignore-pattern node_modules/
+
+      - name: Lint shell scripts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends shellcheck
+          shellcheck install.sh uninstall.sh
+
       - name: Compile GSettings schema
         run: glib-compile-schemas schemas/
 
@@ -36,3 +47,8 @@ jobs:
         run: |
           python3 -m pip install --user --quiet ruff
           ruff check homelab/bambu-bridge
+
+      - name: Unit tests (bridge)
+        run: |
+          python3 -m pip install --user --quiet -r homelab/bambu-bridge/requirements-dev.txt
+          python3 -m pytest homelab/bambu-bridge/tests

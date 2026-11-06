@@ -37,8 +37,11 @@ def main() -> int:
     shutil.rmtree(build, ignore_errors=True)
     os.makedirs(stage)
 
+    # Include tracked and untracked-but-not-ignored files so a local
+    # `make install` works before the new files are committed.
     files = subprocess.check_output(
-        ["git", "-C", repo, "ls-files"], text=True
+        ["git", "-C", repo, "ls-files", "--cached", "--others", "--exclude-standard"],
+        text=True,
     ).splitlines()
 
     count = 0

@@ -69,7 +69,6 @@ test('widgetFractions maps edges to 0 and 1', () => {
 });
 
 test('positionForFractions is the inverse of widgetFractions', () => {
-	const area = monitorWorkArea(MONITOR, OPTS);
 	const widget = {size: 'small', x: 640, y: 360};
 	const fractions = widgetFractions(widget, MONITOR, OPTS);
 	const restored = positionForFractions({...widget, ...fractions}, MONITOR, OPTS);

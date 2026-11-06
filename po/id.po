@@ -110,15 +110,15 @@ msgstr "Musik"
 
 #: prefs.js:74
 msgid "Primary monitor"
-msgstr ""
+msgstr "Monitor utama"
 
 #: prefs.js:83
 msgid "Monitor %s"
-msgstr ""
+msgstr "Monitor %s"
 
 #: prefs.js:87
 msgid "%s (%s×%s)"
-msgstr ""
+msgstr "%s (%s×%s)"
 
 #: prefs.js:113
 msgid "General"
@@ -130,7 +130,7 @@ msgstr "Penempatan"
 
 #: prefs.js:119
 msgid "Where the widgets live and how they are positioned."
-msgstr ""
+msgstr "Di mana widget berada dan bagaimana posisinya."
 
 #: prefs.js:125
 msgid "Monitor"
@@ -142,7 +142,7 @@ msgstr "Ukuran grid"
 
 #: prefs.js:138
 msgid "Snap grid in pixels used while dragging widgets"
-msgstr ""
+msgstr "Ukuran grid dalam piksel saat menyeret widget"
 
 #: prefs.js:145
 msgid "Widget gap"
@@ -150,7 +150,7 @@ msgstr "Jarak widget"
 
 #: prefs.js:146
 msgid "Spacing in pixels between widgets and the screen edges"
-msgstr ""
+msgstr "Jarak dalam piksel antara widget dan tepi layar"
 
 #: prefs.js:153
 msgid "Snap to grid"
@@ -158,7 +158,7 @@ msgstr "Rapatkan ke grid"
 
 #: prefs.js:154
 msgid "Snap widget positions to the grid while dragging"
-msgstr ""
+msgstr "Kunci posisi widget ke grid saat diseret"
 
 #: prefs.js:161
 msgid "Behavior"
@@ -170,7 +170,7 @@ msgstr "Mode edit"
 
 #: prefs.js:165
 msgid "Show drag handles and remove buttons on the widgets"
-msgstr ""
+msgstr "Tampilkan handle seret dan tombol hapus pada widget"
 
 #: prefs.js:171
 msgid "Hide all widgets"
@@ -178,7 +178,7 @@ msgstr "Sembunyikan semua widget"
 
 #: prefs.js:172
 msgid "Temporarily hide every widget without deleting the layout"
-msgstr ""
+msgstr "Sembunyikan semua widget sementara tanpa menghapus tata letak"
 
 #: prefs.js:178
 msgid "Widget opacity (%)"
@@ -190,7 +190,7 @@ msgstr "Panel atas"
 
 #: prefs.js:188
 msgid "Control the Desktop Widget button in the top panel."
-msgstr ""
+msgstr "Kontrol tombol Desktop Widget di panel atas."
 
 #: prefs.js:192
 msgid "Show panel icon"
@@ -198,7 +198,7 @@ msgstr "Tampilkan ikon panel"
 
 #: prefs.js:193
 msgid "Show the Desktop Widget button in the top panel"
-msgstr ""
+msgstr "Tampilkan tombol Desktop Widget di panel atas"
 
 #: prefs.js:201
 msgid "Support"
@@ -214,47 +214,47 @@ msgstr "Dukung pengembangan dengan donasi kecil via Ko-fi"
 
 #: prefs.js:237
 msgid "Display"
-msgstr ""
+msgstr "Tampilan"
 
 #: prefs.js:238
 msgid "Where the Photos widget gets its images and how often it changes."
-msgstr ""
+msgstr "Dari mana widget Photos mengambil gambar dan seberapa sering berubah."
 
 #: prefs.js:242
 msgid "Photo source"
-msgstr ""
+msgstr "Sumber foto"
 
 #: prefs.js:243
 msgid "Immich is used first; local photos are a fallback when unavailable"
-msgstr ""
+msgstr "Immich digunakan lebih dulu; foto lokal sebagai cadangan saat tidak tersedia"
 
 #: prefs.js:244
 msgid "Immich + local (fallback)"
-msgstr ""
+msgstr "Immich + lokal (cadangan)"
 
 #: prefs.js:244
 msgid "Immich only"
-msgstr ""
+msgstr "Hanya Immich"
 
 #: prefs.js:244
 msgid "Local only"
-msgstr ""
+msgstr "Hanya lokal"
 
 #: prefs.js:253
 msgid "Change interval (minutes)"
-msgstr ""
+msgstr "Interval ganti (menit)"
 
 #: prefs.js:265
 msgid "Immich"
-msgstr ""
+msgstr "Immich"
 
 #: prefs.js:266
 msgid "Pull random photos from your Immich server. Create an API key under Account Settings → API Keys."
-msgstr ""
+msgstr "Ambil foto acak dari server Immich Anda. Buat kunci API di Account Settings → API Keys."
 
 #: prefs.js:269
 msgid "Server URL"
-msgstr ""
+msgstr "URL server"
 
 #: prefs.js:277
 msgid "Unencrypted http:// — anyone on the network path can read your API key. Prefer https://"
@@ -262,103 +262,103 @@ msgstr "Http:// tanpa enkripsi — siapa pun di jalur jaringan bisa membaca API 
 
 #: prefs.js:284
 msgid "API key"
-msgstr ""
+msgstr "Kunci API"
 
 #: prefs.js:292
 msgid "Show"
-msgstr ""
+msgstr "Tampilkan"
 
 #: prefs.js:293
 msgid "All photos"
-msgstr ""
+msgstr "Semua foto"
 
 #: prefs.js:293
 msgid "Favorites only"
-msgstr ""
+msgstr "Hanya favorit"
 
 #: prefs.js:293
 msgid "Specific album"
-msgstr ""
+msgstr "Album tertentu"
 
 #: prefs.js:298
 msgid "Album"
-msgstr ""
+msgstr "Album"
 
 #: prefs.js:299 prefs.js:346
 msgid "Loading albums…"
-msgstr ""
+msgstr "Memuat album…"
 
 #: prefs.js:304
 msgid "Image quality"
-msgstr ""
+msgstr "Kualitas gambar"
 
 #: prefs.js:305
 msgid "Preview (recommended)"
-msgstr ""
+msgstr "Pratinjau (disarankan)"
 
 #: prefs.js:305
 msgid "Thumbnail (lightest)"
-msgstr ""
+msgstr "Thumbnail (paling ringan)"
 
 #: prefs.js:305
 msgid "Full size"
-msgstr ""
+msgstr "Ukuran penuh"
 
 #: prefs.js:319
 msgid "No albums found"
-msgstr ""
+msgstr "Tidak ada album ditemukan"
 
 #: prefs.js:355
 msgid "Album list unavailable"
-msgstr ""
+msgstr "Daftar album tidak tersedia"
 
 #: prefs.js:400
 msgid "Calendars"
-msgstr ""
+msgstr "Kalender"
 
 #: prefs.js:401
 msgid "Which calendars the Calendar and Agenda widgets read from Evolution. Deselecting every calendar shows all of them."
-msgstr ""
+msgstr "Kalender mana yang dibaca widget Calendar dan Agenda dari Evolution. Membatalkan pilihan semua kalender menampilkan semuanya."
 
 #: prefs.js:404
 msgid "Loading calendars…"
-msgstr ""
+msgstr "Memuat kalender…"
 
 #: prefs.js:418 prefs.js:462
 msgid "Calendar support unavailable"
-msgstr ""
+msgstr "Dukungan kalender tidak tersedia"
 
 #: prefs.js:419 prefs.js:463
 msgid "Install python3-gi and Evolution Data Server introspection"
-msgstr ""
+msgstr "Pasang python3-gi dan introspeksi Evolution Data Server"
 
 #: prefs.js:430 prefs.js:441 prefs.js:451
 msgid "Could not read calendars"
-msgstr ""
+msgstr "Tidak dapat membaca kalender"
 
 #: prefs.js:470
 msgid "No calendars found"
-msgstr ""
+msgstr "Tidak ada kalender ditemukan"
 
 #: prefs.js:471
 msgid "Add a calendar in GNOME Calendar or Evolution"
-msgstr ""
+msgstr "Tambahkan kalender di GNOME Calendar atau Evolution"
 
 #: prefs.js:493
 msgid "Public holidays"
-msgstr ""
+msgstr "Hari libur nasional"
 
 #: prefs.js:511
 msgid "Bridge connection"
-msgstr ""
+msgstr "Koneksi bridge"
 
 #: prefs.js:512
 msgid "Point the widget at the self-hosted Bambu bridge (see homelab/bambu-bridge). Run it next to the printer and expose it through a Cloudflare Tunnel."
-msgstr ""
+msgstr "Arahkan widget ke Bambu bridge yang self-hosted (lihat homelab/bambu-bridge). Jalankan di samping printer dan ekspos melalui Cloudflare Tunnel."
 
 #: prefs.js:515
 msgid "Bridge URL"
-msgstr ""
+msgstr "URL bridge"
 
 #: prefs.js:523
 msgid "Unencrypted http:// — anyone on the network path can read your bridge token. Prefer https://"
@@ -366,39 +366,39 @@ msgstr "Http:// tanpa enkripsi — siapa pun di jalur jaringan bisa membaca toke
 
 #: prefs.js:530
 msgid "Bearer token"
-msgstr ""
+msgstr "Token bearer"
 
 #: prefs.js:538
 msgid "Refresh interval (seconds)"
-msgstr ""
+msgstr "Interval refresh (detik)"
 
 #: prefs.js:539
 msgid "How often the widget polls the bridge (3-300)"
-msgstr ""
+msgstr "Seberapa sering widget menanyai bridge (3-300)"
 
 #: prefs.js:546
 msgid "Print notifications"
-msgstr ""
+msgstr "Notifikasi cetak"
 
 #: prefs.js:547
 msgid "Tell me when the printer connects or disconnects, and when a print starts, pauses, finishes or fails"
-msgstr ""
+msgstr "Beri tahu saat printer terhubung atau terputus, dan saat cetak dimulai, dijeda, selesai, atau gagal"
 
 #: prefs.js:553
 msgid "Connection status"
-msgstr ""
+msgstr "Status koneksi"
 
 #: prefs.js:554
 msgid "Not tested yet"
-msgstr ""
+msgstr "Belum diuji"
 
 #: prefs.js:557
 msgid "Test connection"
-msgstr ""
+msgstr "Uji koneksi"
 
 #: prefs.js:578
 msgid "Lyrics"
-msgstr ""
+msgstr "Lirik"
 
 #: prefs.js:579
 msgid "The Music widget reads what other apps play over MPRIS. Time-synced lyrics are fetched from lrclib.net — each lookup sends the track title, artist, album, and duration — and cached under ~/.cache/desktop-widget/lyrics."
@@ -406,155 +406,155 @@ msgstr "Widget Musik membaca apa yang diputar aplikasi lain melalui MPRIS. Lirik
 
 #: prefs.js:583
 msgid "Show lyrics"
-msgstr ""
+msgstr "Tampilkan lirik"
 
 #: prefs.js:584
 msgid "Highlight the current line of the song while it plays"
-msgstr ""
+msgstr "Sorot baris lirik yang sedang diputar"
 
 #: prefs.js:590
 msgid "Lyrics offset (ms)"
-msgstr ""
+msgstr "Offset lirik (ms)"
 
 #: prefs.js:591
 msgid "Shift the timing to line the lyrics up with the audio"
-msgstr ""
+msgstr "Geser timing agar lirik selaras dengan audio"
 
 #: prefs.js:614
 msgid "Offline face"
-msgstr ""
+msgstr "Wajah offline"
 
 #: prefs.js:615
 msgid "What to show when the bridge is reachable but the printer is offline."
-msgstr ""
+msgstr "Yang ditampilkan saat bridge dapat dijangkau tapi printer offline."
 
 #: prefs.js:619
 msgid "Animated face"
-msgstr ""
+msgstr "Wajah animasi"
 
 #: prefs.js:620
 msgid "Show a cute mochi face that reacts to temperature, battery and CPU load instead of a plain “Printer offline” message"
-msgstr ""
+msgstr "Tampilkan wajah mochi lucu yang bereaksi terhadap suhu, baterai, dan beban CPU alih-alih pesan “Printer offline” biasa"
 
 #: prefs.js:626
 msgid "Always show the face"
-msgstr ""
+msgstr "Selalu tampilkan wajah"
 
 #: prefs.js:627
 msgid "Show it even when the printer is online or the bridge is unreachable (good for testing)"
-msgstr ""
+msgstr "Tampilkan bahkan saat printer online atau bridge tidak dapat dijangkau (bagus untuk pengujian)"
 
 #: prefs.js:633
 msgid "Show the face while printing"
-msgstr ""
+msgstr "Tampilkan wajah saat mencetak"
 
 #: prefs.js:634
 msgid "Replace the job details with the face so it can react to print events (printing, paused, failed, finished)"
-msgstr ""
+msgstr "Ganti detail pekerjaan dengan wajah agar dapat bereaksi terhadap kejadian cetak (mencetak, dijeda, gagal, selesai)"
 
 #: prefs.js:640
 msgid "Use system accent colour"
-msgstr ""
+msgstr "Gunakan warna aksen sistem"
 
 #: prefs.js:641
 msgid "Turn off to pick a custom colour for the face"
-msgstr ""
+msgstr "Matikan untuk memilih warna kustom untuk wajah"
 
 #: prefs.js:645
 msgid "Face colour"
-msgstr ""
+msgstr "Warna wajah"
 
 #: prefs.js:651
 msgid "Caption (leave empty to hide)"
-msgstr ""
+msgstr "Keterangan (kosongkan untuk menyembunyikan)"
 
 #: prefs.js:675
 msgid "Hot above"
-msgstr ""
+msgstr "Panas di atas"
 
 #: prefs.js:675
 msgid "Temperature (°C) at or above which the face looks hot"
-msgstr ""
+msgstr "Suhu (°C) di mana wajah terlihat panas"
 
 #: prefs.js:676
 msgid "Sleepy below"
-msgstr ""
+msgstr "Mengantuk di bawah"
 
 #: prefs.js:676
 msgid "Battery (%) at or below which the face looks sleepy while unplugged"
-msgstr ""
+msgstr "Baterai (%) di mana wajah terlihat mengantuk saat tidak dicolok"
 
 #: prefs.js:677
 msgid "Busy above"
-msgstr ""
+msgstr "Sibuk di atas"
 
 #: prefs.js:677
 msgid "CPU load (%) at or above which the face looks busy"
-msgstr ""
+msgstr "Beban CPU (%) di mana wajah terlihat sibuk"
 
 #: prefs.js:678
 msgid "Overloaded above"
-msgstr ""
+msgstr "Kelebihan beban di atas"
 
 #: prefs.js:678
 msgid "RAM usage (%) at or above which the face looks overloaded"
-msgstr ""
+msgstr "Penggunaan RAM (%) di mana wajah terlihat kelebihan beban"
 
 #: prefs.js:760 prefs.js:761
 msgid "Set the bridge URL and token first"
-msgstr ""
+msgstr "Atur URL bridge dan token terlebih dahulu"
 
 #: prefs.js:765
 msgid "Testing %s…"
-msgstr ""
+msgstr "Menguji %s…"
 
 #: prefs.js:780
 msgid "Connection timed out after 15s"
-msgstr ""
+msgstr "Koneksi habis waktu setelah 15 detik"
 
 #: prefs.js:781
 msgid "Connection timed out"
-msgstr ""
+msgstr "Koneksi habis waktu"
 
 #: prefs.js:801
 msgid "HTTP 502 — the tunnel is up but the bridge is not running"
-msgstr ""
+msgstr "HTTP 502 — tunnel aktif tapi bridge tidak berjalan"
 
 #: prefs.js:803
 msgid "HTTP 401 — token does not match API_TOKEN"
-msgstr ""
+msgstr "HTTP 401 — token tidak cocok dengan API_TOKEN"
 
 #: prefs.js:804
 msgid "Bridge replied with HTTP %s"
-msgstr ""
+msgstr "Bridge membalas dengan HTTP %s"
 
 #: prefs.js:810
 msgid "Bridge reachable, printer connected"
-msgstr ""
+msgstr "Bridge dapat dijangkau, printer terhubung"
 
 #: prefs.js:811
 msgid "Bridge reachable, printer not connected (mock: %s)"
-msgstr ""
+msgstr "Bridge dapat dijangkau, printer tidak terhubung (mock: %s)"
 
 #: prefs.js:815 prefs.js:834
 msgid "Connection failed: %s"
-msgstr ""
+msgstr "Koneksi gagal: %s"
 
 #: prefs.js:816 prefs.js:835
 msgid "Connection failed — see Bambu Lab page"
-msgstr ""
+msgstr "Koneksi gagal — lihat halaman Bambu Lab"
 
 #: prefs.js:828 prefs.js:829
 msgid "Invalid bridge URL"
-msgstr ""
+msgstr "URL bridge tidak valid"
 
 #: prefs.js:842
 msgid "Hidden"
-msgstr ""
+msgstr "Tersembunyi"
 
 #: prefs.js:845
 msgid "Position: %s, %s · %s×%s"
-msgstr ""
+msgstr "Posisi: %s, %s · %s×%s"
 
 #: prefs.js:851
 msgid "Developer"
@@ -562,83 +562,83 @@ msgstr "Pengembang"
 
 #: prefs.js:856
 msgid "Developer mode"
-msgstr ""
+msgstr "Mode pengembang"
 
 #: prefs.js:857
 msgid "Reveal extra controls for testing widgets without real-world conditions."
-msgstr ""
+msgstr "Tampilkan kontrol ekstra untuk menguji widget tanpa kondisi dunia nyata."
 
 #: prefs.js:861
 msgid "Enable developer mode"
-msgstr ""
+msgstr "Aktifkan mode pengembang"
 
 #: prefs.js:862
 msgid "Show testing controls such as forcing the Bambu face mood"
-msgstr ""
+msgstr "Tampilkan kontrol pengujian seperti memaksa mood wajah Bambu"
 
 #: prefs.js:869
 msgid "Bambu face"
-msgstr ""
+msgstr "Wajah Bambu"
 
 #: prefs.js:870
 msgid "Preview every mood without stressing the CPU or draining the battery. Turn on “Always show the face” on the Bambu Lab page to see it while the printer is online."
-msgstr ""
+msgstr "Pratinjau setiap mood tanpa membebani CPU atau menguras baterai. Aktifkan “Selalu tampilkan wajah” di halaman Bambu Lab untuk melihatnya saat printer online."
 
 #: prefs.js:874
 msgid "Cycle all moods"
-msgstr ""
+msgstr "Putar semua mood"
 
 #: prefs.js:875
 msgid "Rotate through chill, hot, sleepy, charging, busy and overload automatically"
-msgstr ""
+msgstr "Putar otomatis melalui chill, hot, sleepy, charging, busy, dan overload"
 
 #: prefs.js:882
 msgid "Force mood"
-msgstr ""
+msgstr "Paksa mood"
 
 #: prefs.js:883
 msgid "Auto (real sensors)"
-msgstr ""
+msgstr "Otomatis (sensor nyata)"
 
 #: prefs.js:883 widgets/bambu/widget.js:166 widgets/bambu/widget.js:444
 msgid "Chill"
-msgstr ""
+msgstr "Santai"
 
 #: prefs.js:883 widgets/bambu/widget.js:167
 msgid "Hot"
-msgstr ""
+msgstr "Panas"
 
 #: prefs.js:883 widgets/bambu/widget.js:168
 msgid "Sleepy"
-msgstr ""
+msgstr "Mengantuk"
 
 #: prefs.js:883 widgets/bambu/widget.js:169
 msgid "Charging"
-msgstr ""
+msgstr "Mengisi daya"
 
 #: prefs.js:883 widgets/bambu/widget.js:170
 msgid "Busy"
-msgstr ""
+msgstr "Sibuk"
 
 #: prefs.js:883 widgets/bambu/widget.js:171
 msgid "Overloaded"
-msgstr ""
+msgstr "Kelebihan beban"
 
 #: prefs.js:883 widgets/bambu/widget.js:25 widgets/bambu/widget.js:172 widgets/bambu/widget.js:1280
 msgid "Printing"
-msgstr ""
+msgstr "Mencetak"
 
 #: prefs.js:883 widgets/bambu/widget.js:26 widgets/bambu/widget.js:173
 msgid "Paused"
-msgstr ""
+msgstr "Dijeda"
 
 #: prefs.js:883 widgets/bambu/widget.js:174
 msgid "Error"
-msgstr ""
+msgstr "Kesalahan"
 
 #: prefs.js:883 widgets/bambu/widget.js:27 widgets/bambu/widget.js:175
 msgid "Finished"
-msgstr ""
+msgstr "Selesai"
 
 #: prefs.js:918
 msgid "Widgets"
@@ -646,31 +646,31 @@ msgstr "Widget"
 
 #: prefs.js:923
 msgid "Individual widgets"
-msgstr ""
+msgstr "Widget individual"
 
 #: prefs.js:924
 msgid "Add, remove, show or hide each widget and fine-tune its position and size."
-msgstr ""
+msgstr "Tambah, hapus, tampilkan, atau sembunyikan setiap widget dan atur posisi serta ukurannya."
 
 #: prefs.js:929
 msgid "Add widget"
-msgstr ""
+msgstr "Tambah widget"
 
 #: prefs.js:930
 msgid "Adds a new widget to the layout below."
-msgstr ""
+msgstr "Menambahkan widget baru ke tata letak di bawah."
 
 #: prefs.js:951
 msgid "No widgets configured"
-msgstr ""
+msgstr "Tidak ada widget yang dikonfigurasi"
 
 #: prefs.js:952
 msgid "Add one from the \"Add widget\" section below."
-msgstr ""
+msgstr "Tambahkan dari bagian \"Tambah widget\" di bawah."
 
 #: prefs.js:968
 msgid "Reset to default layout"
-msgstr ""
+msgstr "Kembalikan ke tata letak default"
 
 #: prefs.js:973
 msgid "Reset to default layout?"
@@ -690,23 +690,23 @@ msgstr "Kembalikan"
 
 #: prefs.js:1039
 msgid "Visible"
-msgstr ""
+msgstr "Terlihat"
 
 #: prefs.js:1066
 msgid "X position"
-msgstr ""
+msgstr "Posisi X"
 
 #: prefs.js:1067
 msgid "Y position"
-msgstr ""
+msgstr "Posisi Y"
 
 #: prefs.js:1068
 msgid "Width"
-msgstr ""
+msgstr "Lebar"
 
 #: prefs.js:1069
 msgid "Height"
-msgstr ""
+msgstr "Tinggi"
 
 #: prefs.js:1076
 msgid "Remove this widget?"
@@ -722,51 +722,51 @@ msgstr "Hapus"
 
 #: lib/bambuData.js:179
 msgid "Set the endpoint URL and token in preferences"
-msgstr ""
+msgstr "Atur URL endpoint dan token di preferensi"
 
 #: lib/bambuData.js:203
 msgid "invalid endpoint URL: %s"
-msgstr ""
+msgstr "URL endpoint tidak valid: %s"
 
 #: lib/bambuData.js:207
 msgid "request failed: %s"
-msgstr ""
+msgstr "permintaan gagal: %s"
 
 #: lib/bambuData.js:213
 msgid "server responded with status %s"
-msgstr ""
+msgstr "server membalas dengan status %s"
 
 #: lib/bambuData.js:222
 msgid "could not parse response: %s"
-msgstr ""
+msgstr "tidak dapat mengurai respons: %s"
 
 #: lib/bambuData.js:227
 msgid "bridge reported an error"
-msgstr ""
+msgstr "bridge melaporkan kesalahan"
 
 #: lib/calendarData.js:140
 msgid "python3 was not found on PATH"
-msgstr ""
+msgstr "python3 tidak ditemukan di PATH"
 
 #: lib/calendarData.js:145
 msgid "calendar helper script is missing"
-msgstr ""
+msgstr "skrip pembantu kalender tidak ada"
 
 #: lib/calendarData.js:181
 msgid "could not start the calendar helper: %s"
-msgstr ""
+msgstr "tidak dapat menjalankan pembantu kalender: %s"
 
 #: lib/calendarData.js:207
 msgid "calendar helper failed: %s"
-msgstr ""
+msgstr "pembantu kalender gagal: %s"
 
 #: lib/calendarData.js:216
 msgid "could not parse calendar data: %s"
-msgstr ""
+msgstr "tidak dapat mengurai data kalender: %s"
 
 #: lib/calendarData.js:222
 msgid "calendar data is unavailable"
-msgstr ""
+msgstr "data kalender tidak tersedia"
 
 #: widgets/agenda/widget.js:55
 msgid "All day"
@@ -782,27 +782,27 @@ msgstr "Besok"
 
 #: widgets/agenda/widget.js:138
 msgid "No events today"
-msgstr ""
+msgstr "Tidak ada acara hari ini"
 
 #: widgets/agenda/widget.js:142 widgets/agenda/widget.js:252
 msgid "+%s more"
-msgstr ""
+msgstr "+%s lagi"
 
 #: widgets/agenda/widget.js:164
 msgid "Calendar module unavailable"
-msgstr ""
+msgstr "Modul kalender tidak tersedia"
 
 #: widgets/agenda/widget.js:168
 msgid "Calendar data unavailable — install python3-gi and Evolution Data Server"
-msgstr ""
+msgstr "Data kalender tidak tersedia — pasang python3-gi dan Evolution Data Server"
 
 #: widgets/agenda/widget.js:172
 msgid "Could not read calendar data"
-msgstr ""
+msgstr "Tidak dapat membaca data kalender"
 
 #: widgets/agenda/widget.js:175
 msgid "Loading calendar…"
-msgstr ""
+msgstr "Memuat kalender…"
 
 #: widgets/agenda/widget.js:209
 msgid "No upcoming events"
@@ -818,31 +818,31 @@ msgstr "Berikutnya: %s dalam %s"
 
 #: widgets/bambu/widget.js:24
 msgid "Idle"
-msgstr ""
+msgstr "Diam"
 
 #: widgets/bambu/widget.js:28
 msgid "Failed"
-msgstr ""
+msgstr "Gagal"
 
 #: widgets/bambu/widget.js:29
 msgid "Preparing"
-msgstr ""
+msgstr "Menyiapkan"
 
 #: widgets/bambu/widget.js:30
 msgid "Slicing"
-msgstr ""
+msgstr "Mengiris"
 
 #: widgets/bambu/widget.js:95
 msgid "%s min left"
-msgstr ""
+msgstr "%s menit lagi"
 
 #: widgets/bambu/widget.js:98
 msgid "%s h left"
-msgstr ""
+msgstr "%s jam lagi"
 
 #: widgets/bambu/widget.js:101
 msgid "%s h %s min left"
-msgstr ""
+msgstr "%s jam %s menit lagi"
 
 #: widgets/bambu/widget.js:378
 msgid "Printer status face"
@@ -858,119 +858,119 @@ msgstr "ram %s%%"
 
 #: widgets/bambu/widget.js:1194
 msgid "AMS · %s"
-msgstr ""
+msgstr "AMS · %s"
 
 #: widgets/bambu/widget.js:1194
 msgid "AMS"
-msgstr ""
+msgstr "AMS"
 
 #: widgets/bambu/widget.js:1245
 msgid "No active print"
-msgstr ""
+msgstr "Tidak ada cetak aktif"
 
 #: widgets/bambu/widget.js:1257
 msgid "Layer %s / %s"
-msgstr ""
+msgstr "Lapisan %s / %s"
 
 #: widgets/bambu/widget.js:1261
 msgid "Nozzle %s · Bed %s"
-msgstr ""
+msgstr "Nozzle %s · Bed %s"
 
 #: widgets/bambu/widget.js:1283
 msgid "%s · %s%%"
-msgstr ""
+msgstr "%s · %s%%"
 
 #: widgets/bambu/widget.js:1320
 msgid "Bambu Lab is unavailable"
-msgstr ""
+msgstr "Bambu Lab tidak tersedia"
 
 #: widgets/bambu/widget.js:1324
 msgid "Configure the Bambu bridge endpoint and token in Settings"
-msgstr ""
+msgstr "Konfigurasikan endpoint dan token Bambu bridge di Pengaturan"
 
 #: widgets/bambu/widget.js:1328
 msgid "Bambu bridge unreachable"
-msgstr ""
+msgstr "Bambu bridge tidak dapat dijangkau"
 
 #: widgets/bambu/widget.js:1332
 msgid "Connecting to the Bambu bridge…"
-msgstr ""
+msgstr "Menghubungkan ke Bambu bridge…"
 
 #: widgets/bambu/widget.js:1336
 msgid "Waiting for the Bambu bridge…"
-msgstr ""
+msgstr "Menunggu Bambu bridge…"
 
 #: widgets/bambu/widget.js:1339
 msgid "Printer offline"
-msgstr ""
+msgstr "Printer offline"
 
 #: widgets/battery/widget.js:64
 msgid "UPS"
-msgstr ""
+msgstr "UPS"
 
 #: widgets/battery/widget.js:65 widgets/battery/widget.js:90
 msgid "Mouse"
-msgstr ""
+msgstr "Mouse"
 
 #: widgets/battery/widget.js:66 widgets/battery/widget.js:93
 msgid "Keyboard"
-msgstr ""
+msgstr "Keyboard"
 
 #: widgets/battery/widget.js:67
 msgid "PDA"
-msgstr ""
+msgstr "PDA"
 
 #: widgets/battery/widget.js:68 widgets/battery/widget.js:111 widgets/battery/widget.js:407
 msgid "Phone"
-msgstr ""
+msgstr "Telepon"
 
 #: widgets/battery/widget.js:69
 msgid "Media Player"
-msgstr ""
+msgstr "Pemutar media"
 
 #: widgets/battery/widget.js:70 widgets/battery/widget.js:96
 msgid "Tablet"
-msgstr ""
+msgstr "Tablet"
 
 #: widgets/battery/widget.js:71 widgets/battery/widget.js:114
 msgid "Computer"
-msgstr ""
+msgstr "Komputer"
 
 #: widgets/battery/widget.js:72 widgets/battery/widget.js:99
 msgid "Gamepad"
-msgstr ""
+msgstr "Gamepad"
 
 #: widgets/battery/widget.js:73
 msgid "Stylus"
-msgstr ""
+msgstr "Stylus"
 
 #: widgets/battery/widget.js:74
 msgid "Touchpad"
-msgstr ""
+msgstr "Touchpad"
 
 #: widgets/battery/widget.js:75 widgets/battery/widget.js:102
 msgid "Headset"
-msgstr ""
+msgstr "Headset"
 
 #: widgets/battery/widget.js:76 widgets/battery/widget.js:108
 msgid "Speakers"
-msgstr ""
+msgstr "Speaker"
 
 #: widgets/battery/widget.js:77 widgets/battery/widget.js:105
 msgid "Headphones"
-msgstr ""
+msgstr "Headphone"
 
 #: widgets/battery/widget.js:78
 msgid "Audio Device"
-msgstr ""
+msgstr "Perangkat audio"
 
 #: widgets/battery/widget.js:79
 msgid "Device"
-msgstr ""
+msgstr "Perangkat"
 
 #: widgets/battery/widget.js:335
 msgid "Bluetooth Device"
-msgstr ""
+msgstr "Perangkat Bluetooth"
 
 #: widgets/battery/widget.js:1066
 msgid "No batteries found"
@@ -978,23 +978,23 @@ msgstr "Tidak ada baterai ditemukan"
 
 #: widgets/calendar/widget.js:168 widgets/calendar/widget.js:168
 msgid "S"
-msgstr ""
+msgstr "S"
 
 #: widgets/calendar/widget.js:168
 msgid "M"
-msgstr ""
+msgstr "S"
 
 #: widgets/calendar/widget.js:168 widgets/calendar/widget.js:168
 msgid "T"
-msgstr ""
+msgstr "R"
 
 #: widgets/calendar/widget.js:168
 msgid "W"
-msgstr ""
+msgstr "K"
 
 #: widgets/calendar/widget.js:168
 msgid "F"
-msgstr ""
+msgstr "J"
 
 #: widgets/media/widget.js:331
 msgid "Album artwork"
@@ -1018,7 +1018,7 @@ msgstr "Artis tak dikenal"
 
 #: widgets/media/widget.js:468
 msgid "♪ Instrumental"
-msgstr ""
+msgstr "♪ Instrumental"
 
 #: widgets/media/widget.js:494
 msgid "No lyrics found"

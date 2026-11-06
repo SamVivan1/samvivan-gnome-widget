@@ -22,10 +22,10 @@ import hmac
 import logging
 import os
 import secrets
-
-from fastapi import Depends, FastAPI, Header, HTTPException, status
+from contextlib import asynccontextmanager
 
 from bambu_client import BambuClient
+from fastapi import Depends, FastAPI, Header, HTTPException, status
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 _LOGGER = logging.getLogger("bambu_bridge")
@@ -80,8 +80,6 @@ client = BambuClient(
     mock=MOCK,
 )
 
-app = FastAPI(title="Bambu Bridge", version="1.0.0")
-
 
 def _validate_config() -> None:
     if MOCK:
@@ -102,6 +100,11 @@ def require_token(authorization: str = Header(default="")) -> None:
 
 
 def _print_token_banner() -> None:
+    if not API_TOKEN_SOURCE.startswith("newly"):
+        # Token was provided via env or loaded from file — do not log it.
+        _LOGGER.info("Bambu Bridge API token loaded (%s)", API_TOKEN_SOURCE)
+        return
+
     line = "=" * 72
     _LOGGER.info(line)
     _LOGGER.info("Bambu Bridge API token (%s)", API_TOKEN_SOURCE)
@@ -112,7 +115,6 @@ def _print_token_banner() -> None:
     _LOGGER.info(line)
 
 
-@app.on_event("startup")
 def _startup() -> None:
     _validate_config()
     _LOGGER.info("starting bambu bridge (mock=%s)", MOCK)
@@ -120,9 +122,20 @@ def _startup() -> None:
     client.start()
 
 
-@app.on_event("shutdown")
 def _shutdown() -> None:
     client.stop()
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    _startup()
+    try:
+        yield
+    finally:
+        _shutdown()
+
+
+app = FastAPI(title="Bambu Bridge", version="1.0.0", lifespan=lifespan)
 
 
 @app.get("/")

@@ -26,13 +26,16 @@ import {
   clamp,
   snap as gridSnap,
   sizeForWidget as widgetSize,
-  monitorWorkArea as areaForMonitor,
   widgetFractions as fractionsForWidget,
   positionForFractions as positionFromWidgetFractions,
   rectForWidget as widgetRect,
   rectsOverlap as rectsOverlapWithGap,
   stripTransientWidgetFields as cleanWidgetForSave,
 } from './lib/geometry.js';
+import { enabledProviders } from './lib/widgetPresence.js';
+import { WIDGET_TYPES, widgetLabels as catalogWidgetLabels } from './lib/widgetCatalog.js';
+import { hexToCssRgba } from './lib/color.js';
+import { backgroundGroup as getBackgroundGroup } from './lib/shellCompat.js';
 import { configureLogger, resetLogger, warn } from './logger.js';
 import { WorkspaceIntegration } from './workspaceIntegration.js';
 
@@ -62,10 +65,9 @@ const WIDGET_MODULES = [
   BambuWidget,
 ];
 const WIDGETS = new Map(WIDGET_MODULES.map(widgetModule => [widgetModule.type, widgetModule]));
-const WIDGET_TYPES = WIDGET_MODULES.map(widgetModule => widgetModule.type);
 
 function widgetLabel(type) {
-	return WIDGET_MODULES.find(widgetModule => widgetModule.type === type)?.label() ?? type;
+	return catalogWidgetLabels(_)[type] ?? type;
 };
 const DEFAULT_WIDGETS = WIDGET_MODULES
   .filter(widgetModule => widgetModule.defaultInLayout !== false)
@@ -199,22 +201,6 @@ function darkStyleEnabled(settings) {
   return settings?.get_string('color-scheme') === 'prefer-dark';
 };
 
-function hexToRgba(hex, alpha) {
-  const value = String(hex || '').replace('#', '');
-  const normalized = value.length === 3
-    ? value.split('').map(part => part + part).join('')
-    : value;
-
-  if (normalized.length !== 6) {
-    return `rgba(53, 132, 228, ${alpha})`;
-  };
-
-  const red = parseInt(normalized.slice(0, 2), 16);
-  const green = parseInt(normalized.slice(2, 4), 16);
-  const blue = parseInt(normalized.slice(4, 6), 16);
-
-  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
-};
 
 function snap(value) {
   return gridSnap(value, {gridSize: GRID_SIZE, snapToGrid: SNAP_TO_GRID});
@@ -222,10 +208,6 @@ function snap(value) {
 
 function sizeForWidget(widget) {
   return widgetSize(widget, WIDGET_SIZES);
-};
-
-function monitorWorkArea(monitor) {
-  return areaForMonitor(monitor, {gap: WIDGET_GAP, panelHeight: Main.panel?.height ?? 0});
 };
 
 function widgetFractions(widget, monitor) {
@@ -290,6 +272,7 @@ class WidgetController {
     this._batteryRefreshId = 0;
     this._lastBatteryRefreshAt = 0;
     this._batterySignature = undefined;
+    this._batteryWatching = false;
     this._calendarSignature = undefined;
     this._calendarData = null;
     this._calendarUnsubscribe = null;
@@ -378,16 +361,23 @@ class WidgetController {
     this._bambuData?.reconfigure();
   };
 
-  _syncBambuPolling() {
-    const active = this._widgets.some(widget => widget.type === 'bambu');
-
-    this._bambuData?.setEnabled(active);
+  _activeProviders() {
+    return enabledProviders(this._widgets, {
+      hideAll: this._layoutSettings?.get_boolean('hide-all') ?? false,
+    });
   };
 
-  _syncMediaPolling() {
-    const active = this._widgets.some(widget => widget.type === 'media');
+  _syncDataProviders() {
+    const active = this._activeProviders();
 
-    this._mprisData?.setEnabled(active);
+    this._bambuData?.setEnabled(active.bambu);
+    this._mprisData?.setEnabled(active.media);
+    this._calendarData?.setEnabled(active.calendar);
+    this._syncBatteryWatch(active.battery);
+
+    if (active.weather) {
+      this._refreshWeather(false);
+    };
   };
 
   _applyCalendarSources() {
@@ -439,7 +429,6 @@ class WidgetController {
     this._calendarData = new CalendarData(EXTENSION_PATH);
     this._calendarUnsubscribe = this._calendarData.subscribe(() => this._refreshCalendarViews(true));
     this._applyCalendarSources();
-    this._calendarData.start();
 
     this._bambuData = new BambuData(this._layoutSettings);
     this._bambuRenderKey = null;
@@ -453,9 +442,9 @@ class WidgetController {
 
     this._createLayer();
     this._rebuildWidgets();
+    this._calendarData.start();
     this._bambuData.start();
     this._mprisData.start();
-    this._refreshWeather(true);
     this._workspaceIntegration.enable(this._layer);
 
     global.stage.connectObject(
@@ -476,7 +465,6 @@ class WidgetController {
       this._refreshWeatherViews();
     }, this);
 
-    this._watchBatteryChanges();
     BatteryWidget.setBatterySignatureListener?.(signature => this._applyBatterySignature(signature));
 
     Main.layoutManager.connectObject(
@@ -516,15 +504,7 @@ class WidgetController {
     this._interfaceSettings.disconnectObject(this);
     this._weatherSettings.disconnectObject(this);
 
-    for (const id of this._dbusSignalIds) {
-      Gio.DBus.system.signal_unsubscribe(id);
-    };
-    for (const id of this._sessionSignalIds) {
-      Gio.DBus.session.signal_unsubscribe(id);
-    };
-
-    this._dbusSignalIds = [];
-    this._sessionSignalIds = [];
+    this._unwatchBatteryChanges();
 
     this._calendarUnsubscribe?.();
     this._calendarUnsubscribe = null;
@@ -674,7 +654,7 @@ class WidgetController {
   };
 
   _createLayer() {
-    const backgroundGroup = Main.layoutManager._backgroundGroup;
+    const backgroundGroup = getBackgroundGroup();
 
     if (!backgroundGroup) {
       warn('background-group-missing', 'Could not find GNOME Shell background group');
@@ -758,7 +738,7 @@ class WidgetController {
   _editBorderStyle() {
     const accent = this._gnomeTheme().accent;
 
-    return `border: 2px solid ${accent}; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.16), 0 0 20px ${hexToRgba(accent, 0.55)};`;
+    return `border: 2px solid ${accent}; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.16), 0 0 20px ${hexToCssRgba(accent, 0.55)};`;
   };
 
   _styleForWidget(widget) {
@@ -948,7 +928,7 @@ class WidgetController {
   };
 
   _scheduleBatteryRefresh() {
-    if (this._batteryRefreshId) {
+    if (!this._batteryWatching || this._batteryRefreshId) {
       return;
     };
 
@@ -963,7 +943,47 @@ class WidgetController {
     });
   };
 
+  _syncBatteryWatch(enabled) {
+    if (!enabled) {
+      this._unwatchBatteryChanges();
+      return;
+    };
+
+    if (this._batteryWatching) {
+      return;
+    };
+
+    this._watchBatteryChanges();
+    this._scheduleBatteryRefresh();
+  };
+
+  _unwatchBatteryChanges() {
+    this._batteryWatching = false;
+
+    for (const id of this._dbusSignalIds) {
+      Gio.DBus.system.signal_unsubscribe(id);
+    };
+
+    for (const id of this._sessionSignalIds) {
+      Gio.DBus.session.signal_unsubscribe(id);
+    };
+
+    this._dbusSignalIds = [];
+    this._sessionSignalIds = [];
+
+    if (this._batteryRefreshId) {
+      GLib.source_remove(this._batteryRefreshId);
+      this._batteryRefreshId = 0;
+    };
+  };
+
   _watchBatteryChanges() {
+    if (this._batteryWatching) {
+      return;
+    };
+
+    this._batteryWatching = true;
+
     const refresh = () => this._scheduleBatteryRefresh();
     const refreshBlueZ = (_connection, _sender, _objectPath, _interfaceName, _signalName, parameters) => {
       const [changedInterface] = parameters.deep_unpack();
@@ -1123,6 +1143,8 @@ class WidgetController {
         view.removeButton.visible = shouldShow && this._editMode;
       };
     };
+
+    this._syncDataProviders();
   };
 
   addWidget(type) {
@@ -1161,6 +1183,8 @@ class WidgetController {
     if (!hideAll && !widget.hidden) {
       this._createWidget(widget);
     };
+
+    this._syncDataProviders();
   };
 
   removeWidget(id) {
@@ -1170,6 +1194,7 @@ class WidgetController {
     this._saveWidgets();
 
     if (!view) {
+      this._syncDataProviders();
       return;
     };
 
@@ -1178,6 +1203,7 @@ class WidgetController {
     view.actor.disconnectObject(this);
     view.actor.destroy();
     this._views.delete(id);
+    this._syncDataProviders();
   };
 
   _rebuildWidgets() {
@@ -1201,8 +1227,7 @@ class WidgetController {
       this._createWidget(widget);
     };
 
-    this._syncBambuPolling();
-    this._syncMediaPolling();
+    this._syncDataProviders();
   };
 
   _refreshWidgets() {
@@ -1210,10 +1235,24 @@ class WidgetController {
       return;
     };
 
-    this._refreshWeather(false);
-    this._refreshCalendarViews();
-    this._refreshBatteryViews();
-    this._refreshBambuViews();
+    const active = this._activeProviders();
+
+    if (active.weather) {
+      this._refreshWeather(false);
+    };
+
+    if (active.calendar) {
+      this._refreshCalendarViews();
+    };
+
+    if (active.battery) {
+      this._refreshBatteryViews();
+    };
+
+    if (active.bambu) {
+      this._refreshBambuViews();
+    };
+
     this._pruneStaleViews();
   };
 
@@ -1423,9 +1462,11 @@ class WidgetController {
   };
 
   _pickedActorIsOnDesktop(actor) {
-    const backgroundGroup = Main.layoutManager._backgroundGroup;
+    const backgroundGroup = getBackgroundGroup();
 
-    return this._actorIsDescendantOf(actor, this._layer) || this._actorIsDescendantOf(actor, backgroundGroup);
+    return this._actorIsDescendantOf(actor, this._layer) || (backgroundGroup
+      ? this._actorIsDescendantOf(actor, backgroundGroup)
+      : false);
   };
 
   _handleAppClickEvent(event) {
@@ -1581,7 +1622,7 @@ class WidgetController {
 
     if (!widgetModule?.render && !widgetModule?.reconcile) {
       body.destroy_all_children();
-      body.add_child(this._label('Unknown widget', 'widget-text'));
+      body.add_child(this._label(_('Unknown widget'), 'widget-text'));
       return;
     };
 

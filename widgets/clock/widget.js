@@ -4,6 +4,8 @@ import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import St from 'gi://St';
 
+import { roundedRect } from '../../lib/draw.js';
+
 export const type = 'clock';
 export function label() { return _('Clock'); };
 export const stylesheet = 'widgets/clock/stylesheet.css';
@@ -12,20 +14,7 @@ export const defaultSize = 'small';
 const CLOCK_RADIUS = 26;
 const TICK_INSET = 16;
 
-function roundedRectangle(cr, x, y, width, height, radius) {
-	const r = Math.min(radius, width / 2, height / 2);
 
-	cr.moveTo(x + r, y);
-	cr.lineTo(x + width - r, y);
-	cr.arc(x + width - r, y + r, r, -Math.PI / 2, 0);
-	cr.lineTo(x + width, y + height - r);
-	cr.arc(x + width - r, y + height - r, r, 0, Math.PI / 2);
-	cr.lineTo(x + r, y + height);
-	cr.arc(x + r, y + height - r, r, Math.PI / 2, Math.PI);
-	cr.lineTo(x, y + r);
-	cr.arc(x + r, y + r, r, Math.PI, Math.PI * 1.5);
-	cr.closePath();
-};
 
 function colorFromHex(hex, fallback) {
 	const match = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
@@ -102,7 +91,7 @@ const AnalogClockFace = GObject.registerClass(
 			const hands = this._dark ? [1, 1, 1] : [0.12, 0.11, 0.16];
 			const centerDot = this._dark ? [0, 0, 0, 0.95] : [1, 1, 1, 0.95];
 
-			roundedRectangle(cr, 0, 0, width, height, CLOCK_RADIUS);
+			roundedRect(cr, 0, 0, width, height, CLOCK_RADIUS);
 			cr.clip();
 			cr.setLineCap(1);
 
