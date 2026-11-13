@@ -28,7 +28,7 @@ jobs:
         run: make pack
 
       - name: Create Release and upload
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: desktop-widget@samvivan.shell-extension.zip
           generate_release_notes: true
